@@ -65,7 +65,9 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
       });
       if (res.ok) {
         const data = await res.json();
-        setActiveAudit({
+        // Set the active audit ID so the useEffect poller starts tracking it
+        setActiveAudit(prev => ({
+          ...(prev || {}),
           id: data.auditId,
           status: 'pending',
           riskScore: 0,
@@ -83,7 +85,10 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             topEntities: [],
             riskFindings: []
           }
-        });
+        } as ReputationAudit));
+        
+        // Stay in 'running' mode. The useEffect poller will transition us to 'completed'
+        // only once the database record actually has a reportUrl.
       } else {
         setAuditMode('dashboard');
       }
