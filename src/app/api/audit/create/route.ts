@@ -36,20 +36,14 @@ export async function POST(request: Request) {
       .update({ status: 'analysis' })
       .eq('id', audit.id);
 
-    // 3. RUN ANALYSIS (Awaiting to prevent Vercel termination)
-    try {
-      console.log(`[Audit API] Starting synchronous analysis for ${audit.id}`);
-      await AuditAnalysisService.runAnalysis(audit.id, user.id);
-    } catch (err) {
-      console.error(`[Audit API] Analysis failed for ${audit.id}:`, err);
-      // Even if it fails, we return the auditId so the UI can show the failure state
-    }
+    // 3. RUN ANALYSIS (Background - no await to prevent browser timeout)
+    AuditAnalysisService.runAnalysis(audit.id, user.id);
 
     return NextResponse.json({
       success: true,
       auditId: audit.id,
-      status: 'completed',
-      message: 'Neural reputation audit complete.'
+      status: 'analysis',
+      message: 'Neural reputation audit initiated.'
     });
 
   } catch (err) {
