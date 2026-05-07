@@ -263,18 +263,15 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
             <button
               className={styles.downloadBtn}
+              disabled={!activeAudit.reportUrl && !activeAudit.metadata?.reportUrl}
               onClick={() => {
                 const downloadUrl = activeAudit.reportUrl || activeAudit.metadata?.reportUrl;
                 if (downloadUrl) {
                   window.open(downloadUrl, '_blank');
-                } else {
-                  if (confirm("This audit was generated without a PDF link. Would you like to start a NEW Audit to generate the full 8-page report?")) {
-                    setAuditMode('dashboard');
-                  }
                 }
               }}
             >
-              DOWNLOAD FULL PDF
+              {(!activeAudit.reportUrl && !activeAudit.metadata?.reportUrl) ? 'GENERATING PDF...' : 'DOWNLOAD FULL PDF'}
             </button>
           </aside>
         </div>
