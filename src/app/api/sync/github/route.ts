@@ -33,6 +33,21 @@ export async function POST(request: Request) {
 
     const { supabase, userId, userEmail, userName } = actor;
 
+    // --- DATA LOCKDOWN GUARD ---
+    const { data: activeAudit } = await supabase
+      .from('reputation_audits')
+      .select('id, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'analysis', 'generating'])
+      .maybeSingle();
+
+    if (activeAudit) {
+      return NextResponse.json({ 
+        error: 'System Busy: Reputation Audit in progress.', 
+        detail: 'Ingestion is paused to ensure data snapshot integrity for your current audit.' 
+      }, { status: 423 });
+    }
+
     // 1. Get existing sync status to find the current page cursor
     const { data: currentStatus } = await supabase
       .from('sync_status')
