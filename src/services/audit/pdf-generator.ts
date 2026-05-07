@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { ReputationAudit } from '@/types/dashboard';
 
 /**
@@ -193,7 +193,6 @@ export class PDFGenerationService {
             const filePath = `${userId}/${fileName}`;
 
             // Use high-privilege admin client for background storage upload
-            const { createAdminClient } = await import('@/utils/supabase/server');
             const supabase = await createAdminClient();
 
             // Ensure bucket exists (Safe check)
