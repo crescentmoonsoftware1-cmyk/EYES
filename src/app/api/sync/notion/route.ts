@@ -61,7 +61,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Notion is not connected yet.' }, { status: 400 });
     }
 
-    const accessToken = decryptToken(tokenRow.access_token);
+    let accessToken: string;
+    try {
+      accessToken = decryptToken(tokenRow.access_token);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('notion sync auth error:', detail);
+      return NextResponse.json({ error: 'Unable to authenticate Notion connection.', detail }, { status: 401 });
+    }
 
     const url = new URL(request.url);
     const depth = url.searchParams.get('depth') || 'shallow';
@@ -101,6 +108,11 @@ export async function POST(request: Request) {
       });
 
       if (!searchResponse.ok) {
+        if (searchResponse.status === 401 || searchResponse.status === 403) {
+          const detail = await searchResponse.text();
+          throw new Error(`Notion auth failed: ${searchResponse.status} ${detail}`);
+        }
+
         hasMore = false;
         break;
       }

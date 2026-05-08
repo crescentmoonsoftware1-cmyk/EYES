@@ -56,7 +56,14 @@ export async function POST(request: Request) {
       .eq('platform', 'github')
       .maybeSingle();
 
-    const accessToken = await getValidGithubToken(supabase, userId);
+    let accessToken: string | null = null;
+    try {
+      accessToken = await getValidGithubToken(supabase, userId);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('github sync auth error:', detail);
+      return NextResponse.json({ error: 'GitHub authentication failed.', detail }, { status: 401 });
+    }
 
     if (!accessToken) {
       return NextResponse.json({ error: 'GitHub is not connected yet.' }, { status: 401 });
@@ -92,6 +99,11 @@ export async function POST(request: Request) {
       });
 
       if (!repoResponse.ok) {
+        if (repoResponse.status === 401 || repoResponse.status === 403) {
+          const detail = await repoResponse.text();
+          throw new Error(`GitHub auth failed: ${repoResponse.status} ${detail}`);
+        }
+
         hasMore = false;
         break;
       }
