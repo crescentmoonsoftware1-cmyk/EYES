@@ -44,3 +44,16 @@ Open <http://localhost:3000>.
 - Schedule: configured in `vercel.json` (every 30 minutes)
 - Required server env vars: `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`
 - Optional escalation env vars: `SYNC_ESCALATION_WEBHOOK_URL`, `SYNC_ESCALATION_COOLDOWN_MINUTES`, `SYNC_ESCALATION_OWNER_WARNING`, `SYNC_ESCALATION_OWNER_CRITICAL`, `SYNC_ESCALATION_INCLUDE_WARNING`
+
+## Linear Setup
+
+Linear actions now execute directly from the Action Queue and Linear sync is available in the platform stack.
+
+Required env vars:
+
+- `LINEAR_CLIENT_ID`
+- `LINEAR_CLIENT_SECRET`
+- `LINEAR_DEFAULT_TEAM_ID` (used when creating tickets from the Action Queue)
+- `TOKEN_ENCRYPTION_KEY`
+
+If you want the platform readiness screen to show Linear as configured, all of the above must be present.

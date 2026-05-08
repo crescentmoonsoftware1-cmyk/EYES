@@ -15,11 +15,54 @@ type GmailMessageResponse = {
   internalDate?: string;
   payload?: {
     headers?: Array<{ name: string; value: string }>;
+    body?: {
+      data?: string;
+    };
+    parts?: GmailMessagePart[];
   };
+};
+
+type GmailMessagePart = {
+  mimeType?: string;
+  body?: {
+    data?: string;
+  };
+  parts?: GmailMessagePart[];
 };
 
 function getHeader(headers: Array<{ name: string; value: string }> | undefined, key: string) {
   return headers?.find((header) => header.name.toLowerCase() === key.toLowerCase())?.value;
+}
+
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function extractTextFromPart(part: GmailMessagePart | undefined): string {
+  if (!part) return '';
+
+  const mimeType = part.mimeType || '';
+  const ownText = part.body?.data ? decodeBase64Url(part.body.data) : '';
+
+  if (mimeType.startsWith('text/plain') && ownText) {
+    return ownText;
+  }
+
+  const nested = (part.parts || []).map(extractTextFromPart).filter(Boolean).join('\n');
+  if (nested) return nested;
+
+  if (mimeType.startsWith('text/html') && ownText) {
+    return ownText
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  return ownText;
 }
 
 export async function POST(request: Request) {
@@ -119,7 +162,7 @@ export async function POST(request: Request) {
         try {
           const chunkResponses = await Promise.all(
             chunkIds.map(async (id) => {
-              const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`, {
+              const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full&metadataHeaders=Subject&metadataHeaders=From`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
                 cache: 'no-store',
               });
@@ -150,11 +193,16 @@ export async function POST(request: Request) {
     const events = await Promise.all(messages.map(async (message) => {
       const subject = getHeader(message.payload?.headers, 'Subject') || 'No subject';
       const from = getHeader(message.payload?.headers, 'From') || 'Unknown sender';
-      const content = `${subject} ${message.snippet || ''}`.trim();
+      const bodyText = extractTextFromPart({
+        mimeType: 'multipart/mixed',
+        body: message.payload?.body,
+        parts: message.payload?.parts,
+      });
+      const content = `${subject}\n${message.snippet || ''}\n${bodyText}`.trim().slice(0, 12000);
       const ts = message.internalDate ? new Date(Number(message.internalDate)).toISOString() : new Date().toISOString();
       const risk = await scoreGmailEvent({
         subject,
-        snippet: message.snippet || '',
+        snippet: `${message.snippet || ''} ${bodyText.slice(0, 1500)}`.trim(),
         from,
       });
 
@@ -169,6 +217,8 @@ export async function POST(request: Request) {
         timestamp: ts,
         metadata: {
           from,
+          snippet: message.snippet || null,
+          body_indexed: bodyText.length > 0,
           risk_score: risk.score,
           risk_factors: risk.reasons,
         },

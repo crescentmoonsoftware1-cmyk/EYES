@@ -8,7 +8,6 @@ import { POST as syncGoogleCalendar } from '@/app/api/sync/google-calendar/route
 import { POST as syncNotion } from '@/app/api/sync/notion/route';
 import { POST as syncReddit } from '@/app/api/sync/reddit/route';
 import { POST as syncSlack } from '@/app/api/sync/slack/route';
-import { POST as syncLinkedin } from '@/app/api/sync/linkedin/route';
 import { POST as syncDiscord } from '@/app/api/sync/discord/route';
 import { POST as syncEmbeddings } from '@/app/api/sync/embeddings/route';
 import { logCronMetrics, logAsyncJobFailure } from '@/utils/monitoring';
@@ -175,7 +174,7 @@ function toFiniteNumber(raw: string | undefined, fallback: number) {
   return parsed;
 }
 
-const SUPPORTED_PLATFORMS = new Set(['github', 'gmail', 'google_calendar', 'notion', 'reddit', 'slack', 'linkedin', 'discord']);
+const SUPPORTED_PLATFORMS = new Set(['github', 'gmail', 'google_calendar', 'notion', 'reddit', 'slack', 'discord']);
 const SYNC_TIMEOUT_MS = Number(process.env.CRON_SYNC_TIMEOUT_MS || 20000);
 const EMBEDDINGS_TIMEOUT_MS = Number(process.env.CRON_EMBEDDINGS_TIMEOUT_MS || 25000);
 const DEFAULT_MAX_USERS_PER_RUN = Number(process.env.CRON_MAX_USERS_PER_RUN || 10);
@@ -233,8 +232,6 @@ function getSyncHandler(routePlatform: string) {
       return syncReddit;
     case 'slack':
       return syncSlack;
-    case 'linkedin':
-      return syncLinkedin;
     case 'discord':
       return syncDiscord;
     default:

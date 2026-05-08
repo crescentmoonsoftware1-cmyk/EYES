@@ -4,6 +4,38 @@ import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/
 import { getValidSlackToken } from '@/utils/oauth';
 import { scoreSlackEvent } from '@/utils/risk/scorer';
 
+type SlackConversation = {
+  id: string;
+  name?: string;
+  is_member?: boolean;
+  is_im?: boolean;
+  is_mpim?: boolean;
+  user?: string;
+};
+
+type SlackMessage = {
+  text?: string;
+  subtype?: string;
+  user?: string;
+  ts?: string;
+  client_msg_id?: string;
+};
+
+type SlackHistoryResponse = {
+  ok?: boolean;
+  messages?: SlackMessage[];
+  has_more?: boolean;
+};
+
+type SlackConversationListResponse = {
+  ok?: boolean;
+  error?: string;
+  channels?: SlackConversation[];
+  response_metadata?: {
+    next_cursor?: string;
+  };
+};
+
 export async function POST(request: Request) {
   const actor = await resolveSyncActor(request);
   if ('status' in actor) {
@@ -35,24 +67,45 @@ export async function POST(request: Request) {
       last_sync_at: new Date().toISOString(),
     });
 
-    // 3. Fetch Slack Context
-    const channelsResponse = await fetch('https://slack.com/api/conversations.list?types=public_channel,private_channel', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
+    // 3. Fetch Slack conversations (pagination aware)
+    const allConversations: SlackConversation[] = [];
+    let nextCursor = '';
 
-    const channelData = await channelsResponse.json();
-    if (!channelData.ok) throw new Error(`Slack API error: ${channelData.error}`);
+    do {
+      const listUrl = new URL('https://slack.com/api/conversations.list');
+      listUrl.searchParams.set('types', 'public_channel,private_channel,im,mpim');
+      listUrl.searchParams.set('limit', '200');
+      if (nextCursor) {
+        listUrl.searchParams.set('cursor', nextCursor);
+      }
+
+      const channelsResponse = await fetch(listUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+
+      const channelData = (await channelsResponse.json()) as SlackConversationListResponse;
+      if (!channelData.ok) throw new Error(`Slack API error: ${channelData.error}`);
+
+      allConversations.push(...(channelData.channels || []));
+      nextCursor = channelData.response_metadata?.next_cursor || '';
+    } while (nextCursor);
 
     const url = new URL(request.url);
     const depth = url.searchParams.get('depth') || 'shallow';
     const channelLimit = depth === 'deep' ? 20 : 5;
     const messageLimit = depth === 'deep' ? 100 : 20;
 
-    const activeChannels = (channelData.channels || []).filter((c: any) => c.is_member).slice(0, channelLimit);
+    const activeChannels = allConversations
+      .filter((conversation) => conversation.is_member && !conversation.is_im && !conversation.is_mpim)
+      .slice(0, channelLimit);
+    const activeDMs = allConversations
+      .filter((conversation) => conversation.is_im || conversation.is_mpim)
+      .slice(0, channelLimit);
+    const activeConversations = [...activeChannels, ...activeDMs];
     
     // 4. Fetch History for each channel (using cursors for deep sync)
-    const historyPromises = activeChannels.map(async (channel: any) => {
+    const historyPromises = activeConversations.map(async (channel) => {
       // Use the stored timestamp (cursor) as the 'latest' parameter to pull OLDER messages
       const latest = channelCursors[channel.id] || null;
       const fetchUrl = new URL('https://slack.com/api/conversations.history');
@@ -64,14 +117,14 @@ export async function POST(request: Request) {
         headers: { Authorization: `Bearer ${accessToken}` },
         cache: 'no-store',
       });
-      const data = await resp.json();
-      return { channel, messages: data.ok ? data.messages : [], hasMore: data.has_more };
+      const data = (await resp.json()) as SlackHistoryResponse;
+      return { channel, messages: data.ok ? (data.messages || []) : [], hasMore: Boolean(data.has_more) };
     });
 
     const histories = await Promise.all(historyPromises);
 
     // 5. Transform to Events
-    const events: any[] = [];
+    const events: Record<string, unknown>[] = [];
     const updatedCursors = { ...channelCursors };
     let hasMoreOverall = false;
 
@@ -79,11 +132,15 @@ export async function POST(request: Request) {
       if (hasMore) hasMoreOverall = true;
 
       for (const msg of messages) {
-        if (!msg.text || msg.subtype === 'bot_message') continue;
+        if (!msg.text || msg.subtype === 'bot_message' || !msg.ts) continue;
+
+        const channelLabel = channel.is_im || channel.is_mpim
+          ? `DM ${channel.user ? `with ${channel.user}` : ''}`.trim()
+          : `#${channel.name || 'unknown'}`;
 
         const risk = await scoreSlackEvent({
           text: msg.text,
-          channelName: channel.name,
+          channelName: channelLabel,
           user: 'User' // We don't have the current user name here easily
         });
 
@@ -92,14 +149,20 @@ export async function POST(request: Request) {
           platform: 'slack',
           platform_id: `msg_${msg.client_msg_id || msg.ts}`,
           event_type: 'message',
-          title: `Message in #${channel.name}`,
+          title: channel.is_im || channel.is_mpim ? `Direct message ${channel.user ? `with ${channel.user}` : ''}`.trim() : `Message in #${channel.name}`,
           content: msg.text,
           author: msg.user || 'Unknown',
           timestamp: new Date(parseFloat(msg.ts) * 1000).toISOString(),
           is_flagged: risk.flagged,
           flag_severity: risk.severity,
           flag_reason: risk.reasons.join(', '),
-          metadata: { ...msg, channel_id: channel.id, channel_name: channel.name }
+          metadata: {
+            ...msg,
+            channel_id: channel.id,
+            channel_name: channel.name,
+            is_im: Boolean(channel.is_im),
+            is_mpim: Boolean(channel.is_mpim),
+          }
         });
         
         // Update the cursor for this channel to the oldest message in this batch

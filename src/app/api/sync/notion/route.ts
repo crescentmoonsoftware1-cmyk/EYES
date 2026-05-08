@@ -18,6 +18,51 @@ type NotionSearchResponse = {
   results?: NotionSearchResult[];
 };
 
+type NotionBlock = {
+  id: string;
+  type: string;
+  has_children?: boolean;
+  rich_text?: Array<{ plain_text?: string }>;
+  paragraph?: { rich_text?: Array<{ plain_text?: string }> };
+  heading_1?: { rich_text?: Array<{ plain_text?: string }> };
+  heading_2?: { rich_text?: Array<{ plain_text?: string }> };
+  heading_3?: { rich_text?: Array<{ plain_text?: string }> };
+  bulleted_list_item?: { rich_text?: Array<{ plain_text?: string }> };
+  numbered_list_item?: { rich_text?: Array<{ plain_text?: string }> };
+  to_do?: { rich_text?: Array<{ plain_text?: string }> };
+  quote?: { rich_text?: Array<{ plain_text?: string }> };
+  callout?: { rich_text?: Array<{ plain_text?: string }> };
+  code?: { rich_text?: Array<{ plain_text?: string }> };
+};
+
+function extractRichText(parts: Array<{ plain_text?: string }> | undefined) {
+  return (parts || []).map((part) => part.plain_text || '').join(' ').trim();
+}
+
+function extractBlockText(block: NotionBlock) {
+  const blockRecord = block as Record<string, unknown>;
+  const typePayload = blockRecord[block.type] as { rich_text?: Array<{ plain_text?: string }> } | undefined;
+  return extractRichText(typePayload?.rich_text || block.rich_text);
+}
+
+async function fetchNotionPageContent(accessToken: string, pageId: string) {
+  const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    return '';
+  }
+
+  const body = (await response.json()) as { results?: NotionBlock[] };
+  return (body.results || []).map(extractBlockText).filter(Boolean).join('\n').slice(0, 10000);
+}
+
 function extractTitle(item: NotionSearchResult) {
   if (item.object === 'database' && item.title?.length) {
     return item.title.map((part) => part.plain_text).join(' ').trim() || 'Untitled database';
@@ -130,7 +175,10 @@ export async function POST(request: Request) {
 
     const events = await Promise.all(allResults.map(async (item) => {
       const title = extractTitle(item);
-      const content = `${title} ${item.url || ''}`.trim();
+      const pageContent = item.object === 'page'
+        ? await fetchNotionPageContent(accessToken, item.id)
+        : '';
+      const content = `${title}\n${pageContent}\n${item.url || ''}`.trim().slice(0, 12000);
       const risk = await scoreNotionEvent({ title, content });
 
       return {
@@ -145,6 +193,7 @@ export async function POST(request: Request) {
         metadata: {
           object: item.object,
           url: item.url,
+          page_content_indexed: pageContent.length > 0,
         },
         is_flagged: risk.flagged,
         flag_severity: risk.severity,

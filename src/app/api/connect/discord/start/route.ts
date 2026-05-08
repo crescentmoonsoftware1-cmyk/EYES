@@ -42,7 +42,7 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', callbackUrl);
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('scope', 'identify email'); // messages.read requires bot/privileged scopes
+  authUrl.searchParams.set('scope', 'identify email guilds');
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('prompt', 'consent');
 

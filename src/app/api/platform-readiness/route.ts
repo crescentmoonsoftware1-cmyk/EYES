@@ -97,7 +97,7 @@ const platformConfigs: Array<{
   {
     id: 'linear',
     name: 'Linear',
-    env: ['LINEAR_CLIENT_ID', 'LINEAR_CLIENT_SECRET', 'TOKEN_ENCRYPTION_KEY'],
+    env: ['LINEAR_CLIENT_ID', 'LINEAR_CLIENT_SECRET', 'LINEAR_DEFAULT_TEAM_ID', 'TOKEN_ENCRYPTION_KEY'],
     scopes: ['read'],
   },
   {

@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', callbackUrl);
-  authUrl.searchParams.set('user_scope', 'channels:read,groups:read,im:read,mpim:read,channels:history,groups:history,im:history,mpim:history'); // Enriched history scopes
+  authUrl.searchParams.set('user_scope', 'channels:read,groups:read,im:read,mpim:read,channels:history,groups:history,im:history,mpim:history,chat:write,chat:write.public');
   authUrl.searchParams.set('state', state);
 
   return NextResponse.redirect(authUrl);

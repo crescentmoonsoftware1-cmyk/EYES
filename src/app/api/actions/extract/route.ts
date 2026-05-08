@@ -40,7 +40,12 @@ Each action must have:
   "description": "A brief explanation of the context",
   "suggestedAction": "What the AI will do (e.g. 'Add event to Google Calendar for May 10, 4:00 PM')",
   "actionType": "CALENDAR" | "LINEAR_TICKET" | "SLACK_REPLY" | "REMINDER",
-  "confidence": number (1-100)
+  "confidence": number (1-100),
+  "teamId": "Required for LINEAR_TICKET actions if known",
+  "channelId": "Required for SLACK_REPLY actions if known",
+  "threadTs": "Optional Slack thread timestamp for replies",
+  "reminderDate": "Optional ISO date for REMINDER actions",
+  "text": "Optional message body for Slack replies or reminder text"
 }
 
 Only return highly confident actionable items. If none exist, return {"actions": []}.
