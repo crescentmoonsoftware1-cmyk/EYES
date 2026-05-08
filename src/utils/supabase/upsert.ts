@@ -128,3 +128,43 @@ export async function upsertSyncStatusSafely(supabase: SupabaseClient, syncStatu
 
   if (updateError) throw updateError;
 }
+
+/**
+ * Batch upsert multiple sync status rows in a single operation.
+ * Significantly reduces database load compared to individual upserts.
+ * Work Item #4: Status Table Write Batching
+ */
+export async function batchUpsertSyncStatus(supabase: SupabaseClient, statuses: SyncStatusUpsertRow[]) {
+  if (statuses.length === 0) return;
+
+  // Deduplicate by user_id+platform composite key (keep last)
+  const dedupedMap = new Map<string, SyncStatusUpsertRow>();
+  for (const status of statuses) {
+    const key = `${status.user_id}::${status.platform}`;
+    dedupedMap.set(key, status);
+  }
+
+  const dedupedStatuses = Array.from(dedupedMap.values());
+
+  try {
+    const { error: upsertError } = await supabase
+      .from('sync_status')
+      .upsert(dedupedStatuses, { onConflict: 'user_id,platform' });
+
+    if (!upsertError) return;
+
+    if (!hasMissingConflictConstraint(upsertError)) {
+      console.error(`[DB Error] Batch sync status upsert failed: ${upsertError.message}`);
+      throw upsertError;
+    }
+
+    // Fallback: individual updates if batch fails
+    console.warn('[DB] Batch sync status upsert failed, falling back to individual updates');
+    for (const status of dedupedStatuses) {
+      await upsertSyncStatusSafely(supabase, status);
+    }
+  } catch (error) {
+    console.error('[DB] Batch status upsert error:', error);
+    throw error;
+  }
+}

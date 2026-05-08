@@ -2,6 +2,16 @@ import crypto from 'node:crypto';
 
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { POST as syncGithub } from '@/app/api/sync/github/route';
+import { POST as syncGmail } from '@/app/api/sync/gmail/route';
+import { POST as syncGoogleCalendar } from '@/app/api/sync/google-calendar/route';
+import { POST as syncNotion } from '@/app/api/sync/notion/route';
+import { POST as syncReddit } from '@/app/api/sync/reddit/route';
+import { POST as syncSlack } from '@/app/api/sync/slack/route';
+import { POST as syncLinkedin } from '@/app/api/sync/linkedin/route';
+import { POST as syncDiscord } from '@/app/api/sync/discord/route';
+import { POST as syncEmbeddings } from '@/app/api/sync/embeddings/route';
+import { logCronMetrics, logAsyncJobFailure } from '@/utils/monitoring';
 
 type TokenRow = {
   user_id: string;
@@ -207,6 +217,29 @@ const ESCALATION_INCLUDE_WARNING = ['1', 'true', 'yes', 'on'].includes(
 function toSyncRoutePlatform(platform: string) {
   if (platform === 'google_calendar') return 'google-calendar';
   return platform.replace(/_/g, '-');
+}
+
+function getSyncHandler(routePlatform: string) {
+  switch (routePlatform) {
+    case 'github':
+      return syncGithub;
+    case 'gmail':
+      return syncGmail;
+    case 'google-calendar':
+      return syncGoogleCalendar;
+    case 'notion':
+      return syncNotion;
+    case 'reddit':
+      return syncReddit;
+    case 'slack':
+      return syncSlack;
+    case 'linkedin':
+      return syncLinkedin;
+    case 'discord':
+      return syncDiscord;
+    default:
+      return null;
+  }
 }
 
 function parseResponsePayload(rawBody: string) {
@@ -538,16 +571,27 @@ async function runPlatformSync(
   const startedAt = Date.now();
 
   try {
-    const response = await fetchWithTimeout(
-      `${baseUrl}/api/sync/${routePlatform}`,
-      {
+    const handler = getSyncHandler(routePlatform);
+    if (!handler) {
+      return {
+        platform,
+        routePlatform,
+        success: false,
+        status: null,
+        durationMs: Date.now() - startedAt,
+        error: `Unsupported sync platform: ${routePlatform}`,
+      };
+    }
+
+    const requestUrl = new URL(`${baseUrl}/api/sync/${routePlatform}`);
+    const response = await handler(
+      new Request(requestUrl.toString(), {
         method: 'POST',
         headers: {
           'x-cron-secret': secret,
           'x-cron-user-id': userId,
         },
-      },
-      SYNC_TIMEOUT_MS
+      })
     );
 
     const rawBody = await response.text();
@@ -588,16 +632,15 @@ async function runEmbeddingsSync(baseUrl: string, userId: string, secret: string
   const startedAt = Date.now();
 
   try {
-    const response = await fetchWithTimeout(
-      `${baseUrl}/api/sync/embeddings`,
-      {
+    const requestUrl = new URL(`${baseUrl}/api/sync/embeddings`);
+    const response = await syncEmbeddings(
+      new Request(requestUrl.toString(), {
         method: 'POST',
         headers: {
           'x-cron-secret': secret,
           'x-cron-user-id': userId,
         },
-      },
-      EMBEDDINGS_TIMEOUT_MS
+      })
     );
 
     const rawBody = await response.text();
@@ -896,6 +939,20 @@ async function runCronSync(request: Request) {
     const { userId, platform, priorRetryAttempt, status, error } = params;
     const runAttempt = toRunAttemptFromRetryAttempt(priorRetryAttempt > 0 ? priorRetryAttempt : undefined);
     const queueKey = toRetryQueueKey(userId, platform);
+
+    // Log async job failure for monitoring (Work Item #7)
+    const jobType = platform === 'embeddings' ? 'embedding' : 'sync';
+    logAsyncJobFailure(supabase, {
+      jobId: `${runId}-${userId}-${platform}-${runAttempt}`,
+      type: jobType as 'sync' | 'embedding',
+      userId,
+      platform,
+      error: error || `HTTP ${status}`,
+      timestamp: new Date().toISOString(),
+      retriable: !isNonRetriableHttpStatus(status),
+    }).catch((logError) => {
+      console.warn('[Cron Sync] Failed to log async job failure:', logError);
+    });
 
     if (isNonRetriableHttpStatus(status)) {
       retryDeadLetteredCount += 1;
@@ -1383,7 +1440,7 @@ async function runCronSync(request: Request) {
     }
   }
 
-  const observabilityWarning = [
+  let observabilityWarning = [
     logPersistenceError,
     retryQueuePersistenceError,
     deadLetterPersistenceError,
@@ -1393,6 +1450,32 @@ async function runCronSync(request: Request) {
   ]
     .filter(Boolean)
     .join(' | ') || null;
+
+  // Log cron execution metrics for monitoring (Work Item #7)
+  const cronMetricsResult = await logCronMetrics(supabase, {
+    runId,
+    durationMs: Date.now() - startedAt,
+    processedUsers: outcomes.length,
+    platformRuns: platformRuns.length,
+    platformSuccessCount,
+    platformFailureCount,
+    embeddingsAttempted: embeddingsAttempted > 0,
+    embeddingsSuccessCount,
+    embeddingsFailureCount: embeddingsAttempted - embeddingsSuccessCount,
+    retryQueueDepth: dedupedRetryQueueUpserts.length,
+    deadLetterCount24h: retryDeadLetteredCount,
+    escalationCount: escalationActiveCount,
+    successRate: platformRuns.length > 0 ? platformSuccessCount / platformRuns.length : 0,
+    timestamp: new Date().toISOString(),
+  });
+
+  if (!cronMetricsResult.success) {
+    const monitoringWarning = `Cron metrics logging failed: ${cronMetricsResult.error}`;
+    console.warn('[Cron Sync] Monitoring:', monitoringWarning);
+    observabilityWarning = observabilityWarning
+      ? `${observabilityWarning} | ${monitoringWarning}`
+      : monitoringWarning;
+  }
 
   return NextResponse.json({
     ok: true,
@@ -1429,6 +1512,7 @@ async function runCronSync(request: Request) {
       retryQueuePersisted,
       deadLetterPersisted,
       escalationPersisted,
+      cronMetricsLogged: cronMetricsResult.success,
       warning: observabilityWarning,
     },
     outcomes,

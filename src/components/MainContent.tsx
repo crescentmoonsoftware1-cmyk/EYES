@@ -50,18 +50,12 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [sumRes, platRes, feedRes] = await Promise.all([
-          fetch('/api/audit-summary', { cache: 'no-store' }),
-          fetch('/api/platform-readiness', { cache: 'no-store' }),
-          fetch('/api/memory-feed', { cache: 'no-store' })
-        ]);
-        const sP = await sumRes.json();
-        const pP = await platRes.json();
-        const fP = await feedRes.json();
+        const response = await fetch('/api/dashboard/bootstrap', { cache: 'no-store' });
+        const payload = await response.json();
 
-        if (sP?.totalMemories !== undefined) setSummary(sP);
-        if (pP?.platforms) setPlatforms(pP.platforms);
-        if (fP?.events) setFeedEvents(fP.events);
+        if (payload?.summary) setSummary(payload.summary);
+        if (payload?.platforms) setPlatforms(payload.platforms);
+        if (payload?.feedEvents) setFeedEvents(payload.feedEvents);
       } catch (err) { 
         console.error('Core Dashboard Load Failure:', err); 
       } finally { 

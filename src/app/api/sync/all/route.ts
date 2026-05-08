@@ -186,52 +186,47 @@ export async function POST(request: Request) {
       }
     };
 
-    const backgroundMode = isBackgroundMode(request);
-
-    if (backgroundMode) {
-      void Promise.allSettled(tokens.map((token) => runPlatformSync(token.platform))).then((settled) => {
-        const fulfilled = settled.filter((item): item is PromiseFulfilledResult<SyncOutcome> => item.status === 'fulfilled');
-        const successCount = fulfilled.filter((item) => item.value.success).length;
-        const failedCount = fulfilled.length - successCount + (settled.length - fulfilled.length);
-        console.log(
-          `[Sync All] Background sync complete. user=${userId} success=${successCount} failed=${failedCount}`
-        );
-      });
-
-      return NextResponse.json(
-        {
-          accepted: true,
-          mode: 'background',
-          message: `Background sync launched for ${tokens.length} platforms.`,
-          platforms: tokens.map((token) => token.platform),
-        },
-        { status: 202 }
+    void Promise.allSettled(tokens.map((token) => runPlatformSync(token.platform))).then((settled) => {
+      const fulfilled = settled.filter((item): item is PromiseFulfilledResult<SyncOutcome> => item.status === 'fulfilled');
+      const successCount = fulfilled.filter((item) => item.value.success).length;
+      const failedCount = fulfilled.length - successCount + (settled.length - fulfilled.length);
+      console.log(
+        `[Sync All] Background sync complete. user=${userId} success=${successCount} failed=${failedCount}`
       );
-    }
-
-    const results = await Promise.all(tokens.map((token) => runPlatformSync(token.platform)));
-    
-    // Trigger embeddings sync to ensure new data is searchable immediately
-    try {
-      await fetch(`${appBaseUrl}/api/sync/embeddings`, {
-        method: 'POST',
-        headers: subHeaders,
-        cache: 'no-store'
-      });
-    } catch (e) {
-      console.warn('[Sync All] Neural indexing trigger failed:', e);
-    }
-
-    const successCount = results.filter((result) => result.success).length;
-
-    return NextResponse.json({
-      accepted: true,
-      mode: 'blocking',
-      message: `Sync and neural indexing completed for ${results.length} platforms.`,
-      successCount,
-      failedCount: results.length - successCount,
-      results,
     });
+
+    void (async () => {
+      try {
+        const { data: rawEvents } = await supabase
+          .from('raw_events')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(100);
+
+        if (rawEvents && rawEvents.length > 0) {
+          const queueItems = rawEvents.map((event) => ({
+            user_id: userId,
+            raw_event_id: event.id,
+            status: 'pending',
+          }));
+
+          await supabase.from('embedding_queue').insert(queueItems);
+          console.log(`[Sync All] Queued ${queueItems.length} events for embeddings`);
+        }
+      } catch (err) {
+        console.warn('[Sync All] Failed to queue embeddings:', err);
+      }
+    })();
+
+    return NextResponse.json(
+      {
+        accepted: true,
+        mode: 'background',
+        message: `Sync launched for ${tokens.length} platforms. Check sync_status for progress.`,
+        platforms: tokens.map((token) => token.platform),
+      },
+      { status: 202 }
+    );
   } catch (err) {
     console.error('Unified Sync error:', err);
     return NextResponse.json({ error: 'Failed to initiate global sync.' }, { status: 500 });

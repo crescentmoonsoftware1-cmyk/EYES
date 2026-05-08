@@ -112,19 +112,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/connect/notion?oauth=error&reason=token_persist_failed', baseUrl));
   }
 
-  // Trigger immediate automatic background sync
-  try {
-    const syncUrl = new URL('/api/sync/notion?background=true', baseUrl);
-    fetch(syncUrl.toString(), { 
-      method: 'POST',
-      headers: {
-        'x-cron-user-id': authData.user.id,
-        'x-cron-secret': process.env.CRON_SECRET || ''
-      }
-    }).catch(e => console.error('[Auto Sync] Notion initial trigger failed:', e));
-  } catch (e) {
-    console.warn('[Auto Sync] Notion trigger error:', e);
-  }
-
+  // Sync is triggered by cron (runs every 5 minutes)
+  // Returning immediately gives faster user feedback
   return NextResponse.redirect(new URL('/connect/notion?oauth=success', baseUrl));
 }
