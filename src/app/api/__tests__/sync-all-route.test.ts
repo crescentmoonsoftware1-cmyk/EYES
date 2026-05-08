@@ -88,10 +88,10 @@ describe('POST /api/sync/all', () => {
 
     const response = await POST(new Request('http://localhost/api/sync/all', { method: 'POST' }));
     const payload = (await response.json()) as {
+      accepted: boolean;
       mode: string;
-      successCount: number;
-      failedCount: number;
-      results: Array<{ platform: string; routePlatform: string; success: boolean; status: number | null }>;
+      message: string;
+      platforms: string[];
     };
 
     fetchMock.mockRestore();
