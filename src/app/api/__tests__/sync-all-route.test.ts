@@ -96,16 +96,10 @@ describe('POST /api/sync/all', () => {
 
     fetchMock.mockRestore();
 
-    expect(response.status).toBe(200);
-    expect(payload.mode).toBe('blocking');
-    expect(payload.successCount).toBe(1);
-    expect(payload.failedCount).toBe(1);
-    expect(payload.results).toHaveLength(2);
-
-    const googleCalendarResult = payload.results.find((result) => result.platform === 'google_calendar');
-    expect(googleCalendarResult?.routePlatform).toBe('google-calendar');
-    expect(googleCalendarResult?.success).toBe(false);
-    expect(googleCalendarResult?.status).toBe(502);
+    expect(response.status).toBe(202);
+    expect(payload.accepted).toBe(true);
+    expect(payload.mode).toBe('background');
+    expect(payload.platforms).toHaveLength(2);
 
     expect(upsertSyncStatusSafelyMock).toHaveBeenCalled();
   });

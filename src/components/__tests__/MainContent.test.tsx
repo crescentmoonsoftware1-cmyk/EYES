@@ -20,27 +20,29 @@ describe("MainContent", () => {
     const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = typeof input === "string" ? input : input.toString();
 
-      if (url.includes("/api/audit-summary")) {
+      if (url.includes("/api/dashboard/bootstrap")) {
         return new Response(
           JSON.stringify({
-            totalMemories: 20000,
-            overallRisk: "LIGHT",
-            riskCounts: { heavy: 0, direct: 1, light: 3 },
-            flaggedItems: [
-              {
-                id: "item-1",
-                severity: "LIGHT",
-                platform: "GitHub",
-                date: "Jan 1, 2024",
-                content: "Example flagged item",
-              },
-            ],
-            comparisonData: [
-              {
-                eyes: "1 item found",
-                recruiter: "Might find 0",
-              },
-            ],
+            summary: {
+              totalMemories: 20000,
+              overallRisk: "LIGHT",
+              riskCounts: { heavy: 0, direct: 1, light: 3 },
+              flaggedItems: [
+                {
+                  id: "item-1",
+                  severity: "LIGHT",
+                  platform: "GitHub",
+                  date: "Jan 1, 2024",
+                  content: "Example flagged item",
+                },
+              ],
+              comparisonData: [
+                {
+                  eyes: "1 item found",
+                  recruiter: "Might find 0",
+                },
+              ],
+            }
           }),
           { status: 200 }
         );
