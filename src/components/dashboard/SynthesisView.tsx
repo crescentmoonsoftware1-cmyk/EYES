@@ -17,25 +17,29 @@ import type { Message } from '@/types/dashboard';
  * No external library needed — safe since content is AI-generated (not user HTML).
  */
 function renderMarkdown(text: string): string {
-  return text
-    // Bold: **text** or __text__
+  // Process line-by-line to wrap <li> groups in <ul> without needing the `s` flag
+  const lines = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.*?)__/g, '<strong>$1</strong>')
-    // Italic: *text* or _text_ (only if not double)
     .replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
-    // Bullet list lines: lines starting with * or - or •
     .replace(/^[\*\-•]\s+(.+)$/gm, '<li>$1</li>')
-    // Numbered list lines: lines starting with 1. 2. etc
     .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
-    // Wrap consecutive <li> blocks in <ul>
-    .replace(/(<li>.*<\/li>)/gs, '<ul style="margin: 6px 0 6px 16px; padding: 0; list-style: disc;">$1</ul>')
-    // Double newline → paragraph break
-    .replace(/\n\n/g, '</p><p style="margin: 8px 0;">')
-    // Single newline → line break
-    .replace(/\n/g, '<br />')
-    // Wrap whole thing in a paragraph
-    .replace(/^/, '<p style="margin: 0;">')
-    .replace(/$/, '</p>');
+    .split('\n');
+
+  const result: string[] = [];
+  let inList = false;
+  for (const line of lines) {
+    if (line.startsWith('<li>')) {
+      if (!inList) { result.push('<ul style="margin: 6px 0 6px 16px; padding: 0; list-style: disc;">'); inList = true; }
+      result.push(line);
+    } else {
+      if (inList) { result.push('</ul>'); inList = false; }
+      result.push(line);
+    }
+  }
+  if (inList) result.push('</ul>');
+
+  return '<p style="margin: 0;">' + result.join('\n').replace(/\n\n/g, '</p><p style="margin: 8px 0;">').replace(/\n/g, '<br />') + '</p>';
 }
 
 interface SynthesisViewProps {
