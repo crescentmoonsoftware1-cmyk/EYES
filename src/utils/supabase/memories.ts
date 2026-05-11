@@ -80,9 +80,9 @@ export async function upsertMemoriesSafely(
           const embeddingResult = await generateEmbedding(textToEmbed);
           const embedding = embeddingResult?.embedding ?? null;
 
-          // IMPORTANT: only include 'embedding' in the upsert if we have a real value.
-          // If we set embedding: null on an existing row, it overwrites the stored embedding.
-          const baseFields = {
+          // Build the upsert payload — only include embedding when non-null.
+          // If embedding failed (429/null), the existing embedded value is preserved.
+          const upsertPayload: Record<string, unknown> = {
             user_id: row.user_id,
             platform: row.platform,
             source_id: row.source_id,
@@ -98,10 +98,9 @@ export async function upsertMemoriesSafely(
             flag_reason: row.flag_reason ?? null,
             updated_at: new Date().toISOString(),
           };
-
-          const upsertPayload = embedding
-            ? { ...baseFields, embedding }   // include embedding only when we have it
-            : baseFields;                    // leave existing embedding untouched on conflict
+          if (embedding !== null) {
+            upsertPayload.embedding = embedding;
+          }
 
           const { error } = await supabase.from('memories').upsert(
             upsertPayload,
