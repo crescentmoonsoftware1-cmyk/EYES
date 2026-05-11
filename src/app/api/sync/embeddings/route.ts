@@ -23,7 +23,8 @@ export async function POST(request: Request) {
       .select('id, platform, event_type, title, content, embeddings(id)')
       .eq('user_id', userId)
       .not('content', 'is', null)
-      .limit(40); // Process in smaller chunks to avoid timeouts
+      .limit(200); // Voyage AI has 200M free tokens — batch 200 items safely
+
 
     if (fetchError) throw fetchError;
 
