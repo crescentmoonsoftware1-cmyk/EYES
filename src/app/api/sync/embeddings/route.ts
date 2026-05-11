@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { generateEmbedding } from '@/services/ai/ai';
-import { buildDeterministicChunks } from '@/services/ai/chunking';
 import { resolveSyncActor } from '@/utils/sync/actor';
 
 /**
- * Background worker to generate embeddings for all 'raw_events' that haven't been indexed.
- * Optimized for high-throughput memory synthesis.
+ * Background worker — generates embeddings for memories that have NULL embedding.
+ * Targets the unified `memories` table (not the old raw_events/embeddings split).
+ * Uses Voyage AI (primary) with Gemini fallback. Processes 200 items per call.
  */
 export async function POST(request: Request) {
   try {
@@ -16,104 +16,104 @@ export async function POST(request: Request) {
 
     const { supabase, userId } = actor;
 
-    // 1. Find events that don't have embeddings yet
-    // Using the 'id' field of the joined 'embeddings' table to check for null
-    const { data: events, error: fetchError } = await supabase
-      .from('raw_events')
-      .select('id, platform, event_type, title, content, embeddings(id)')
+    // 1. Fetch memories that haven't been embedded yet
+    const { data: memories, error: fetchError } = await supabase
+      .from('memories')
+      .select('id, platform, event_type, title, content')
       .eq('user_id', userId)
+      .is('embedding', null)
       .not('content', 'is', null)
-      .limit(200); // Voyage AI has 200M free tokens — batch 200 items safely
-
+      .limit(200); // Voyage AI: 200M free tokens — safe to batch 200 items
 
     if (fetchError) throw fetchError;
 
-    // Filter manually for rows where embeddings array is empty
-    const pendingEvents = (events || []).filter(e => !e.embeddings || (Array.isArray(e.embeddings) && e.embeddings.length === 0));
+    if (!memories || memories.length === 0) {
+      // Count total embedded for the response
+      const { count: totalIndexed } = await supabase
+        .from('memories')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .not('embedding', 'is', null);
 
-    if (pendingEvents.length === 0) {
-      return NextResponse.json({ message: 'Neural index is current.', count: 0 });
+      return NextResponse.json({
+        message: 'Neural index is current — all memories embedded.',
+        indexed: 0,
+        totalAtUser: totalIndexed ?? 0,
+      });
     }
 
-    console.log(`[AI-Brain] Found ${pendingEvents.length} new events. Indexing memories for user ${userId}...`);
+    console.log(`[AI-Brain] Found ${memories.length} un-embedded memories for user ${userId}. Starting indexing...`);
 
     let successCount = 0;
-    let indexedChunkCount = 0;
     let quotaExhausted = false;
 
-    for (const event of pendingEvents) {
+    for (const memory of memories) {
       if (quotaExhausted) break;
 
       try {
-        const chunks = buildDeterministicChunks({
-          platform: event.platform,
-          eventType: event.event_type,
-          title: event.title,
-          content: event.content || '',
-        });
+        // Build the text to embed from the memory fields
+        const textToEmbed = [
+          memory.title,
+          memory.content,
+        ].filter(Boolean).join('\n').slice(0, 8000);
 
-        let insertedChunks = 0;
+        if (!textToEmbed.trim()) continue;
 
-        for (const chunk of chunks) {
-          if (quotaExhausted) break;
+        const result = await generateEmbedding(textToEmbed);
 
-          const result = await generateEmbedding(chunk);
-          if (!result) {
-            // generateEmbedding returns null when BOTH providers 429'd
-            console.warn(`[AI-Brain] Both providers quota-exhausted on event ${event.id}. Stopping batch.`);
-            quotaExhausted = true;
-            break;
-          }
-
-          const { error: insertError } = await supabase
-            .from('embeddings')
-            .insert({
-              user_id: userId,
-              event_id: event.id,
-              content: chunk,
-              embedding: result.embedding,
-            });
-
-          if (insertError) {
-            console.warn('[AI-Brain] Persistence failed:', insertError.message);
-            continue;
-          }
-
-          insertedChunks += 1;
-          // Small delay to respect free-tier rate limits (300 req/min for Gemini)
-          await new Promise(r => setTimeout(r, 250));
+        if (!result) {
+          console.warn(`[AI-Brain] Both embedding providers exhausted on memory ${memory.id}. Stopping batch.`);
+          quotaExhausted = true;
+          break;
         }
 
-        if (insertedChunks > 0) {
-          successCount += 1;
-          indexedChunkCount += insertedChunks;
+        // Update the embedding column directly on the memories row
+        const { error: updateError } = await supabase
+          .from('memories')
+          .update({ embedding: result.embedding })
+          .eq('id', memory.id)
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.warn(`[AI-Brain] Failed to save embedding for memory ${memory.id}:`, updateError.message);
+          continue;
         }
+
+        successCount += 1;
+        // 250ms delay — keeps us well within Voyage's rate limits
+        await new Promise(r => setTimeout(r, 250));
+
       } catch (err) {
-        console.error(`[AI-Brain] Failed to index event ${event.id}:`, err);
+        console.error(`[AI-Brain] Error embedding memory ${memory.id}:`, err);
       }
     }
 
     if (quotaExhausted) {
-      console.warn('[AI-Brain] Batch stopped early — embedding quota exhausted. Will resume on next cron run.');
+      console.warn('[AI-Brain] Batch stopped early — quota exhausted. Will resume on next run.');
     }
 
-    // Update user profile with new count
+    // Count total embedded now
     const { count: totalIndexed } = await supabase
-      .from('embeddings')
+      .from('memories')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .not('embedding', 'is', null);
 
+    // Update user profile counter
     await supabase
       .from('user_profiles')
-      .update({ memories_indexed: totalIndexed || 0, updated_at: new Date().toISOString() })
+      .update({ memories_indexed: totalIndexed ?? 0, updated_at: new Date().toISOString() })
       .eq('user_id', userId);
 
-    return NextResponse.json({ 
-      message: `Neural indexing cycle complete.`, 
+    console.log(`[AI-Brain] Batch done — embedded ${successCount} memories. Total indexed: ${totalIndexed}`);
+
+    return NextResponse.json({
+      message: 'Neural indexing cycle complete.',
       indexed: successCount,
-      indexedChunks: indexedChunkCount,
-      totalAtUser: totalIndexed
+      totalAtUser: totalIndexed ?? 0,
+      quotaExhausted,
     });
+
   } catch (err) {
     console.error('[AI-Brain] Deep indexing failure:', err);
     return NextResponse.json({ error: 'Internal neural link failure during indexing.' }, { status: 500 });
