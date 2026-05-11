@@ -80,24 +80,31 @@ export async function upsertMemoriesSafely(
           const embeddingResult = await generateEmbedding(textToEmbed);
           const embedding = embeddingResult?.embedding ?? null;
 
+          // IMPORTANT: only include 'embedding' in the upsert if we have a real value.
+          // If we set embedding: null on an existing row, it overwrites the stored embedding.
+          const baseFields = {
+            user_id: row.user_id,
+            platform: row.platform,
+            source_id: row.source_id,
+            event_type: row.event_type ?? null,
+            title: row.title ?? null,
+            content: row.content,
+            author: row.author ?? null,
+            source_url: row.source_url ?? null,
+            timestamp: row.timestamp ?? null,
+            metadata: row.metadata ?? {},
+            is_flagged: row.is_flagged ?? false,
+            flag_severity: row.flag_severity ?? null,
+            flag_reason: row.flag_reason ?? null,
+            updated_at: new Date().toISOString(),
+          };
+
+          const upsertPayload = embedding
+            ? { ...baseFields, embedding }   // include embedding only when we have it
+            : baseFields;                    // leave existing embedding untouched on conflict
+
           const { error } = await supabase.from('memories').upsert(
-            {
-              user_id: row.user_id,
-              platform: row.platform,
-              source_id: row.source_id,
-              event_type: row.event_type ?? null,
-              title: row.title ?? null,
-              content: row.content,
-              author: row.author ?? null,
-              source_url: row.source_url ?? null,
-              timestamp: row.timestamp ?? null,
-              metadata: row.metadata ?? {},
-              is_flagged: row.is_flagged ?? false,
-              flag_severity: row.flag_severity ?? null,
-              flag_reason: row.flag_reason ?? null,
-              embedding,   // null if embedding failed — row still stored, searchable via FTS
-              updated_at: new Date().toISOString(),
-            },
+            upsertPayload,
             { onConflict: 'user_id,platform,source_id' }
           );
 
