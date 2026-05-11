@@ -3,15 +3,11 @@
 	"crons": [
 		{
 			"path": "/api/cron/sync",
-			"schedule": "0 */6 * * *"
+			"schedule": "0 0 * * *"
 		},
 		{
 			"path": "/api/cron/embeddings",
-			"schedule": "30 */6 * * *"
-		},
-		{
-			"path": "/api/cron/retry-remediation",
-			"schedule": "15 */6 * * *"
+			"schedule": "0 1 * * *"
 		}
 	]
 }
