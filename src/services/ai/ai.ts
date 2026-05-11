@@ -1,4 +1,4 @@
-﻿import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
+import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from '@/utils/supabase/server';
 import crypto from 'crypto';
@@ -75,50 +75,22 @@ export async function invokeModel(options: AIInvokeOptions): Promise<any> {
  * Internal: Handle 768d Embeddings via Gemini
  */
 async function handleEmbedding(text: string) {
-  // Prefer Gemini embeddings when available
-  if (GEMINI_API_KEY) {
-    try {
-      const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
-      const result = await model.embedContent({
-        content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
-        taskType: TaskType.RETRIEVAL_QUERY,
-      });
-      return { embedding: Array.from(result.embedding.values) };
-    } catch (err: any) {
-      console.error('[AI] Gemini embedding failed:', err?.message || err);
-      // fallthrough to OpenAI fallback if available
-    }
+  if (!GEMINI_API_KEY) {
+    console.error('[AI] GEMINI_API_KEY not set — cannot generate embedding');
+    return null;
   }
-
-  // OpenAI fallback (text-embedding-3-small)
-  // Paste your OpenAI API key in .env.local as OPENAI_API_KEY=...
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-  if (OPENAI_API_KEY) {
-    try {
-      const res = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({ input: text.slice(0, 8000), model: 'text-embedding-3-small' })
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        console.warn('[AI Abstraction] OpenAI embedding failed:', res.status, txt);
-        return null;
-      }
-      const body = await res.json();
-      const emb = body?.data?.[0]?.embedding;
-      if (!emb) return null;
-      return { embedding: emb };
-    } catch (err) {
-      console.error('[AI Abstraction] OpenAI embedding error:', err);
-      return null;
-    }
+  try {
+    const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
+    const result = await model.embedContent({
+      content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
+      taskType: TaskType.RETRIEVAL_QUERY,
+      outputDimensionality: 768, // must match stored vector(768) column
+    });
+    return { embedding: Array.from(result.embedding.values) };
+  } catch (err: any) {
+    console.error('[AI] Gemini embedding failed:', err?.message || err);
+    return null;
   }
-
-  return null;
 }
 
 /**
