@@ -43,15 +43,49 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     };
     
     fetchLatest();
-
-    // Auto-refresh if in progress
-    let interval: any;
-    if (activeAudit && (activeAudit.status === 'pending' || activeAudit.status === 'analysis' || activeAudit.status === 'generating')) {
-      interval = setInterval(fetchLatest, 5000);
-    }
     
-    return () => clearInterval(interval);
+    // keep existing load behavior; polling of a specific audit is handled
+    // by a dedicated effect that watches `activeAudit.id` so we can
+    // perform near-real-time updates for the in-progress audit.
+    return () => {};
   }, [activeAudit?.status]);
+
+  // Poll a specific audit by id so the UI updates in near-real-time
+  useEffect(() => {
+    if (!activeAudit?.id) return;
+
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      try {
+        const res = await fetch(`/api/audit/${activeAudit.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data) return;
+
+        setActiveAudit(prev => ({ ...(prev || {}), ...data } as any));
+
+        if (data.status === 'completed') {
+          setAuditMode('completed');
+          stopped = true;
+        }
+        if (data.status === 'failed') {
+          setAuditMode('dashboard');
+          stopped = true;
+        }
+      } catch (err) {
+        console.warn('[Audit Poll] failed to fetch audit status:', err);
+      }
+    };
+
+    // Start immediate poll and then interval
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [activeAudit?.id]);
 
 
   const handleStartAudit = async (type: string = 'full') => {

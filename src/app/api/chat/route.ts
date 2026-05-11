@@ -17,17 +17,25 @@ type RawEventCitationRow = {
 
 type HybridSearchRow = {
   id: string;
+  platform: string;
+  source_id: string;
+  event_type: string | null;
+  title: string | null;
   content: string;
+  author: string | null;
+  source_url: string | null;
+  timestamp: string | null;
+  metadata: Record<string, unknown>;
+  is_flagged: boolean;
   similarity: number;
+  keyword_rank: number;
   combined_score: number;
 };
 
 type ChatCitation = {
   sourceId: number;
-  embeddingId: string;
-  eventId: string | null;
+  memoryId: string;
   platform: string;
-  platformId: string | null;
   title: string | null;
   eventType: string | null;
   author: string | null;
@@ -148,36 +156,22 @@ export async function POST(request: Request) {
       if (matchError) {
         retrievalError = matchError.message;
       } else if (matches && (matches as HybridSearchRow[]).length > 0) {
-        const rerankedRows = (matches as HybridSearchRow[]).sort((a, b) => b.combined_score - a.combined_score).slice(0, 8);
-        const uniqueEventIds = Array.from(new Set(rerankedRows.map(row => row.id)));
-        
-        let eventMap = new Map<string, RawEventCitationRow>();
-        if (uniqueEventIds.length > 0) {
-          const { data: eventRows } = await supabase
-            .from('raw_events')
-            .select('id,platform,platform_id,title,event_type,author,timestamp')
-            .eq('user_id', user.id)
-            .in('id', uniqueEventIds);
-          eventMap = new Map(((eventRows ?? []) as RawEventCitationRow[]).map((row) => [row.id, row]));
-        }
+        const rerankedRows = (matches as HybridSearchRow[])
+          .sort((a, b) => b.combined_score - a.combined_score)
+          .slice(0, 8);
 
-        citations = rerankedRows.map((match, index) => {
-          const source = eventMap.get(match.id);
-          return {
-            sourceId: index + 1,
-            embeddingId: match.id,
-            eventId: match.id,
-            platform: source?.platform ?? 'unknown',
-            platformId: source?.platform_id ?? null,
-            title: source?.title ?? null,
-            eventType: source?.event_type ?? null,
-            author: source?.author ?? null,
-            timestamp: source?.timestamp ?? null,
-            similarity: Number((match.similarity ?? 0).toFixed(4)),
-            rerankScore: Number((match.combined_score ?? 0).toFixed(4)),
-            snippet: maskPII((match.content || '').slice(0, 420)),
-          };
-        });
+        citations = rerankedRows.map((match, index) => ({
+          sourceId: index + 1,
+          memoryId: match.id,
+          platform: match.platform ?? 'unknown',
+          title: match.title ?? null,
+          eventType: match.event_type ?? null,
+          author: match.author ?? null,
+          timestamp: match.event_timestamp ?? null,
+          similarity: Number((match.similarity ?? 0).toFixed(4)),
+          rerankScore: Number((match.combined_score ?? 0).toFixed(4)),
+          snippet: maskPII((match.content || '').slice(0, 420)),
+        }));
 
         context = citations
           .map((citation) => {

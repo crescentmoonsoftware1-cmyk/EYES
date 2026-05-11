@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
+﻿import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from '@/utils/supabase/server';
 import crypto from 'crypto';
@@ -8,9 +8,12 @@ import crypto from 'crypto';
  * All model invocations must route through the unified 'invokeModel' interface.
  */
 
+// Paste your Anthropic API key in .env.local as ANTHROPIC_API_KEY=...
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+let anthropicEnabled = Boolean(ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith('sk-ant-'));
 
+// Paste your Gemini API key in .env.local as GEMINI_API_KEY=...
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''; 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -18,7 +21,7 @@ const CLAUDE_MODEL = "claude-3-5-sonnet-20240620";
 const GEMINI_CHAT_MODEL = "gemini-flash-latest"; // Verified stable in 2026 env
 const EMBED_MODEL = "gemini-embedding-001";
 
-export type AIPreference = 'claude' | 'mistral' | 'openai' | 'auto';
+export type AIPreference = 'claude' | 'gemini' | 'auto';
 export type AICapability = 'chat' | 'embed' | 'classify';
 
 export interface AIHistoryMessage {
@@ -72,18 +75,50 @@ export async function invokeModel(options: AIInvokeOptions): Promise<any> {
  * Internal: Handle 768d Embeddings via Gemini
  */
 async function handleEmbedding(text: string) {
-  if (!GEMINI_API_KEY) return null;
-  try {
-    const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
-    const result = await model.embedContent({
-      content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
-      taskType: TaskType.RETRIEVAL_QUERY,
-    });
-    return { embedding: Array.from(result.embedding.values) };
-  } catch (err) {
-    console.error('[AI Abstraction] Embedding Error:', err);
-    return null;
+  // Prefer Gemini embeddings when available
+  if (GEMINI_API_KEY) {
+    try {
+      const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
+      const result = await model.embedContent({
+        content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
+        taskType: TaskType.RETRIEVAL_QUERY,
+      });
+      return { embedding: Array.from(result.embedding.values) };
+    } catch (err: any) {
+      console.error('[AI] Gemini embedding failed:', err?.message || err);
+      // fallthrough to OpenAI fallback if available
+    }
   }
+
+  // OpenAI fallback (text-embedding-3-small)
+  // Paste your OpenAI API key in .env.local as OPENAI_API_KEY=...
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+  if (OPENAI_API_KEY) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({ input: text.slice(0, 8000), model: 'text-embedding-3-small' })
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.warn('[AI Abstraction] OpenAI embedding failed:', res.status, txt);
+        return null;
+      }
+      const body = await res.json();
+      const emb = body?.data?.[0]?.embedding;
+      if (!emb) return null;
+      return { embedding: emb };
+    } catch (err) {
+      console.error('[AI Abstraction] OpenAI embedding error:', err);
+      return null;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -101,7 +136,7 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
 
   const targetProvider = (preference === 'auto' || preference === 'claude') ? 'claude' : 'gemini';
 
-  if (targetProvider === 'claude' && ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
+  if (targetProvider === 'claude' && anthropicEnabled && anthropic) {
     try {
       const response = await anthropic.messages.create({
         model: CLAUDE_MODEL,
@@ -112,22 +147,33 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
       });
 
       const contentBlock = response.content[0];
-      if (contentBlock.type === 'text') return contentBlock.text;
+      if (contentBlock && contentBlock.type === 'text') return contentBlock.text;
     } catch (err: any) {
-      console.warn(`[AI Abstraction] Claude failed, falling back to Gemini.`);
+      // If Anthropic reports billing/credit errors, disable it for the runtime to avoid noisy failures
+      const msg = err?.error?.error?.message || err?.message || String(err);
+      if (typeof msg === 'string' && /credit|balance|billing|quota/i.test(msg)) {
+        anthropicEnabled = false;
+        console.warn('[AI Abstraction] Disabling Anthropic (billing/credit issue):', msg);
+      } else {
+        console.warn('[AI Abstraction] Claude failed, falling back to Gemini:', msg);
+      }
     }
   }
 
   // Gemini Execution (Fallback or Explicit)
   try {
     const model = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-    const result = await model.generateContent({
+    const contentConfig: any = {
       contents: history.map(h => ({ 
         role: h.role === 'assistant' ? 'model' : 'user', 
         parts: [{ text: h.content }] 
       })),
-      systemInstruction: system,
-    });
+    };
+    // Only set systemInstruction if non-empty (Gemini API requirement)
+    if (system && system.trim()) {
+      contentConfig.systemInstruction = system;
+    }
+    const result = await model.generateContent(contentConfig);
     return result.response.text();
   } catch (err) {
     console.error('[AI Abstraction] All real-world models failed in handleChat:', err);
@@ -149,7 +195,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
       content: m.content 
     }));
 
-  if (ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
+  if (anthropicEnabled && anthropic) {
     try {
       const stream = await anthropic.messages.stream({
         model: CLAUDE_MODEL,
@@ -184,10 +230,13 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
     async start(controller) {
       try {
         const model = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-        const result = await model.generateContent({
+        const contentConfig: any = {
           contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
-          systemInstruction: system,
-        });
+        };
+        if (system && system.trim()) {
+          contentConfig.systemInstruction = system;
+        }
+        const result = await model.generateContent(contentConfig);
         controller.enqueue(encoder.encode(result.response.text()));
       } catch (err) {
         console.error('[AI Stream] Gemini fallback failed:', err);

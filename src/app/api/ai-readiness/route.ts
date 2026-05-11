@@ -16,8 +16,8 @@ type ReadinessPayload = {
   model: string;
   reason: string;
   checks: {
-    openaiEmbeddings: ReadinessCheck;
-    openaiChat: ReadinessCheck;
+    claudeChat: ReadinessCheck;
+    geminiChat: ReadinessCheck;
     supabase: ReadinessCheck;
   };
   lastCheckedAt: string;

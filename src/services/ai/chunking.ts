@@ -12,7 +12,7 @@ export interface ChunkInput {
   content: string;
 }
 
-const MAX_CHUNK_SIZE = 1200; // Optimal for text-embedding-3-small
+const MAX_CHUNK_SIZE = 1200; // Optimized for Gemini embedding-001 context window
 const CHUNK_OVERLAP = 200;
 
 /**

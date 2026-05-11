@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
+import { upsertMemoriesSafely, upsertSyncStatusSafely } from '@/utils/supabase/memories';
 import { getValidGithubToken } from '@/utils/oauth';
 import { scoreGithubEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
@@ -70,9 +70,11 @@ export async function POST(request: Request) {
     }
 
     const url = new URL(request.url);
-    const depth = url.searchParams.get('depth') || 'shallow';
+    const mode = url.searchParams.get('mode') || 'delta';
+    const isBackfill = mode === 'backfill';
     const perPage = 100;
-    const maxTotal = depth === 'deep' ? 500 : 30;
+    // No cap in backfill mode — fetch all repos
+    const maxTotal = isBackfill ? Infinity : 100;
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
@@ -144,7 +146,7 @@ export async function POST(request: Request) {
       return {
         user_id: userId,
         platform: 'github',
-        platform_id: String(repo.id),
+        source_id: String(repo.id),   // GitHub's numeric repo ID as string
         event_type: 'repository',
         title: repo.full_name,
         content,
@@ -166,10 +168,11 @@ export async function POST(request: Request) {
       };
     }));
 
-    await upsertRawEventsSafely(supabase, rawEvents);
+    const upsertResult = await upsertMemoriesSafely(supabase, rawEvents);
+    console.log(`[GitHub Sync] Upserted ${upsertResult.inserted} memories, ${upsertResult.errors} errors for user ${userId}`);
 
     const { count: totalMemories } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 

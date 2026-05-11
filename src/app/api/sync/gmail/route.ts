@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
+import { upsertMemoriesSafely, upsertSyncStatusSafely } from '@/utils/supabase/memories';
 import { getValidGoogleToken } from '@/utils/oauth';
 import { scoreGmailEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
@@ -100,9 +100,13 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     const url = new URL(request.url);
-    const depth = url.searchParams.get('depth') || 'shallow';
-    const maxResultsPerPage = 100; 
-    const maxTotalResults = depth === 'deep' ? 500 : 20; // Increased for better "Engine" feel
+    // 'backfill' mode fetches entire history; 'delta' only fetches new items since last sync
+    const mode = url.searchParams.get('mode') || 'delta';
+    const isBackfill = mode === 'backfill';
+    const maxResultsPerPage = 100;
+    // No cap in backfill mode — paginate until the API returns no more pages
+    // Delta mode: fetch up to 200 recent items (fast, catches up quickly)
+    const maxTotalResults = isBackfill ? Infinity : 200;
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
@@ -118,14 +122,16 @@ export async function POST(request: Request) {
     }
 
     let allMessageIds: string[] = [];
-    let nextPageToken: string | undefined = currentStatus?.cursor || undefined;
+    // In backfill mode resume from saved cursor; in delta mode always start fresh
+    let nextPageToken: string | undefined = isBackfill
+      ? (currentStatus?.cursor || undefined)
+      : undefined;
     let hasMore = true;
 
-    // --- PAGINATION LOOP ---
-    // We continue from where we left off (nextPageToken)
+    // --- PAGINATION LOOP (no hard cap in backfill mode) ---
     while (allMessageIds.length < maxTotalResults && hasMore) {
       const fetchUrl = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
-      fetchUrl.searchParams.set('maxResults', Math.min(maxResultsPerPage, maxTotalResults - allMessageIds.length).toString());
+      fetchUrl.searchParams.set('maxResults', String(maxResultsPerPage));
       if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
 
       const listResponse = await fetch(fetchUrl.toString(), {
@@ -141,12 +147,14 @@ export async function POST(request: Request) {
       const listBody = (await listResponse.json()) as { messages?: Array<{ id: string }>, nextPageToken?: string };
       const pageIds = (listBody.messages ?? []).map((m) => m.id);
       allMessageIds = [...allMessageIds, ...pageIds];
-      
+
       nextPageToken = listBody.nextPageToken;
       if (!nextPageToken) {
         hasMore = false;
         break;
       }
+      // Respect Gmail API rate limits between page fetches
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     const messages: GmailMessageResponse[] = [];
@@ -209,7 +217,7 @@ export async function POST(request: Request) {
       return {
         user_id: userId,
         platform: 'gmail',
-        platform_id: message.id,
+        source_id: message.id,    // maps to platform's original ID
         event_type: 'email',
         title: subject,
         content,
@@ -228,10 +236,12 @@ export async function POST(request: Request) {
       };
     }));
 
-    await upsertRawEventsSafely(supabase, events);
+    // upsertMemoriesSafely: stores to unified memories table AND generates embeddings inline
+    const upsertResult = await upsertMemoriesSafely(supabase, events);
+    console.log(`[Gmail Sync] Upserted ${upsertResult.inserted} memories, ${upsertResult.errors} errors for user ${userId}`);
 
     const { count: totalMemories } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 
