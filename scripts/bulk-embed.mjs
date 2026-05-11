@@ -1,15 +1,22 @@
-/**
- * bulk-embed.mjs
- * Directly embeds all memories with embedding=NULL using Voyage AI + Supabase service role.
- * Run with: node scripts/bulk-embed.mjs
- */
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
-const SUPABASE_URL    = 'https://rwywnbkvbztzosvbmrqw.supabase.co';
-const SERVICE_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3eXduYmt2Ynp0em9zdmJtcnF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTcyNzkzNiwiZXhwIjoyMDkxMzAzOTM2fQ.n3Ybhin5uIvUA5WJa5r9xh9sZB1v4S916a8gb9bJf50';
-const VOYAGE_API_KEY  = 'pa-Bwc2yB6973rfiqE6DKfdC4isEgP6iIn7PqodWngqoHb';
-const USER_ID         = '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
-const BATCH_SIZE      = 8;   // 3 RPM free limit — 8 texts × ~500 tokens avg = ~4K TPM
-const VOYAGE_MODEL    = 'voyage-context-3'; // 200M free tokens
+// Load .env.local — never hardcode keys in scripts committed to git
+const envPath = resolve(process.cwd(), '.env.local');
+const envVars = {};
+try {
+  readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    const [k, ...v] = line.split('=');
+    if (k && v.length) envVars[k.trim()] = v.join('=').trim().replace(/^"|"$/g, '');
+  });
+} catch {}
+
+const SUPABASE_URL   = envVars.NEXT_PUBLIC_SUPABASE_URL   || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY    = envVars.SUPABASE_SERVICE_ROLE_KEY  || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const VOYAGE_API_KEY = envVars.VOYAGE_API_KEY             || process.env.VOYAGE_API_KEY;
+const USER_ID        = '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
+const BATCH_SIZE     = 8;
+const VOYAGE_MODEL   = 'voyage-context-3'; // 200M free tokens
 
 const headers = {
   'apikey': SERVICE_KEY,

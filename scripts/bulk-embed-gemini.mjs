@@ -1,14 +1,19 @@
-/**
- * bulk-embed-gemini.mjs
- * Uses @supabase/supabase-js + Gemini embeddings to index all NULL memories.
- * 15 RPM safe rate — 1 item every 4 seconds.
- * Run: node scripts/bulk-embed-gemini.mjs
- */
-import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
-const SUPABASE_URL = 'https://rwywnbkvbztzosvbmrqw.supabase.co';
-const SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3eXduYmt2Ynp0em9zdmJtcnF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTcyNzkzNiwiZXhwIjoyMDkxMzAzOTM2fQ.n3Ybhin5uIvUA5WJa5r9xh9sZB1v4S916a8gb9bJf50';
-const GEMINI_KEY   = 'AIzaSyD3dCq5UC8VVvvb-9V7sjSc3UP92rry5SA';
+// Load .env.local
+const envPath = resolve(process.cwd(), '.env.local');
+const envVars = {};
+try {
+  readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    const [k, ...v] = line.split('=');
+    if (k && v.length) envVars[k.trim()] = v.join('=').trim().replace(/^"|"$/g, '');
+  });
+} catch {}
+
+const SUPABASE_URL = envVars.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = envVars.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const GEMINI_KEY   = envVars.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 const USER_ID      = '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
 const DELAY_MS     = 4000;   // 4s gap = 15 RPM, under Gemini's 20 RPM free limit
 const EMBED_MODEL  = 'gemini-embedding-001';
