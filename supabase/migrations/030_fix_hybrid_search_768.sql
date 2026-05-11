@@ -68,7 +68,7 @@ AS $$
     AND (start_date IS NULL OR m.timestamp >= start_date)
     AND (end_date   IS NULL OR m.timestamp <= end_date)
     AND (
-      (1 - (m.embedding <=> query_embedding)) > 0.35
+      (1 - (m.embedding <=> query_embedding)) > 0.15   -- lowered from 0.35 for better recall
       OR m.fts @@ websearch_to_tsquery('english', query_text)
     )
   ORDER BY combined_score DESC
