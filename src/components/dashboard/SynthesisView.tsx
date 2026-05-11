@@ -11,6 +11,33 @@ import { useRouter } from 'next/navigation';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { Message } from '@/types/dashboard';
 
+/**
+ * Lightweight inline markdown renderer.
+ * Converts bold, bullet lists, numbered lists, and line breaks to HTML.
+ * No external library needed — safe since content is AI-generated (not user HTML).
+ */
+function renderMarkdown(text: string): string {
+  return text
+    // Bold: **text** or __text__
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+    // Italic: *text* or _text_ (only if not double)
+    .replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+    // Bullet list lines: lines starting with * or - or •
+    .replace(/^[\*\-•]\s+(.+)$/gm, '<li>$1</li>')
+    // Numbered list lines: lines starting with 1. 2. etc
+    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> blocks in <ul>
+    .replace(/(<li>.*<\/li>)/gs, '<ul style="margin: 6px 0 6px 16px; padding: 0; list-style: disc;">$1</ul>')
+    // Double newline → paragraph break
+    .replace(/\n\n/g, '</p><p style="margin: 8px 0;">')
+    // Single newline → line break
+    .replace(/\n/g, '<br />')
+    // Wrap whole thing in a paragraph
+    .replace(/^/, '<p style="margin: 0;">')
+    .replace(/$/, '</p>');
+}
+
 interface SynthesisViewProps {
   query: string;
   setQuery: (q: string) => void;
@@ -120,24 +147,17 @@ export function SynthesisView({
         <div className={styles.chatOutput}>
            {messages.map((m, i) => (
              <div key={i} className={`${styles.chatMessage} ${m.role === 'user' ? styles.userMsg : styles.aiMsg}`}>
-                <div className={styles.msgBody}>
-                  {m.content}
+               <div className={styles.msgBody}>
+                  {m.role === 'assistant' && m.content ? (
+                    <div
+                      className={styles.markdownContent}
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content) }}
+                    />
+                  ) : (
+                    m.content
+                  )}
                   {m.pending && <span className={styles.typingCursor}>▊</span>}
                 </div>
-                {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
-                  <div className={styles.citationStrip}>
-                    {m.citations.map((c) => (
-                      <div key={c.sourceId} className={styles.citationCard} title="Source Reference">
-                        <div className={styles.citationCardHeader}>
-                          <span className={styles.citationCardId}>[{c.sourceId}]</span>
-                          <span className={styles.citationCardPlatform}>{c.platform}</span>
-                        </div>
-                        {c.title && <div className={styles.citationCardTitle}>{c.title}</div>}
-                        <div className={styles.citationCardBody}>"{c.snippet.length > 100 ? c.snippet.slice(0, 100) + '...' : c.snippet}"</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
              </div>
            ))}

@@ -11,6 +11,36 @@ import {
 } from '@/components/common/icons/PlatformIcons';
 import type { Message, PlatformStatus } from '@/types/dashboard';
 
+/**
+ * Converts AI markdown output to rendered HTML.
+ * Handles bold, italic, bullet lists, numbered lists, and line breaks.
+ */
+function renderMarkdown(text: string): string {
+  // Process line by line to wrap <li> groups in <ul> without needing the `s` flag
+  const lines = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/^[-\*•]\s+(.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+    .split('\n');
+
+  const result: string[] = [];
+  let inList = false;
+  for (const line of lines) {
+    if (line.startsWith('<li>')) {
+      if (!inList) { result.push('<ul>'); inList = true; }
+      result.push(line);
+    } else {
+      if (inList) { result.push('</ul>'); inList = false; }
+      result.push(line);
+    }
+  }
+  if (inList) result.push('</ul>');
+
+  return '<p>' + result.join('\n').replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br />') + '</p>';
+}
+
 function ChatPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,10 +50,42 @@ function ChatPageInner() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [platforms, setPlatforms] = useState<PlatformStatus[]>([]);
-  const [threadId, setThreadId] = useState('');
+  const [threadId, setThreadId] = useState('');       // local key
+  const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);
   const hasSubmittedRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Persist current messages to Supabase (debounced) */
+  const saveThread = (msgs: Message[], existingDbId: string | null, firstUserMsg: string) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          threadId: existingDbId,
+          title: firstUserMsg.slice(0, 60) || 'New Chat',
+          messages: msgs
+            .filter(m => m.content && !m.pending)
+            .map(m => ({ role: m.role, content: m.content })),
+        };
+        const res = await fetch('/api/chat/threads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!existingDbId && data.threadId) {
+            setDbThreadId(data.threadId);
+          }
+        }
+      } catch (err) {
+        console.warn('[Chat] Failed to persist thread:', err);
+      }
+    }, 1000);
+  };
+
 
   // Initialize
   useEffect(() => {
@@ -108,17 +170,37 @@ function ChatPageInner() {
         }
         
         setMessages((prev) => {
-          return [...prev.slice(0, -1), { 
-            role: 'assistant', 
-            content: streamedReply, 
+          const finalContent = streamedReply.trim() 
+            ? streamedReply 
+            : '⚠️ All AI providers are currently unavailable (quota or rate limits). Please try again in a few minutes.';
+          const finalMessages = [...prev.slice(0, -1), { 
+            role: 'assistant' as const, 
+            content: finalContent, 
             pending: false,
             citations: citations.length > 0 ? citations : undefined
           }];
+          // Auto-persist to Supabase after reply completes
+          const firstUser = finalMessages.find(m => m.role === 'user')?.content || 'New Chat';
+          saveThread(finalMessages, dbThreadId, firstUser);
+          return finalMessages;
         });
+      } else {
+        // Non-200 response
+        setMessages((prev) => [  
+          ...prev.slice(0, -1),
+          { role: 'assistant', content: '⚠️ The neural service returned an error. Please try again.', pending: false }
+        ]);
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         console.error('Chat Stream Failed:', err);
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { role: 'assistant', content: '⚠️ Connection failed. Please check your network and try again.', pending: false }
+        ]);
+      } else {
+        // AbortError — user cancelled, just remove the pending bubble
+        setMessages((prev) => prev.filter((_, i) => i !== prev.length - 1));
       }
     } finally {
       setIsStreaming(false);
@@ -148,24 +230,29 @@ function ChatPageInner() {
                 {messages.map((m, i) => (
                   <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.userRow : styles.aiRow}`}>
                     <div className={styles.messageBubble}>
+                      {/* Metadata line — only shown when platforms are actually connected */}
+                      {(() => {
+                        const connected = platforms.filter(p => p.connected);
+                        if (m.role !== 'assistant' || m.pending || !m.content || connected.length === 0) return null;
+                        const names = connected.map(p => p.id).join(' + ');
+                        return (
+                          <div className={styles.metaLine}>
+                            Loaded tools, used {names} integration
+                            <span className={styles.metaArrow}> ›</span>
+                          </div>
+                        );
+                      })()}
                       <div className={styles.msgBody}>
-                        {m.content}
+                        {m.role === 'assistant' && m.content ? (
+                          <div
+                            className={styles.markdownContent}
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content) }}
+                          />
+                        ) : (
+                          m.content
+                        )}
                         {m.pending && <span className={styles.typingCursor}>▊</span>}
                       </div>
-                      
-                      {m.role === 'assistant' && m.citations && m.citations.length > 0 && (
-                        <div className={styles.citationArea}>
-                          <div className={styles.citationLabel}>SOURCES</div>
-                          <div className={styles.citationGrid}>
-                            {m.citations.map((c) => (
-                              <div key={c.sourceId} className={styles.citationPill}>
-                                <span className={styles.citeId}>[{c.sourceId}]</span>
-                                <span className={styles.citePlatform}>{c.platform}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}

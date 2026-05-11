@@ -149,6 +149,33 @@
   word-break: break-word;
 }
 
+/* Rendered markdown inside AI messages */
+.markdownContent {
+  word-break: break-word;
+  line-height: 1.7;
+  font-size: 15px;
+}
+.markdownContent p {
+  margin: 0 0 8px 0;
+}
+.markdownContent strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.markdownContent em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+.markdownContent ul {
+  margin: 6px 0 6px 18px;
+  padding: 0;
+  list-style: disc;
+}
+.markdownContent li {
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+
 /* STATS GRID (History) */
 .statsGrid {
   display: grid;

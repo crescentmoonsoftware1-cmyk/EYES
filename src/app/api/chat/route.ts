@@ -167,7 +167,7 @@ export async function POST(request: Request) {
           title: match.title ?? null,
           eventType: match.event_type ?? null,
           author: match.author ?? null,
-          timestamp: match.event_timestamp ?? null,
+          timestamp: match.timestamp ?? null,
           similarity: Number((match.similarity ?? 0).toFixed(4)),
           rerankScore: Number((match.combined_score ?? 0).toFixed(4)),
           snippet: maskPII((match.content || '').slice(0, 420)),
@@ -216,13 +216,19 @@ export async function POST(request: Request) {
       retrievalError,
     };
 
-    const systemPrompt = `
-      You are the EYES Neural Assistant. Use the following records to answer the user's question accurately.
-      If the context is empty, inform the user that no relevant memories were found in their archive.
-      
-      CONTEXT:
-      ${context || 'No relevant memory records found.'}
-    `.trim();
+    const hasContext = context.trim().length > 0;
+
+    const systemPrompt = `You are EYES — a personal memory OS that surfaces information from the user's synced digital archive.
+
+STRICT RULES — follow these exactly:
+1. ONLY answer from the CONTEXT records provided below. Do not use general knowledge or make things up.
+2. If the context is empty OR the records are not relevant to the question, say ONLY: "I don't have any records matching that in your synced archive. This could mean the data hasn't been synced yet, or it doesn't exist in your connected platforms." Do NOT show unrelated records.
+3. NEVER tell the user to manually check a website, app, or inbox. EYES is the interface — not a redirect service.
+4. NEVER output [MEMORY X], [GMAIL], [GITHUB], [Unknown Date] or any other internal tags. These are internal labels — strip them completely from your response.
+5. Speak directly and concisely. Match the format to the question — short answers for simple questions, structured for complex ones.
+6. Use **bold** only to highlight a single key fact (a name, date, or number). Do not overformat.
+
+${hasContext ? `CONTEXT FROM ARCHIVE (internal — do NOT repeat these tags in your response):\n${context}` : 'CONTEXT: No matching records found in the user\'s archive.'}`.trim();
 
     const messages: ChatHistoryMessage[] = [
       { role: 'system', content: systemPrompt },

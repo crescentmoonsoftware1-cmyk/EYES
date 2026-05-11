@@ -36,52 +36,65 @@ export async function POST(request: Request) {
 
     console.log(`[AI-Brain] Found ${pendingEvents.length} new events. Indexing memories for user ${userId}...`);
 
-    const indexResults = await Promise.all(
-      pendingEvents.map(async (event) => {
-        try {
-          const chunks = buildDeterministicChunks({
-            platform: event.platform,
-            eventType: event.event_type,
-            title: event.title,
-            content: event.content || '',
-          });
+    let successCount = 0;
+    let indexedChunkCount = 0;
+    let quotaExhausted = false;
 
-          let insertedChunks = 0;
+    for (const event of pendingEvents) {
+      if (quotaExhausted) break;
 
-          for (const chunk of chunks) {
-            const result = await generateEmbedding(chunk);
-            if (!result) {
-              console.warn(`[AI-Brain] Embedding generation returned null for event ${event.id}. Check OpenAI API Key.`);
-              continue;
-            }
+      try {
+        const chunks = buildDeterministicChunks({
+          platform: event.platform,
+          eventType: event.event_type,
+          title: event.title,
+          content: event.content || '',
+        });
 
-            const { error: insertError } = await supabase
-              .from('embeddings')
-              .insert({
-                user_id: userId,
-                event_id: event.id,
-                content: chunk,
-                embedding: result.embedding,
-              });
+        let insertedChunks = 0;
 
-            if (insertError) {
-              console.warn('[AI-Brain] Persistence failed:', insertError.message);
-              continue;
-            }
+        for (const chunk of chunks) {
+          if (quotaExhausted) break;
 
-            insertedChunks += 1;
+          const result = await generateEmbedding(chunk);
+          if (!result) {
+            // generateEmbedding returns null when BOTH providers 429'd
+            console.warn(`[AI-Brain] Both providers quota-exhausted on event ${event.id}. Stopping batch.`);
+            quotaExhausted = true;
+            break;
           }
 
-          return { indexedEvent: insertedChunks > 0, indexedChunks: insertedChunks };
-        } catch (err) {
-          console.error(`[AI-Brain] Failed to index event ${event.id}:`, err);
-          return { indexedEvent: false, indexedChunks: 0 };
-        }
-      })
-    );
+          const { error: insertError } = await supabase
+            .from('embeddings')
+            .insert({
+              user_id: userId,
+              event_id: event.id,
+              content: chunk,
+              embedding: result.embedding,
+            });
 
-    const successCount = indexResults.filter((result) => result.indexedEvent).length;
-    const indexedChunkCount = indexResults.reduce((total, result) => total + result.indexedChunks, 0);
+          if (insertError) {
+            console.warn('[AI-Brain] Persistence failed:', insertError.message);
+            continue;
+          }
+
+          insertedChunks += 1;
+          // Small delay to respect free-tier rate limits (300 req/min for Gemini)
+          await new Promise(r => setTimeout(r, 250));
+        }
+
+        if (insertedChunks > 0) {
+          successCount += 1;
+          indexedChunkCount += insertedChunks;
+        }
+      } catch (err) {
+        console.error(`[AI-Brain] Failed to index event ${event.id}:`, err);
+      }
+    }
+
+    if (quotaExhausted) {
+      console.warn('[AI-Brain] Batch stopped early — embedding quota exhausted. Will resume on next cron run.');
+    }
 
     // Update user profile with new count
     const { count: totalIndexed } = await supabase

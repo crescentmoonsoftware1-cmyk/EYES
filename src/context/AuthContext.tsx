@@ -65,6 +65,29 @@ type SupabaseQueryLike<T> = {
 const REALTIME_REFRESH_EVENT = 'eyes-realtime-refresh';
 const PULSE_THROTTLE_MS = 10000; // Hard 10s throttle for global stability
 const AUTO_BACKGROUND_SYNC_ENABLED = process.env.NEXT_PUBLIC_AUTO_BACKGROUND_SYNC === 'true';
+const PROFILE_CACHE_KEY = 'eyes-user-profile-v1';
+
+function loadCachedProfile(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedProfile(profile: User): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+  } catch { /* quota full — not critical */ }
+}
+
+function clearCachedProfile(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(PROFILE_CACHE_KEY);
+}
 
 let lastPulseTime = 0;
 function emitRealtimeRefreshEvent() {
@@ -227,6 +250,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initials = fallbackName.charAt(0).toUpperCase();
     const joinedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
 
+    // ── Fast path: return cached profile immediately, refresh in background ──
+    const cached = loadCachedProfile();
+    if (cached && cached.id === authUser.id) {
+      syncInProgressRef.current = false;
+      // Refresh in background silently — no await, no blocking
+      void (async () => {
+        try {
+          const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
+            supabase
+              .from('user_profiles')
+              .select('name,avatar,plan,joined_date,memories_indexed')
+              .eq('user_id', authUser.id)
+              .maybeSingle()
+              .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
+            5000,
+            { data: null, error: { message: 'Timed out' } }
+          );
+          if (fetchResult.data) {
+            const fresh: User = {
+              id: authUser.id,
+              name: fetchResult.data.name,
+              email: authUser.email || '',
+              avatar: fetchResult.data.avatar || initials,
+              plan: fetchResult.data.plan || 'Private Beta',
+              joinedDate: fetchResult.data.joined_date || joinedDate,
+              memoriesIndexed: fetchResult.data.memories_indexed || 0,
+            };
+            saveCachedProfile(fresh);
+          }
+        } catch { /* background refresh failed — cache still valid */ }
+      })();
+      return cached;
+    }
+
     try {
       // Increase timeout to 15s to handle DB load during syncs.
       const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
@@ -236,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_id', authUser.id)
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
-        15000,
+        5000,
         { data: null, error: { message: 'Timed out' } }
       );
 
@@ -245,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profile) {
         syncInProgressRef.current = false;
-        return {
+        const result: User = {
           id: authUser.id,
           name: profile.name,
           email: authUser.email || '',
@@ -254,6 +311,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinedDate: profile.joined_date || joinedDate,
           memoriesIndexed: profile.memories_indexed || 0,
         };
+        saveCachedProfile(result); // ← persist for instant load next time
+        return result;
       }
 
       // ONLY create if it's definitely missing, NOT on timeouts
@@ -289,7 +348,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select('name,avatar,plan,joined_date,memories_indexed')
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
-        15000,
+        5000,
         { data: null, error: null }
       );
 
@@ -427,9 +486,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Sub to future changes
+    // Sub to future changes — skip INITIAL_SESSION if user already loaded
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       console.log('[Auth] State Event:', event);
+      if (event === 'INITIAL_SESSION' && user) {
+        // Already have user from cache/init — skip redundant re-sync
+        return;
+      }
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         const profile = await syncProfile({
           id: session.user.id,
@@ -438,6 +501,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (mounted) setUser(profile);
       } else if (event === 'SIGNED_OUT') {
+        clearCachedProfile();
         if (mounted) setUser(null);
       }
     });
