@@ -31,13 +31,13 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 // Voyage AI — primary embedding provider (200M free tokens, no credit card)
 // Sign up at voyageai.com → get API key → set VOYAGE_API_KEY in .env.local
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY || '';
-const VOYAGE_EMBED_MODEL = 'voyage-3';           // 1024 dims
+const VOYAGE_EMBED_MODEL = 'voyage-context-3';   // 1024 dims — 200M free tokens
 const VOYAGE_EMBED_URL = 'https://api.voyageai.com/v1/embeddings';
 
 const CLAUDE_MODEL = "claude-3-5-sonnet-20240620";
 const GEMINI_CHAT_MODEL = "gemini-flash-latest"; // Verified stable in 2026 env
 const EMBED_MODEL = "gemini-embedding-001";
-const EMBED_DIMS = 1024; // Must match vector(1024) column — voyage-3 native, Gemini via outputDimensionality
+const EMBED_DIMS = 1024; // Must match vector(1024) column — voyage-context-3 native, Gemini via outputDimensionality
 
 export type AIPreference = 'claude' | 'gemini' | 'auto';
 export type AICapability = 'chat' | 'embed' | 'classify';
