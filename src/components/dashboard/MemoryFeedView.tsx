@@ -13,6 +13,18 @@ interface MemoryFeedViewProps {
   setFilterPlatform: (id: string) => void;
 }
 
+/** Strip URLs, tracking params, and excessive whitespace from raw content for clean preview */
+function cleanContent(raw: string | null | undefined, maxLen = 240): string {
+  if (!raw) return '';
+  const noUrls = raw
+    .replace(/https?:\/\/[^\s)\]>,"']+/g, '') // remove bare URLs
+    .replace(/\([^)]{0,8}https?[^)]*\)/g, '')  // remove (https://...) link text
+    .replace(/utm_[a-z_]+=\S+/gi, '')           // strip tracking params
+    .replace(/\s{2,}/g, ' ')                    // collapse whitespace
+    .trim();
+  return noUrls.length > maxLen ? noUrls.slice(0, maxLen).trimEnd() + '…' : noUrls;
+}
+
 export function MemoryFeedView({ 
   onBack, 
   feedEvents, 
@@ -20,6 +32,21 @@ export function MemoryFeedView({
   filterPlatform, 
   setFilterPlatform 
 }: MemoryFeedViewProps) {
+
+  // ── Only show platform tabs that have ACTUAL feed entries ──────────────────
+  const activePlatformIds = Array.from(
+    new Set(feedEvents.map(e => e.platform.toLowerCase()))
+  );
+
+  // Try to resolve a display name: prefer PlatformStatus name, fall back to config, fall back to id
+  function platformLabel(id: string): string {
+    const fromStatus = platforms.find(p => p.id.toLowerCase() === id);
+    if (fromStatus) return fromStatus.name;
+    const fromConfig = ALL_POSSIBLE_PLATFORMS.find(p => p.id === id);
+    if (fromConfig) return fromConfig.name ?? id;
+    return id.charAt(0).toUpperCase() + id.slice(1);
+  }
+
   return (
     <div className={styles.soloView}>
        <div className={styles.viewHeader} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '32px' }}>
@@ -32,13 +59,14 @@ export function MemoryFeedView({
              >
                 All Activities
              </button>
-             {platforms.filter(p => p.connected).map(p => (
+             {/* Only render tabs for platforms that have actual data in the feed */}
+             {activePlatformIds.map(id => (
                 <button 
-                  key={p.id}
-                  className={`${styles.filterChip} ${filterPlatform === p.id ? styles.filterChipActive : ''}`}
-                  onClick={() => setFilterPlatform(p.id)}
+                  key={id}
+                  className={`${styles.filterChip} ${filterPlatform === id ? styles.filterChipActive : ''}`}
+                  onClick={() => setFilterPlatform(id)}
                 >
-                   {p.name}
+                   {platformLabel(id)}
                 </button>
              ))}
           </div>
@@ -50,11 +78,12 @@ export function MemoryFeedView({
             .map((e) => {
             const platform = ALL_POSSIBLE_PLATFORMS.find(p => p.id === e.platform.toLowerCase());
             const hasRisk = e.is_flagged || e.flag_severity;
+            const preview = cleanContent(e.content);
             
             return (
               <div key={e.id} className={`${styles.feedEventCard} ${hasRisk ? styles.cardHasRisk : ''}`}>
                  <div className={styles.eventIconWrapper}>
-                    {platform?.icon ? React.cloneElement(platform.icon as React.ReactElement<any>, { size: 18 }) : <div className={styles.fallbackIcon}>{e.platform[0]}</div>}
+                    {platform?.icon ? React.cloneElement(platform.icon as React.ReactElement<{size?: number}>, { size: 18 }) : <div className={styles.fallbackIcon}>{e.platform[0]}</div>}
                  </div>
                  <div className={styles.eventMain}>
                     <div className={styles.eventMeta}>
@@ -69,7 +98,7 @@ export function MemoryFeedView({
                        )}
                     </div>
                     <h3 className={styles.eventTitle}>{e.title || 'Indexed Discovery'}</h3>
-                    <p className={styles.eventBody}>{e.content}</p>
+                    {preview && <p className={styles.eventBody}>{preview}</p>}
                     {e.flag_reason && (
                       <div className={styles.riskReasonOuter}>
                         <span className={styles.riskReasonLabel}>Reputation Signal:</span>
