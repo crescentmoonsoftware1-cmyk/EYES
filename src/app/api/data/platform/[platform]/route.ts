@@ -11,11 +11,12 @@ import { createClient } from '@/utils/supabase/server';
 
 const SUPPORTED_PLATFORMS = new Set([
   'github', 'gmail', 'google-calendar', 'google_calendar', 'reddit', 'notion', 
-  'discord', 'slack', 'twitter', 'dropbox', 'outlook', 'asana', 'trello', 
+  'discord', 'slack', 'twitter', 'dropbox', 'asana', 'trello', 
   'linear', 'clickup', 'vercel', 'netlify', 'supabase', 'sentry', 'posthog', 
-  'webflow', 'devin', 'cursor', 'canva', 'granola', 'strava', 'fitbit', 
-  'withings', 'mercury', 'ramp', 'navan', 'sonos', 'philips-hue'
+  'webflow', 'devin', 'cursor', 'canva', 'strava', 'fitbit', 
+  'withings', 'ramp',
 ]);
+
 
 function toDbPlatform(platform: string) {
   return platform === 'google-calendar' ? 'google_calendar' : platform;
