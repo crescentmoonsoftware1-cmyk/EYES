@@ -34,13 +34,31 @@ const fallbackSummary: AuditSummary = {
 };
 
 const platformLabelMap: Record<string, string> = {
-  github: 'GitHub',
-  gmail: 'Gmail',
-  notion: 'Notion',
+  github:           'GitHub',
+  gmail:            'Gmail',
+  notion:           'Notion',
   'google-calendar': 'Google Calendar',
-  slack: 'Slack',
-  discord: 'Discord',
-  reddit: 'Reddit',
+  google_calendar:  'Google Calendar',   // DB stores with underscore — normalize on read
+  slack:            'Slack',
+  discord:          'Discord',
+  reddit:           'Reddit',
+  twitter:          'Twitter (X)',
+  dropbox:          'Dropbox',
+  asana:            'Asana',
+  linear:           'Linear',
+  clickup:          'ClickUp',
+  netlify:          'Netlify',
+  sentry:           'Sentry',
+  webflow:          'Webflow',
+  canva:            'Canva',
+  strava:           'Strava',
+  fitbit:           'Fitbit',
+  withings:         'Withings',
+  vercel:           'Vercel',
+  trello:           'Trello',
+  posthog:          'PostHog',
+  devin:            'Devin',
+  cursor:           'Cursor',
 };
 
 function getOverallRisk(heavy: number, direct: number): AuditSummary['overallRisk'] {
@@ -109,7 +127,10 @@ function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[]): Audi
 
 function mapPlatforms(syncRows: SyncStatusRow[]): PlatformStatus[] {
   const platforms = syncRows.map((row) => ({
-    id: row.platform,
+    // Normalise the DB underscore format to the hyphen format used in ALL_POSSIBLE_PLATFORMS.
+    // Without this, 'google_calendar' from the DB never matches 'google-calendar' in the
+    // connector hub filter, causing it to appear in both the hub AND managed connections.
+    id: row.platform === 'google_calendar' ? 'google-calendar' : row.platform,
     name: platformLabelMap[row.platform] ?? row.platform,
     connected: true,
     status: (row.status ?? 'idle') as PlatformStatus['status'],

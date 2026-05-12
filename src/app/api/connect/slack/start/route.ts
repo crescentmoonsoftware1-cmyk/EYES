@@ -41,7 +41,11 @@ export async function GET(request: Request) {
   
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', callbackUrl);
-  authUrl.searchParams.set('user_scope', 'channels:read,groups:read,im:read,mpim:read,channels:history,groups:history,im:history,mpim:history,chat:write,chat:write.public');
+  // user_scope must only contain valid user token scopes.
+  // chat:write and chat:write.public are bot-only scopes — including them
+  // causes Slack to reject the request with "Invalid permissions requested".
+  authUrl.searchParams.set('user_scope', 'channels:read,groups:read,im:read,mpim:read,channels:history,groups:history,im:history,mpim:history,users.profile:read');
+
   authUrl.searchParams.set('state', state);
 
   return NextResponse.redirect(authUrl);
