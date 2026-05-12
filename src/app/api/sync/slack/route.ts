@@ -179,7 +179,7 @@ export async function POST(request: Request) {
 
     // 7. Update Sync Status & Profile
     const { count: totalMemories } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 

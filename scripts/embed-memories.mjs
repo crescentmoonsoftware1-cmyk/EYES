@@ -48,6 +48,7 @@ async function embedWithGemini(text) {
   const result = await model.embedContent({
     content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
     taskType: TaskType.RETRIEVAL_DOCUMENT,
+    outputDimensionality: 768,  // force 768d to match pgvector column
   });
   return Array.from(result.embedding.values);
 }
@@ -86,26 +87,48 @@ if (!count || count === 0) {
 }
 
 // ── Step 3: Process in pages of 50 ───────────────────────────────────────────
+async function embedWithRetry(text, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await embedWithGemini(text);
+    } catch (err) {
+      const msg = err?.message || '';
+      const retryMatch = msg.match(/retryDelay":"(\d+)s"/);
+      const waitSec = retryMatch ? parseInt(retryMatch[1]) : (attempt + 1) * 5;
+
+      if (attempt < maxRetries && msg.includes('429')) {
+        process.stdout.write(`\n  ⏳ Rate limited. Waiting ${waitSec}s before retry ${attempt + 1}/${maxRetries}...`);
+        await new Promise(r => setTimeout(r, waitSec * 1000 + 500));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 const PAGE_SIZE = 50;
 let processed = 0;
 let succeeded = 0;
 let failed = 0;
-let offset = 0;
+let batchNum = 0;
 
-while (offset < count) {
+// Always re-fetch from the top — as rows get embedded they leave the NULL set,
+// so offset-based pagination would skip rows. Instead we always grab the first N.
+while (true) {
   const { data: rows, error } = await supabase
     .from('memories')
     .select('id, platform, title, content, event_type')
     .is('embedding', null)
-    .range(offset, offset + PAGE_SIZE - 1);
+    .limit(PAGE_SIZE);
 
   if (error || !rows || rows.length === 0) break;
 
-  console.log(`Processing batch ${Math.floor(offset / PAGE_SIZE) + 1}: rows ${offset + 1}–${offset + rows.length}`);
+  batchNum++;
+  console.log(`\nProcessing batch ${batchNum}: ${rows.length} rows (${count - processed} remaining)`);
 
+  // Sequential — one at a time to respect per-minute rate limits
   for (const row of rows) {
     try {
-      // Build the embed text (same format as memories.ts)
       const header = [
         `[Source: ${row.platform}]`,
         row.event_type ? `[Type: ${row.event_type}]` : null,
@@ -113,12 +136,7 @@ while (offset < count) {
       ].filter(Boolean).join(' ');
 
       const text = `${header}\n\n${(row.content || '').trim().slice(0, 8000)}`;
-      const embedding = await embed(text);
-
-      if (!embedding) {
-        failed++;
-        continue;
-      }
+      const embedding = await embedWithRetry(text);
 
       const { error: updateError } = await supabase
         .from('memories')
@@ -132,22 +150,17 @@ while (offset < count) {
         succeeded++;
       }
     } catch (err) {
-      console.error(`  ❌ Error on row ${row.id}:`, err.message);
       failed++;
     }
 
     processed++;
-    if (processed % 10 === 0) {
-      process.stdout.write(`  ✅ ${processed}/${count} done (${succeeded} embedded, ${failed} failed)\r`);
-    }
+    process.stdout.write(`  ✅ ${succeeded} embedded, ${failed} failed (${processed} processed)\r`);
 
-    // Respect rate limits
-    await new Promise(r => setTimeout(r, 120));
+    // 500ms between requests = ~120 req/min, safely under free tier limit
+    await new Promise(r => setTimeout(r, 500));
   }
 
-  offset += rows.length;
-  console.log(`\n  Batch done. Progress: ${succeeded} embedded, ${failed} failed.`);
-  await new Promise(r => setTimeout(r, 500));
+  console.log(`\n  Batch ${batchNum} done. Total: ${succeeded} embedded, ${failed} failed.`);
 }
 
 console.log(`\n\n✅ Embedding complete!`);

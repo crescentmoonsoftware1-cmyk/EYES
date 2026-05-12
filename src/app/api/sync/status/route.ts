@@ -21,19 +21,18 @@ export async function GET(request: Request) {
       .select('platform, status, sync_progress, total_items, last_sync_at, error_message')
       .eq('user_id', user.id);
 
-    // 2. Get total memory count from profiles
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('memories_indexed')
-      .eq('user_id', user.id)
-      .single();
+    // 2. Get real-time total memory count directly from memories table
+    const { count: memoriesCount } = await supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id);
 
     const isAnySyncing = statusRows?.some(s => s.status === 'syncing') || false;
     const activeSyncs = statusRows?.filter(s => s.status === 'syncing').map(s => s.platform) || [];
 
     return NextResponse.json({
       userId: user.id,
-      memoriesIndexed: profile?.memories_indexed || 0,
+      memoriesIndexed: memoriesCount ?? 0,
       isSyncing: isAnySyncing,
       activeSyncs,
       platforms: statusRows || [],

@@ -38,7 +38,7 @@ const VOYAGE_EMBED_MODEL = 'voyage-context-3';   // 1024 dims — 200M free toke
 const VOYAGE_EMBED_URL = 'https://api.voyageai.com/v1/embeddings';
 
 const CLAUDE_MODEL = "claude-3-5-sonnet-20240620";
-const GEMINI_CHAT_MODEL = "gemini-flash-latest"; // Verified stable in 2026 env
+const GEMINI_CHAT_MODEL = "gemini-2.0-flash"; // Stable Gemini 2.0 Flash model
 const EMBED_MODEL = "gemini-embedding-001";
 const EMBED_DIMS = 1024; // Must match vector(1024) column — voyage-context-3 native, Gemini via outputDimensionality
 

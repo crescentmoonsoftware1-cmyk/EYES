@@ -43,16 +43,36 @@ export type SyncStatusUpsertRow = {
   metadata?: Record<string, unknown>;
 };
 
-export async function upsertRawEventsSafely(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
+export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Record<string, unknown>[]) {
   if (events.length === 0) {
     return;
   }
 
-  const dedupedEvents = Array.from(new Map(events.map((event) => [eventIdentityKey(event), event])).values());
+  // Cast to typed rows — field shapes are enforced by construction in every sync route.
+  const dedupedEvents = Array.from(
+    new Map((events as RawEventUpsertRow[]).map((event) => [eventIdentityKey(event), event])).values()
+  );
+
+  // Map RawEventUpsertRow fields to the memories table schema
+  // Key difference: platform_id (raw_events) → source_id (memories)
+  const memoryRows = dedupedEvents.map((event) => ({
+    user_id: event.user_id,
+    platform: event.platform,
+    source_id: event.platform_id,
+    event_type: event.event_type,
+    title: event.title,
+    content: event.content,
+    author: event.author,
+    timestamp: event.timestamp,
+    metadata: event.metadata,
+    is_flagged: event.is_flagged,
+    flag_severity: event.flag_severity,
+    flag_reason: event.flag_reason,   // ← was silently dropped before this fix
+  }));
 
   const { error: upsertError } = await supabase
-    .from('raw_events')
-    .upsert(dedupedEvents, { onConflict: 'user_id,platform,platform_id' });
+    .from('memories')
+    .upsert(memoryRows, { onConflict: 'user_id,platform,source_id' });
 
   if (!upsertError) {
     return;
@@ -63,7 +83,7 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Ra
   }
 
   console.warn(
-    '[DB] raw_events upsert fallback activated because ON CONFLICT constraint is missing. Apply latest migrations.'
+    '[DB] memories upsert fallback activated because ON CONFLICT constraint is missing. Apply latest migrations.'
   );
 
   const groupedIds = new Map<string, { userId: string; platform: string; ids: string[] }>();
@@ -79,32 +99,25 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Ra
       });
       return;
     }
-
     group.ids.push(event.platform_id);
   });
 
   for (const group of groupedIds.values()) {
     const uniqueIds = Array.from(new Set(group.ids));
-    if (uniqueIds.length === 0) {
-      continue;
-    }
+    if (uniqueIds.length === 0) continue;
 
     const { error: deleteError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .delete()
       .eq('user_id', group.userId)
       .eq('platform', group.platform)
-      .in('platform_id', uniqueIds);
+      .in('source_id', uniqueIds);
 
-    if (deleteError) {
-      throw deleteError;
-    }
+    if (deleteError) throw deleteError;
   }
 
-  const { error: insertError } = await supabase.from('raw_events').insert(dedupedEvents);
-  if (insertError) {
-    throw insertError;
-  }
+  const { error: insertError } = await supabase.from('memories').insert(memoryRows);
+  if (insertError) throw insertError;
 }
 
 export async function upsertSyncStatusSafely(supabase: SupabaseClient, syncStatus: SyncStatusUpsertRow) {

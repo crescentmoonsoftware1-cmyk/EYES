@@ -19,11 +19,10 @@ export async function POST(request: Request) {
     }
 
     const { error: updateError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .update({
         is_flagged: false,
         flag_severity: 'LOW',
-        updated_at: new Date().toISOString(),
       })
       .eq('id', id)
       .eq('user_id', user.id);

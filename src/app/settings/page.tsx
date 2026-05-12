@@ -12,15 +12,46 @@ export default function SettingsPage() {
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security'>('profile');
   const [riskSensitivity, setRiskSensitivity] = useState('MEDIUM');
-  const [excludedSenders, setExcludedSenders] = useState<string[]>(['noreply@bank.com', 'promotions@spam.com']);
+  const [syncDepth, setSyncDepth] = useState('balanced');
+  const [excludedSenders, setExcludedSenders] = useState<string[]>([]);
   const [newSender, setNewSender] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [settingsSaved, setSettingsSaved] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.name) setDisplayName(user.name);
   }, [user]);
+
+  // Load persisted global settings on mount
+  useEffect(() => {
+    fetch('/api/user/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.riskSensitivity) setRiskSensitivity(data.riskSensitivity);
+        if (data.syncDepth) setSyncDepth(data.syncDepth);
+        if (Array.isArray(data.excludedSenders)) setExcludedSenders(data.excludedSenders);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveNeuralSettings = async () => {
+    setSettingsSaved(null);
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ riskSensitivity, syncDepth, excludedSenders }),
+      });
+      setSettingsSaved(res.ok ? 'Settings saved!' : 'Failed to save.');
+    } catch {
+      setSettingsSaved('Error saving settings.');
+    } finally {
+      setTimeout(() => setSettingsSaved(null), 3000);
+    }
+  };
 
   const handleUpdateTheme = (newTheme: 'dark' | 'light') => {
     setGlobalTheme(newTheme);
@@ -190,12 +221,23 @@ export default function SettingsPage() {
 
                   <div className={styles.fieldGroup}>
                     <label>SYNC DEPTH</label>
-                    <select className={styles.select}>
+                    <select
+                      className={styles.select}
+                      value={syncDepth}
+                      onChange={(e) => setSyncDepth(e.target.value)}
+                    >
                       <option value="shallow">Shallow (Last 30 Days)</option>
                       <option value="balanced">Balanced (Last 6 Months)</option>
                       <option value="deep">Deep (Full History)</option>
                     </select>
                   </div>
+
+                  {settingsSaved && activeTab === 'tuning' && (
+                    <p className={settingsSaved.includes('saved') ? styles.successText : styles.errorText}>{settingsSaved}</p>
+                  )}
+                  <button className={styles.saveBtn} onClick={handleSaveNeuralSettings}>
+                    Save Neural Settings
+                  </button>
                 </div>
               )}
 
@@ -221,18 +263,24 @@ export default function SettingsPage() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Add email or domain..." 
+                      <input
+                        type="text"
+                        placeholder="Add email or domain..."
                         value={newSender}
                         onChange={(e) => setNewSender(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newSender && !excludedSenders.includes(newSender)) {
+                            setExcludedSenders(prev => [...prev, newSender]);
+                            setNewSender('');
+                          }
+                        }}
                         className={styles.input}
                       />
-                      <button 
+                      <button
                         className={styles.addBtn}
                         onClick={() => {
                           if (newSender && !excludedSenders.includes(newSender)) {
-                            setExcludedSenders([...excludedSenders, newSender]);
+                            setExcludedSenders(prev => [...prev, newSender]);
                             setNewSender('');
                           }
                         }}
@@ -241,6 +289,13 @@ export default function SettingsPage() {
                       </button>
                     </div>
                   </div>
+
+                  {settingsSaved && activeTab === 'privacy' && (
+                    <p className={settingsSaved.includes('saved') ? styles.successText : styles.errorText}>{settingsSaved}</p>
+                  )}
+                  <button className={styles.saveBtn} onClick={handleSaveNeuralSettings}>
+                    Save Privacy Settings
+                  </button>
                 </div>
               )}
 

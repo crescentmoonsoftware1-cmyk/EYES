@@ -86,7 +86,22 @@ export async function POST(request: Request) {
       .select('platform')
       .eq('user_id', userId);
 
-    if (!tokens || tokens.length === 0) {
+    // Direct API-key platforms — no oauth_tokens row needed, include if env key is present
+    const DIRECT_KEY_PLATFORMS: Array<{ platform: string; envKey: string }> = [
+      { platform: 'vercel', envKey: 'VERCEL_API_TOKEN' },
+      { platform: 'trello', envKey: 'TRELLO_API_KEY' },
+      { platform: 'posthog', envKey: 'POSTHOG_API_KEY' },
+      { platform: 'devin', envKey: 'DEVIN_API_KEY' },
+      { platform: 'cursor', envKey: 'CURSOR_API_KEY' },
+    ];
+    const oauthPlatforms = tokens ?? [];
+    const directPlatforms = DIRECT_KEY_PLATFORMS
+      .filter((p) => Boolean(process.env[p.envKey]))
+      .filter((p) => !oauthPlatforms.some((t) => t.platform === p.platform))
+      .map((p) => ({ platform: p.platform }));
+    const allPlatforms = [...oauthPlatforms, ...directPlatforms];
+
+    if (allPlatforms.length === 0) {
       return NextResponse.json({ message: 'No connected platforms found.', results: [] });
     }
 
@@ -186,7 +201,7 @@ export async function POST(request: Request) {
       }
     };
 
-    void Promise.allSettled(tokens.map((token) => runPlatformSync(token.platform))).then((settled) => {
+    void Promise.allSettled(allPlatforms.map((token) => runPlatformSync(token.platform))).then((settled) => {
       const fulfilled = settled.filter((item): item is PromiseFulfilledResult<SyncOutcome> => item.status === 'fulfilled');
       const successCount = fulfilled.filter((item) => item.value.success).length;
       const failedCount = fulfilled.length - successCount + (settled.length - fulfilled.length);
@@ -197,21 +212,34 @@ export async function POST(request: Request) {
 
     void (async () => {
       try {
-        const { data: rawEvents } = await supabase
-          .from('raw_events')
+        // Queue any newly synced memories that don't have an embedding yet.
+        // Uses memory_id (new unified design) — not the deprecated raw_event_id.
+        const { data: unembedded } = await supabase
+          .from('memories')
           .select('id')
           .eq('user_id', userId)
-          .limit(100);
+          .is('embedding', null)
+          .not('content', 'is', null)
+          .limit(200);
 
-        if (rawEvents && rawEvents.length > 0) {
-          const queueItems = rawEvents.map((event) => ({
+        if (unembedded && unembedded.length > 0) {
+          const queueItems = unembedded.map((memory) => ({
             user_id: userId,
-            raw_event_id: event.id,
+            memory_id: memory.id,
             status: 'pending',
           }));
 
-          await supabase.from('embedding_queue').insert(queueItems);
-          console.log(`[Sync All] Queued ${queueItems.length} events for embeddings`);
+          // onConflict: ignore duplicates — the unique index on (memory_id) WHERE pending/processing
+          // ensures we never double-queue the same memory.
+          const { error: insertError } = await supabase
+            .from('embedding_queue')
+            .insert(queueItems, { onConflict: 'memory_id' } as Record<string, unknown>);
+
+          if (insertError) {
+            console.warn('[Sync All] Failed to insert embedding queue items:', insertError.message);
+          } else {
+            console.log(`[Sync All] Queued ${queueItems.length} memories for embedding.`);
+          }
         }
       } catch (err) {
         console.warn('[Sync All] Failed to queue embeddings:', err);
@@ -222,8 +250,8 @@ export async function POST(request: Request) {
       {
         accepted: true,
         mode: 'background',
-        message: `Sync launched for ${tokens.length} platforms. Check sync_status for progress.`,
-        platforms: tokens.map((token) => token.platform),
+        message: `Sync launched for ${allPlatforms.length} platforms. Check sync_status for progress.`,
+        platforms: allPlatforms.map((token) => token.platform),
       },
       { status: 202 }
     );

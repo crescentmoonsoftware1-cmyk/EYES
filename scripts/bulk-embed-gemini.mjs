@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 // Load .env.local
 const envPath = resolve(process.cwd(), '.env.local');

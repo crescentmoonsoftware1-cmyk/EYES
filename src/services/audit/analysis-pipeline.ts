@@ -1,7 +1,6 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server';
-import { chatCompletion, invokeModel } from '@/services/ai/ai';
+import { invokeModel } from '@/services/ai/ai';
 import { Commitment, ReputationAudit } from '@/types/dashboard';
-import { PDFGenerationService } from './pdf-generator';
 
 /**
  * Reputation Audit: Core Analysis Pipeline (REAL WORLD ONLY)
@@ -16,12 +15,13 @@ export class AuditAnalysisService {
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
       const { data: events, error: fetchError } = await supabase
-        .from('raw_events')
+        .from('memories')
         .select('id, platform, timestamp, title, content, author')
         .eq('user_id', userId)
+        .not('content', 'is', null)
         .gte('timestamp', twoYearsAgo.toISOString())
         .order('timestamp', { ascending: false })
-        .limit(500); // Optimized for speed
+        .limit(500);
 
       if (fetchError || !events) {
         throw new Error(`Data retrieval failed: ${fetchError?.message}`);
@@ -38,7 +38,7 @@ export class AuditAnalysisService {
       const analysisInput = significantRecords.map(e => ({
         id: e.id,
         date: e.timestamp,
-        text: `${e.title}: ${e.content}`.slice(0, 500)
+        text: `${e.title ?? ''}: ${e.content}`.slice(0, 400)
       }));
 
       const extractionPrompt = `
@@ -127,40 +127,11 @@ export class AuditAnalysisService {
       const summaryMatch = summaryRaw?.match(/\{[\s\S]*\}/);
       const summaryResult = summaryMatch ? JSON.parse(summaryMatch[0]) : { narrative: summaryRaw, opportunities: [], topEntities: [] };
 
-      // 5. Generate PDF Certificate (Async but waited)
-      let reportUrl = null;
+      // 5. Persist and Finalize (PDF generated on-demand — nothing stored in Supabase Storage)
       const failureRate = events.length > 0 ? (negativeMentions / events.length) * 100 : 0;
       const complianceRate = 100 - failureRate;
 
-      const auditMetadata = { 
-        commitments: extractedCommitments, 
-        riskFindings: extractedFindings,
-        topEntities: summaryResult.topEntities || [],
-        opportunities: summaryResult.opportunities || [],
-        sentimentBalance: weightedTotalMentions > 0 ? (1 - (weightedNegativeMentions / weightedTotalMentions)) : 1.0,
-        failureRate: failureRate.toFixed(2),
-        complianceRate: complianceRate.toFixed(2)
-      };
-
-      try {
-        console.log(`[Audit] Generating PDF for ${auditId}...`);
-        const auditForPdf: any = {
-          id: auditId,
-          status: 'completed',
-          riskScore: riskScore,
-          mentionsCount: events.length,
-          commitmentsCount: unfulfilledCommitmentsCount,
-          summaryNarrative: summaryResult.narrative,
-          connectorsCovered: connectorsCovered,
-          createdAt: new Date().toISOString(),
-          metadata: auditMetadata
-        };
-        reportUrl = await PDFGenerationService.generateAndUpload(auditForPdf, userId);
-      } catch (pdfErr) {
-        console.warn('[Audit] PDF generation skipped due to error:', pdfErr);
-      }
-
-      // 6. Persist and Finalize
+      // 6. Persist analysis results to DB
       console.log(`[Audit] Finalizing database record for ${auditId}...`);
       const { error: updateError } = await supabase.from('reputation_audits').update({
         status: 'completed',
@@ -169,17 +140,22 @@ export class AuditAnalysisService {
         commitments_count: unfulfilledCommitmentsCount,
         summary_narrative: summaryResult.narrative || 'Analysis complete.',
         connectors_covered: connectorsCovered,
-        report_url: reportUrl,
-        metadata: { 
-          ...auditMetadata,
-          reportUrl: reportUrl // Redundancy backup in JSON
+        report_url: null,
+        metadata: {
+          commitments: extractedCommitments,
+          riskFindings: extractedFindings,
+          topEntities: summaryResult.topEntities || [],
+          opportunities: summaryResult.opportunities || [],
+          sentimentBalance: weightedTotalMentions > 0 ? (1 - (weightedNegativeMentions / weightedTotalMentions)) : 1.0,
+          failureRate: failureRate.toFixed(2),
+          complianceRate: complianceRate.toFixed(2),
         }
       }).eq('id', auditId);
 
       if (updateError) {
         console.error(`[Audit] Database update failed for ${auditId}:`, updateError);
       } else {
-        console.log(`[Audit] Successfully finalized ${auditId} with reportUrl: ${reportUrl}`);
+        console.log(`[Audit] Successfully finalized ${auditId}`);
       }
 
       return { success: true, auditId };
@@ -188,13 +164,15 @@ export class AuditAnalysisService {
       console.error(`[Audit] Analysis failed for ${auditId}:`, err);
       const errorMessage = err instanceof Error ? err.message : String(err);
       
+      // Mark audit as failed in DB — error is already logged, do NOT re-throw
+      // (caller is a background fire-and-forget task; re-throwing causes unhandledRejection crash)
       const supabase = await createAdminClient();
       await supabase.from('reputation_audits').update({ 
         status: 'failed',
-        summary_narrative: `CRITICAL FAILURE: ${errorMessage}. Please check storage permissions and AI quotas.`
+        summary_narrative: `Analysis failed: ${errorMessage}. Please check AI quotas or retry.`
       }).eq('id', auditId);
-      
-      throw err;
+
+      return { success: false, auditId, error: errorMessage };
     }
   }
 }

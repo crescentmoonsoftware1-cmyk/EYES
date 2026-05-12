@@ -19,6 +19,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   const [activeAudit, setActiveAudit] = useState<ReputationAudit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitiating, setIsInitiating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [auditMode, setAuditMode] = useState<'dashboard' | 'running' | 'completed'>('dashboard');
 
   // Fetch the latest audit on mount
@@ -195,7 +196,9 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         <div className={styles.readinessFooter}>
           <div className={styles.readinessStatus}>
             <span className={styles.statusDot} />
-            SYSTEM READY: 14/14 PROBES ACTIVE
+            {summary
+              ? `SYSTEM READY: ${summary.totalMemories.toLocaleString()} MEMORIES INDEXED`
+              : 'SYSTEM READY — NEURAL ENGINE ACTIVE'}
           </div>
         </div>
       </div>
@@ -297,15 +300,29 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
             <button
               className={styles.downloadBtn}
-              disabled={!activeAudit.reportUrl}
-              onClick={() => {
-                const downloadUrl = activeAudit.reportUrl;
-                if (downloadUrl) {
-                  window.open(downloadUrl, '_blank');
+              disabled={isDownloading}
+              onClick={async () => {
+                if (!activeAudit?.id) return;
+                setIsDownloading(true);
+                try {
+                  const res = await fetch(`/api/audit/${activeAudit.id}/pdf`);
+                  if (!res.ok) throw new Error('PDF generation failed');
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `eyes-audit-${activeAudit.id.slice(0, 8)}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error('[PDF Download] failed:', err);
+                  alert('PDF generation failed. Please try again.');
+                } finally {
+                  setIsDownloading(false);
                 }
               }}
             >
-              {!activeAudit.reportUrl ? 'GENERATING PDF...' : 'DOWNLOAD FULL PDF'}
+              {isDownloading ? 'GENERATING PDF...' : 'DOWNLOAD FULL PDF'}
             </button>
           </aside>
         </div>

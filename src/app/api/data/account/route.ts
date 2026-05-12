@@ -97,11 +97,11 @@ export async function DELETE(request: Request) {
       { count: embeddingsBefore },
       { data: tokenRows },
     ] = await Promise.all([
-      supabase.from('raw_events').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('memories').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('topics').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('sync_status').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('oauth_tokens').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-      supabase.from('embeddings').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('chat_threads').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase
         .from('oauth_tokens')
         .select('platform,access_token,refresh_token')
@@ -144,26 +144,14 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { error: rawEventsDeleteError } = await supabase
-      .from('raw_events')
+    const { error: memoriesDeleteError } = await supabase
+      .from('memories')
       .delete()
       .eq('user_id', user.id);
 
-    if (rawEventsDeleteError) {
+    if (memoriesDeleteError) {
       return NextResponse.json(
-        { error: withPolicyHint(rawEventsDeleteError.message || 'Failed to delete raw events.') },
-        { status: 500 }
-      );
-    }
-
-    const { error: embeddingDeleteError } = await supabase
-      .from('embeddings')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (embeddingDeleteError) {
-      return NextResponse.json(
-        { error: withPolicyHint(embeddingDeleteError.message || 'Failed to delete embeddings.') },
+        { error: withPolicyHint(memoriesDeleteError.message || 'Failed to delete memories.') },
         { status: 500 }
       );
     }

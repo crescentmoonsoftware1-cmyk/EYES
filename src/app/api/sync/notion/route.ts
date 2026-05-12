@@ -204,7 +204,7 @@ export async function POST(request: Request) {
     await upsertRawEventsSafely(supabase, events);
 
     const { count: totalMemories } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 

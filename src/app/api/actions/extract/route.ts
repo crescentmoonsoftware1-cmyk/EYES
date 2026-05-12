@@ -11,20 +11,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch the 20 most recent memories
+    // Fetch the 30 most recent memories from the unified memories table
     const { data: memories, error } = await supabase
-      .from('raw_events')
-      .select('id, platform, title, content, timestamp, author')
+      .from('memories')
+      .select('id, platform, event_type, title, content, timestamp, author')
       .eq('user_id', user.id)
+      .not('content', 'is', null)
       .order('timestamp', { ascending: false })
       .limit(30);
 
     if (error) throw error;
-    
-    // DEMO MODE: If no memories are found, we still want to show the mock actions for the demo
-    const memoryContext = (memories && memories.length > 0) 
-      ? memories.map(m => `[ID: ${m.id}] [Platform: ${m.platform}] [Time: ${m.timestamp}] ${m.author}: ${m.title} - ${m.content}`).join('\n')
-      : "No memories indexed yet.";
+
+    const memoryContext = (memories && memories.length > 0)
+      ? memories.map(m => `[ID: ${m.id}] [Platform: ${m.platform}] [Type: ${m.event_type || 'unknown'}] [Time: ${m.timestamp}] ${m.author ?? 'Unknown'}: ${m.title ?? ''} - ${m.content.slice(0, 300)}`).join('\n')
+      : 'No memories indexed yet.';
 
     const prompt = `
 You are the Autonomous Agent brain of "The EYES".

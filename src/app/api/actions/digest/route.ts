@@ -11,11 +11,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch the 15 most recent memories for the digest
+    // Fetch the 15 most recent memories for the digest (unified memories table)
     const { data: memories, error } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('platform, title, content, timestamp, author')
       .eq('user_id', user.id)
+      .not('content', 'is', null)
       .order('timestamp', { ascending: false })
       .limit(15);
 
@@ -24,7 +25,7 @@ export async function GET() {
       return NextResponse.json({ digest: [] });
     }
 
-    const memoryContext = memories.map(m => `[Platform: ${m.platform}] ${m.author}: ${m.title} - ${m.content}`).join('\n');
+    const memoryContext = memories.map(m => `[Platform: ${m.platform}] ${m.author ?? 'Unknown'}: ${(m.title ?? '')} - ${m.content.slice(0, 200)}`).join('\n');
 
     const prompt = `
 You are the Executive AI Assistant for "The EYES".

@@ -25,15 +25,15 @@ export async function DELETE(request: Request) {
       .delete()
       .eq('user_id', user.id);
 
-    // 2. Delete raw ingested events
+    // 2. Delete unified memories (includes embeddings as a column)
     const { error: eventError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .delete()
       .eq('user_id', user.id);
 
-    // 3. Delete neural embeddings (memories)
+    // 3. Delete neural chat history
     const { error: embeddingError } = await supabase
-      .from('embeddings')
+      .from('chat_threads')
       .delete()
       .eq('user_id', user.id);
 

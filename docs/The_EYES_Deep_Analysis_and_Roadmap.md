@@ -191,16 +191,3 @@ Questions to confirm with the client
 - Should there be different keys per environment or one shared project key?
 - Should key usage be logged for security review?
 
-Open concerns
-- Key rotation without a clear process can lead to outages.
-- Shared keys across environments can make debugging and security review harder.
-- If fallback behavior is allowed, users need to know when the system is no longer using the primary model.
-
-Recommended final structure for the PDF
-- Privacy Shields
-- Audit Rules
-- Keys & Access
-- Open Questions
-- Approval Notes
-
-If you want, I can also turn this into a more formal requirements document with headings like Scope, Rules, Audit, Security, and Open Questions.

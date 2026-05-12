@@ -158,9 +158,10 @@ export async function GET() {
         .select('platform,status,sync_progress,total_items,last_sync_at,error_message')
         .eq('user_id', user.id),
       supabase
-        .from('raw_events')
+        .from('memories')
         .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity, flag_reason')
         .eq('user_id', user.id)
+        .not('content', 'is', null)
         .order('timestamp', { ascending: false })
         .limit(300),
     ]);

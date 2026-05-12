@@ -4,6 +4,18 @@ import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/
 import { decryptToken } from '@/utils/tokens';
 import { scoreTwitterEvent } from '@/utils/risk/scorer';
 
+type TweetV2 = {
+  id: string;
+  text: string;
+  created_at?: string;
+  public_metrics?: {
+    retweet_count?: number;
+    reply_count?: number;
+    like_count?: number;
+    quote_count?: number;
+  };
+};
+
 export async function POST(request: Request) {
   const actor = await resolveSyncActor(request);
   if ('status' in actor) {
@@ -46,7 +58,7 @@ export async function POST(request: Request) {
 
     const tweets = body.data || [];
     
-    const events = await Promise.all(tweets.map(async (tweet: any) => {
+    const events = await Promise.all(tweets.map(async (tweet: TweetV2) => {
       const metrics = tweet.public_metrics || {};
       const reach = (metrics.retweet_count || 0) + (metrics.reply_count || 0) + (metrics.like_count || 0);
       const risk = await scoreTwitterEvent({
@@ -78,6 +90,11 @@ export async function POST(request: Request) {
       await upsertRawEventsSafely(supabase, events);
     }
 
+    const { count: totalMemories } = await supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     const now = new Date().toISOString();
     await upsertSyncStatusSafely(supabase, {
       user_id: userId,
@@ -86,12 +103,16 @@ export async function POST(request: Request) {
       sync_progress: 100,
       total_items: events.length,
       last_sync_at: now,
-      next_sync_at: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
+      next_sync_at: new Date(Date.now() + 3600000).toISOString(),
     });
+    await supabase.from('user_profiles')
+      .update({ memories_indexed: totalMemories ?? events.length, updated_at: now })
+      .eq('user_id', userId);
 
     return NextResponse.json({ success: true, count: events.length });
   } catch (err) {
-    console.error('Twitter Sync Error:', err);
-    return NextResponse.json({ error: 'Sync failed' }, { status: 500 });
+    console.error('[Twitter Sync] Error:', err);
+    await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'twitter', status: 'error', error_message: String(err).slice(0, 200) });
+    return NextResponse.json({ error: 'Twitter sync failed' }, { status: 500 });
   }
 }

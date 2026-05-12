@@ -51,7 +51,7 @@ export async function GET() {
     }
 
     const { data, error } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('platform,event_type,title')
       .eq('user_id', authData.user.id)
       .order('timestamp', { ascending: false })

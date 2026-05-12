@@ -10,20 +10,20 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Danger Zone: Delete all memories, vectors, and sync cursors for the user
+    // Danger Zone: Delete all memories (includes embeddings), chat threads, and sync cursors
     const { error: eventError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .delete()
       .eq('user_id', user.id);
 
     if (eventError) throw eventError;
 
-    const { error: embeddingError } = await supabase
-      .from('embeddings')
+    const { error: chatError } = await supabase
+      .from('chat_threads')
       .delete()
       .eq('user_id', user.id);
-      
-    if (embeddingError) throw embeddingError;
+
+    if (chatError) throw chatError;
 
     const { error: syncError } = await supabase
       .from('sync_status')

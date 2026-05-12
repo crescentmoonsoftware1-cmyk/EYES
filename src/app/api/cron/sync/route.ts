@@ -174,7 +174,26 @@ function toFiniteNumber(raw: string | undefined, fallback: number) {
   return parsed;
 }
 
-const SUPPORTED_PLATFORMS = new Set(['github', 'gmail', 'google_calendar', 'notion', 'reddit', 'slack', 'discord']);
+// All platforms that can be synced via the daily cron.
+// OAuth platforms come from oauth_tokens; direct-key platforms are injected below.
+const SUPPORTED_PLATFORMS = new Set([
+  // Original 7
+  'github', 'gmail', 'google_calendar', 'notion', 'reddit', 'slack', 'discord',
+  // Expanded — all OAuth platforms added in later sessions
+  'dropbox', 'asana', 'linear', 'clickup', 'netlify', 'webflow', 'canva',
+  'strava', 'fitbit', 'withings', 'sentry', 'twitter',
+]);
+// Direct API-key platforms (no oauth_tokens row) — always included if env key set
+const DIRECT_KEY_PLATFORMS: Array<{ platform: string; envKey: string }> = [
+  { platform: 'vercel', envKey: 'VERCEL_API_TOKEN' },
+  { platform: 'trello', envKey: 'TRELLO_API_KEY' },
+  { platform: 'posthog', envKey: 'POSTHOG_API_KEY' },
+  { platform: 'devin', envKey: 'DEVIN_API_KEY' },
+  { platform: 'cursor', envKey: 'CURSOR_API_KEY' },
+];
+const SUPPORTED_RETRY_PLATFORMS = new Set([...SUPPORTED_PLATFORMS, 'embeddings']);
+
+// ─── Runtime tuning constants ────────────────────────────────────────────────
 const SYNC_TIMEOUT_MS = Number(process.env.CRON_SYNC_TIMEOUT_MS || 20000);
 const EMBEDDINGS_TIMEOUT_MS = Number(process.env.CRON_EMBEDDINGS_TIMEOUT_MS || 25000);
 const DEFAULT_MAX_USERS_PER_RUN = Number(process.env.CRON_MAX_USERS_PER_RUN || 10);
@@ -185,9 +204,8 @@ const RETRY_MAX_DELAY_MS = Number(process.env.CRON_RETRY_MAX_DELAY_MS || 60 * 60
 const RETRY_MAX_ATTEMPTS = Number(process.env.CRON_RETRY_MAX_ATTEMPTS || 4);
 const RETRY_DUE_LIMIT = Number(process.env.CRON_RETRY_DUE_LIMIT || 100);
 const RETRY_JITTER_RATIO = Number(process.env.CRON_RETRY_JITTER_RATIO || 0.2);
-const SUPPORTED_RETRY_PLATFORMS = new Set([...SUPPORTED_PLATFORMS, 'embeddings']);
+
 const ALERT_PENDING_RETRY_THRESHOLD = Math.max(
-  1,
   Math.floor(toFiniteNumber(process.env.SYNC_ALERT_PENDING_RETRY_THRESHOLD, 8))
 );
 const ALERT_DEAD_LETTER_24H_THRESHOLD = Math.max(
@@ -570,14 +588,38 @@ async function runPlatformSync(
   try {
     const handler = getSyncHandler(routePlatform);
     if (!handler) {
-      return {
-        platform,
-        routePlatform,
-        success: false,
-        status: null,
-        durationMs: Date.now() - startedAt,
-        error: `Unsupported sync platform: ${routePlatform}`,
-      };
+      // ── HTTP fallback for platforms without a direct in-process import ──────
+      // All newer platforms (dropbox, asana, linear, clickup, netlify, webflow,
+      // canva, strava, fitbit, withings, sentry, twitter, vercel, trello,
+      // posthog, devin, cursor) are handled via HTTP sub-request.
+      try {
+        const requestUrl = `${baseUrl}/api/sync/${routePlatform}`;
+        const response = await fetchWithTimeout(
+          requestUrl,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-cron-secret': secret,
+              'x-cron-user-id': userId,
+            },
+          },
+          SYNC_TIMEOUT_MS
+        );
+        const rawBody = await response.text();
+        const body = parseResponsePayload(rawBody);
+        if (!response.ok) {
+          return {
+            platform, routePlatform, success: false, status: response.status,
+            durationMs: Date.now() - startedAt,
+            error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Sync failed (${response.status})`,
+          };
+        }
+        return { platform, routePlatform, success: true, status: response.status, durationMs: Date.now() - startedAt };
+      } catch (httpErr) {
+        const message = httpErr instanceof Error ? httpErr.message : String(httpErr);
+        return { platform, routePlatform, success: false, status: null, durationMs: Date.now() - startedAt, error: message };
+      }
     }
 
     const requestUrl = new URL(`${baseUrl}/api/sync/${routePlatform}`);
@@ -758,16 +800,22 @@ async function runCronSync(request: Request) {
   const retryPriorityOrder = new Map<string, number>();
 
   (tokenRows as TokenRow[] | null)?.forEach((row) => {
-    if (!SUPPORTED_PLATFORMS.has(row.platform)) {
-      return;
-    }
-
+    // Accept ALL platforms — SUPPORTED_PLATFORMS guards retry logic, not initial token scan
     if (!userPlatformMap.has(row.user_id)) {
       userPlatformMap.set(row.user_id, new Set());
     }
-
     userPlatformMap.get(row.user_id)?.add(row.platform);
   });
+
+  // Inject direct-key platforms for every user that has oauth tokens (shared infrastructure)
+  const directPlatformsToAdd = DIRECT_KEY_PLATFORMS
+    .filter((p) => Boolean(process.env[p.envKey]))
+    .map((p) => p.platform);
+  for (const [uid] of userPlatformMap) {
+    for (const dp of directPlatformsToAdd) {
+      userPlatformMap.get(uid)?.add(dp);
+    }
+  }
 
   retryRows.forEach((row, index) => {
     if (!SUPPORTED_RETRY_PLATFORMS.has(row.platform)) {

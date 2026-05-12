@@ -216,7 +216,7 @@ describe('sync route enhancements', () => {
     expect(payload.ok).toBe(true);
     expect(hoisted.upsertRawEventsSafelyMock).toHaveBeenCalledTimes(1);
 
-    const events = hoisted.upsertRawEventsSafelyMock.mock.calls[0][1] as Array<Record<string, unknown>>;
+    const events = (hoisted.upsertRawEventsSafelyMock.mock.calls as unknown[][][])[0][1] as Array<Record<string, unknown>>;
     expect(String(events[0].content)).toContain('full gmail body text');
 
     const metadata = events[0].metadata as Record<string, unknown>;
@@ -279,7 +279,7 @@ describe('sync route enhancements', () => {
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
 
-    const events = hoisted.upsertRawEventsSafelyMock.mock.calls[0][1] as Array<Record<string, unknown>>;
+    const events = (hoisted.upsertRawEventsSafelyMock.mock.calls as unknown[][][])[0][1] as Array<Record<string, unknown>>;
     expect(String(events[0].content)).toContain('implementation details');
 
     const metadata = events[0].metadata as Record<string, unknown>;
@@ -342,7 +342,7 @@ describe('sync route enhancements', () => {
     expect(payload.success).toBe(true);
     expect((payload.count || 0) >= 2).toBe(true);
 
-    const events = hoisted.upsertRawEventsSafelyMock.mock.calls[0][1] as Array<Record<string, unknown>>;
+    const events = (hoisted.upsertRawEventsSafelyMock.mock.calls as unknown[][][])[0][1] as Array<Record<string, unknown>>;
     const hasDm = events.some((event) => {
       const metadata = event.metadata as Record<string, unknown>;
       return metadata.is_im === true;
@@ -399,11 +399,11 @@ describe('sync route enhancements', () => {
     expect(payload.success).toBe(true);
     expect((payload.count || 0) > 0).toBe(true);
 
-    const events = hoisted.upsertRawEventsSafelyMock.mock.calls[0][1] as Array<Record<string, unknown>>;
+    const events = (hoisted.upsertRawEventsSafelyMock.mock.calls as unknown[][][])[0][1] as Array<Record<string, unknown>>;
     const hasGuildMembership = events.some((event) => event.event_type === 'guild_membership');
     expect(hasGuildMembership).toBe(true);
 
-    const syncCalls = hoisted.upsertSyncStatusSafelyMock.mock.calls.map((call) => call[1] as Record<string, unknown>);
+    const syncCalls = (hoisted.upsertSyncStatusSafelyMock.mock.calls as unknown[][][]).map((call) => call[1] as unknown as Record<string, unknown>);
     const finalDiscordCall = [...syncCalls].reverse().find((call) => call.platform === 'discord' && call.metadata);
     expect(finalDiscordCall).toBeTruthy();
 

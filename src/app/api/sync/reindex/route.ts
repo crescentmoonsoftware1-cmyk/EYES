@@ -3,8 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { generateEmbedding } from '@/services/ai/ai';
 
 /**
- * Neural Re-index: Regenerates 768-dimension embeddings for all existing raw_events.
- * This is the final step to fix the Chat 'not working' after the DB dimension change.
+ * Neural Re-index: Regenerates embeddings for all memories that lack an embedding.
+ * Reads from the unified `memories` table. Processes up to 200 items per call.
  */
 export async function POST(request: Request) {
   try {
@@ -18,36 +18,32 @@ export async function POST(request: Request) {
     // 1. Get raw events that don't have a matching 768d embedding yet
     // Or just all events if we want to be thorough
     const { data: events, error: fetchError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('id, content')
       .eq('user_id', user.id)
-      .limit(200); // Process in batches of 200 for stability
+      .is('embedding', null)
+      .not('content', 'is', null)
+      .limit(200);
 
     if (fetchError || !events) {
-      throw new Error(`Failed to fetch events for re-indexing: ${fetchError?.message}`);
+      throw new Error(`Failed to fetch memories for re-indexing: ${fetchError?.message}`);
     }
 
-    console.log(`[Re-index] Processing ${events.length} records for user ${user.id}`);
+    console.log(`[Re-index] Processing ${events.length} memories for user ${user.id}`);
 
     let successCount = 0;
     const errors = [];
 
-    // 2. Loop through and generate real 768d embeddings
     for (const event of events) {
       try {
         const result = await generateEmbedding(event.content);
         if (result && result.embedding) {
-          // Upsert into embeddings table
-          const { error: upsertError } = await supabase
-            .from('embeddings')
-            .upsert({
-              user_id: user.id,
-              event_id: event.id,
-              content: event.content,
-              embedding: result.embedding
-            }, { onConflict: 'event_id' });
+          const { error: updateError } = await supabase
+            .from('memories')
+            .update({ embedding: result.embedding })
+            .eq('id', event.id);
 
-          if (upsertError) throw upsertError;
+          if (updateError) throw updateError;
           successCount++;
         }
       } catch (err) {

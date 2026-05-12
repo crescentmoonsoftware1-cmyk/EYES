@@ -8,7 +8,7 @@ import { createClient } from '@/utils/supabase/server';
 type ExportRowEvent = {
   id: string;
   platform: string;
-  platform_id: string;
+  source_id: string;
   event_type: string | null;
   title: string | null;
   content: string | null;
@@ -17,9 +17,6 @@ type ExportRowEvent = {
   metadata: unknown;
   is_flagged: boolean | null;
   flag_severity: string | null;
-  flag_reason: string | null;
-  created_at: string | null;
-  updated_at: string | null;
 };
 
 function exportFileName() {
@@ -233,9 +230,10 @@ export async function GET(request: Request) {
         .eq('user_id', user.id)
         .maybeSingle(),
       supabase
-        .from('raw_events')
-        .select('id,platform,platform_id,event_type,title,content,author,timestamp,metadata,is_flagged,flag_severity,flag_reason,created_at,updated_at')
+        .from('memories')
+        .select('id,platform,source_id,event_type,title,content,author,timestamp,metadata,is_flagged,flag_severity')
         .eq('user_id', user.id)
+        .not('content', 'is', null)
         .order('timestamp', { ascending: false }),
       supabase
         .from('topics')
@@ -250,7 +248,7 @@ export async function GET(request: Request) {
         .select('platform,scope,created_at,updated_at,expires_at')
         .eq('user_id', user.id),
       supabase
-        .from('embeddings')
+        .from('memories')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id),
     ]);
@@ -282,7 +280,7 @@ export async function GET(request: Request) {
         const columns = [
           'id',
           'platform',
-          'platform_id',
+          'source_id',
           'event_type',
           'title',
           'content',
@@ -290,10 +288,7 @@ export async function GET(request: Request) {
           'timestamp',
           'is_flagged',
           'flag_severity',
-          'flag_reason',
           'metadata',
-          'created_at',
-          'updated_at',
         ];
 
         const csvRows = events.map((event) => ({
@@ -427,7 +422,7 @@ export async function GET(request: Request) {
       const rawEventColumns = [
         'id',
         'platform',
-        'platform_id',
+        'source_id',
         'event_type',
         'title',
         'content',
@@ -435,10 +430,7 @@ export async function GET(request: Request) {
         'timestamp',
         'is_flagged',
         'flag_severity',
-        'flag_reason',
         'metadata',
-        'created_at',
-        'updated_at',
       ];
       zip.file(
         'raw-events.csv',

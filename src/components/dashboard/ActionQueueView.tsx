@@ -24,6 +24,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings'>('all');
   const [logs, setLogs] = useState<string[]>(['INITIALIZING NEURAL LINK...', 'SCANNING GMAIL...', 'CHECKING GITHUB PRs...']);
 
   useEffect(() => {
@@ -98,61 +99,83 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
               <div className={styles.listHeader}>
                  <span className={styles.countBadge}>{actions.length} PENDING ACTIONS</span>
                  <div className={styles.filterChips}>
-                    <button className={styles.chipActive}>All</button>
-                    <button className={styles.chip}>Priority</button>
-                    <button className={styles.chip}>Meetings</button>
+                    <button
+                      className={activeFilter === 'all' ? styles.chipActive : styles.chip}
+                      onClick={() => setActiveFilter('all')}
+                    >All</button>
+                    <button
+                      className={activeFilter === 'priority' ? styles.chipActive : styles.chip}
+                      onClick={() => setActiveFilter('priority')}
+                    >Priority</button>
+                    <button
+                      className={activeFilter === 'meetings' ? styles.chipActive : styles.chip}
+                      onClick={() => setActiveFilter('meetings')}
+                    >Meetings</button>
                  </div>
               </div>
 
-              {loading ? (
-                 <div className={styles.loadingBox}>
+              {(() => {
+                const filtered = actions.filter(a => {
+                  if (activeFilter === 'priority') return a.confidence >= 80;
+                  if (activeFilter === 'meetings') return a.actionType === 'CALENDAR';
+                  return true;
+                });
+
+                if (loading) return (
+                  <div className={styles.loadingBox}>
                     <div className={styles.spinner} />
                     <span>EXTRACTING INTENT...</span>
-                 </div>
-              ) : actions.length === 0 ? (
-                 <div className={styles.emptyCard}>
+                  </div>
+                );
+
+                if (filtered.length === 0) return (
+                  <div className={styles.emptyCard}>
                     <div className={styles.emptyIcon}><BoltIcon size={48} /></div>
                     <h3>Inbox Zero</h3>
-                    <p>No actionable items detected in the latest neural scan.</p>
+                    <p>{activeFilter !== 'all' ? `No ${activeFilter} actions found.` : 'No actionable items detected in the latest neural scan.'}</p>
                     <button className={styles.refreshBtn} onClick={() => window.location.reload()}>RE-SCAN NOW</button>
-                 </div>
-              ) : (
-                 <div className={styles.cardList}>
-                    {actions.map(action => {
-                       const platformObj = ALL_POSSIBLE_PLATFORMS.find(p => p.id === action.platform.toLowerCase());
-                       const isProcessing = processingId === action.id;
+                  </div>
+                );
 
-                       return (
-                         <div key={action.id} className={styles.actionCard}>
-                            <div className={styles.cardMain}>
-                               <div className={styles.platformIcon}>
-                                  {platformObj?.icon ? React.cloneElement(platformObj.icon as any, { size: 24 }) : <span>{action.platform[0]}</span>}
-                               </div>
-                               <div className={styles.cardContent}>
-                                  <div className={styles.cardHead}>
-                                     <h4 className={styles.actionTitle}>{action.title}</h4>
-                                     <span className={styles.confidence}>{action.confidence}% CONFIDENCE</span>
-                                  </div>
-                                  <p className={styles.actionDesc}>{action.description}</p>
-                                  <div className={styles.suggestionBox}>
-                                     <span className={styles.suggestionLabel}>PROPOSED COMMAND</span>
-                                     <span className={styles.suggestionText}>{action.suggestedAction}</span>
-                                  </div>
-                               </div>
+                return (
+                  <div className={styles.cardList}>
+                    {filtered.map(action => {
+                      const platformObj = ALL_POSSIBLE_PLATFORMS.find(p => p.id === action.platform.toLowerCase());
+                      const isProcessing = processingId === action.id;
+
+                      return (
+                        <div key={action.id} className={styles.actionCard}>
+                          <div className={styles.cardMain}>
+                            <div className={styles.platformIcon}>
+                              {platformObj?.icon ? React.cloneElement(platformObj.icon as any, { size: 24 }) : <span>{action.platform[0]}</span>}
                             </div>
-                            <div className={styles.cardFooter}>
-                               <button className={styles.approveBtn} onClick={() => handleApprove(action)} disabled={isProcessing}>
-                                  {isProcessing ? 'EXECUTING...' : 'APPROVE & EXECUTE'}
-                               </button>
-                               <button className={styles.dismissBtn} onClick={() => handleDismiss(action.id)}>DISMISS</button>
+                            <div className={styles.cardContent}>
+                              <div className={styles.cardHead}>
+                                <h4 className={styles.actionTitle}>{action.title}</h4>
+                                <span className={styles.confidence}>{action.confidence}% CONFIDENCE</span>
+                              </div>
+                              <p className={styles.actionDesc}>{action.description}</p>
+                              <div className={styles.suggestionBox}>
+                                <span className={styles.suggestionLabel}>PROPOSED COMMAND</span>
+                                <span className={styles.suggestionText}>{action.suggestedAction}</span>
+                              </div>
                             </div>
-                         </div>
-                       );
+                          </div>
+                          <div className={styles.cardFooter}>
+                            <button className={styles.approveBtn} onClick={() => handleApprove(action)} disabled={isProcessing}>
+                              {isProcessing ? 'EXECUTING...' : 'APPROVE & EXECUTE'}
+                            </button>
+                            <button className={styles.dismissBtn} onClick={() => handleDismiss(action.id)}>DISMISS</button>
+                          </div>
+                        </div>
+                      );
                     })}
-                 </div>
-              )}
+                  </div>
+                );
+              })()}
            </main>
         </div>
+     
      </div>
   );
 }

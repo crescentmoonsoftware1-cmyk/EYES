@@ -18,7 +18,7 @@ export async function GET() {
       const end = `${year}-12-31T23:59:59Z`;
 
       const { count, error } = await supabase
-        .from('raw_events')
+        .from('memories')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .gte('timestamp', start)

@@ -84,7 +84,7 @@ export async function DELETE(
 
     const [{ count: eventCountBefore, error: countError }, { data: tokenRow }] = await Promise.all([
       supabase
-        .from('raw_events')
+        .from('memories')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('platform', platform),
@@ -101,7 +101,7 @@ export async function DELETE(
     }
 
     const { error: purgeError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .delete()
       .eq('user_id', user.id)
       .eq('platform', platform);
@@ -197,7 +197,7 @@ export async function DELETE(
     }
 
     const { count: remainingMemories, error: remainingCountError } = await supabase
-      .from('raw_events')
+      .from('memories')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id);
 

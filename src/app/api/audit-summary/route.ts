@@ -125,12 +125,11 @@ export async function GET() {
         .select("platform,total_items,last_sync_at")
         .eq("user_id", userId),
       supabase
-        .from("raw_events")
-        .select("id, platform, timestamp, content, flag_severity, is_flagged")
-        .eq("user_id", userId)
-        .eq("is_flagged", true)
-        .order("timestamp", { ascending: false })
-        .order("timestamp", { ascending: false })
+        .from('memories')
+        .select('id, platform, timestamp, content, flag_severity, is_flagged')
+        .eq('user_id', userId)
+        .eq('is_flagged', true)
+        .order('timestamp', { ascending: false })
     ]);
 
     if (syncStatusResult.error) {
