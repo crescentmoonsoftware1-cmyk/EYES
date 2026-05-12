@@ -135,6 +135,7 @@ async function handleEmbedding(text: string) {
   }
 
   // ── 2. Voyage AI (FALLBACK 1) ─────────────────────────────────────────────
+  if (VOYAGE_API_KEY) {
     try {
       const res = await fetch(VOYAGE_EMBED_URL, {
         method: 'POST',
