@@ -182,10 +182,9 @@ export async function GET() {
       { status: 200 }
     );
 
-    // Cache for 30s with stale-while-revalidate for 5min
-    // Significantly reduces load on first-paint and subsequent requests within window
-    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=300');
-    response.headers.set('CDN-Cache-Control', 's-maxage=30');
+    // Never cache at CDN — this payload is user-specific (auth-gated).
+    // Private + no-store ensures every load gets fresh platform/feed data.
+    response.headers.set('Cache-Control', 'private, no-store');
     
     return response;
   } catch (error) {
@@ -199,8 +198,8 @@ export async function GET() {
       { status: 200 }
     );
 
-    // Cache error responses for 5s to avoid thundering herd
-    response.headers.set('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=30');
+    // Cache error responses briefly to avoid thundering herd
+    response.headers.set('Cache-Control', 'private, max-age=5');
     return response;
   }
 }

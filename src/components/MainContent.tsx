@@ -84,6 +84,23 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     load();
     triggerAutoSync();
 
+    // ── Post-connect refresh ───────────────────────────────────────────────
+    // When returning from an OAuth connect flow the connect page stores a flag.
+    // We do: immediate re-fetch (show "connected") + delayed re-fetch (show data).
+    try {
+      const connectedPlatform = sessionStorage.getItem('eyes-post-connect');
+      if (connectedPlatform) {
+        sessionStorage.removeItem('eyes-post-connect');
+        console.log(`[Dashboard] Detected fresh connect for ${connectedPlatform} — forcing refresh.`);
+        // Small delay so DB write from OAuth callback is visible
+        setTimeout(() => load(), 800);
+        // Second delayed fetch to capture data from the background sync
+        setTimeout(() => load(), 5000);
+      }
+    } catch (_) {
+      // sessionStorage unavailable — not critical
+    }
+
     // Real-time UI synchronization listener with pulse-damping (throttle)
     let lastRefresh = 0;
     const handleRefresh = () => {
@@ -98,6 +115,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     window.addEventListener('eyes-realtime-refresh', handleRefresh);
     return () => window.removeEventListener('eyes-realtime-refresh', handleRefresh);
   }, [onLoaded]);
+
 
   // Handle Scroll to Bottom for Chat
   useEffect(() => {
