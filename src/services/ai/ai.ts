@@ -28,8 +28,11 @@ const OPENROUTER_FREE_MODELS = [
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''; 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// Voyage AI — primary embedding provider (200M free tokens, no credit card)
-// Sign up at voyageai.com → get API key → set VOYAGE_API_KEY in .env.local
+// Cohere — PRIMARY embedding provider (free trial, 2000 RPM, 1024 dims, no card)
+const COHERE_API_KEY = process.env.COHERE_API_KEY || '';
+const COHERE_EMBED_MODEL = 'embed-english-v3.0'; // 1024 dims
+
+// Voyage AI — FALLBACK 1 (200M free tokens, 3 RPM without card)
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY || '';
 const VOYAGE_EMBED_MODEL = 'voyage-context-3';   // 1024 dims — 200M free tokens
 const VOYAGE_EMBED_URL = 'https://api.voyageai.com/v1/embeddings';
@@ -91,13 +94,47 @@ export async function invokeModel(options: AIInvokeOptions): Promise<any> {
 
 /**
  * Internal: Handle 1024d Embeddings
- * Priority: 1) Voyage AI (primary, 200M free tokens)  2) Gemini (fallback, 20 req/day)
+ * Priority: 1) Cohere (primary, 2000 RPM free)  2) Voyage AI (fallback, 200M free)  3) Gemini (last resort)
  */
 async function handleEmbedding(text: string) {
   const input = text.slice(0, 8000);
 
-  // ── 1. Voyage AI (PRIMARY) ─────────────────────────────────────────────
-  if (VOYAGE_API_KEY) {
+  // ── 1. Cohere (PRIMARY — 2000 RPM free, no card needed) ──────────────────
+  if (COHERE_API_KEY) {
+    try {
+      const res = await fetch('https://api.cohere.com/v2/embed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${COHERE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: COHERE_EMBED_MODEL,
+          texts: [input],
+          input_type: 'search_document',
+          embedding_types: ['float'],
+        }),
+      });
+      if (res.ok) {
+        const body = await res.json();
+        const embedding = body?.embeddings?.float?.[0];
+        if (Array.isArray(embedding) && embedding.length === EMBED_DIMS) {
+          console.log('[AI] Cohere embedding OK');
+          return { embedding };
+        }
+        console.warn('[AI] Cohere embedding: unexpected response shape', body);
+      } else if (res.status === 429) {
+        console.warn('[AI] Cohere rate-limited, falling back to Voyage...');
+      } else {
+        const errText = await res.text();
+        console.warn(`[AI] Cohere embedding non-OK (${res.status}):`, errText);
+      }
+    } catch (err: any) {
+      console.warn('[AI] Cohere embedding failed:', err?.message ?? err);
+    }
+  }
+
+  // ── 2. Voyage AI (FALLBACK 1) ─────────────────────────────────────────────
     try {
       const res = await fetch(VOYAGE_EMBED_URL, {
         method: 'POST',
@@ -129,7 +166,7 @@ async function handleEmbedding(text: string) {
     }
   }
 
-  // ── 2. Gemini (FALLBACK) ───────────────────────────────────────────────
+  // ── 3. Gemini (LAST RESORT) ──────────────────────────────────────────────
   if (!GEMINI_API_KEY) {
     console.error('[AI] No embedding providers available (VOYAGE_API_KEY and GEMINI_API_KEY both unset)');
     return null;
