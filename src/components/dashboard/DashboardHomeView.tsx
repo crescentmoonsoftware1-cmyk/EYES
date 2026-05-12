@@ -42,20 +42,27 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
     ? remainingPlatforms 
     : remainingPlatforms.filter(p => (p as any).category === activeCategory);
 
+  // Platforms with a working OAuth connect route
   const primaryPlatformIds = [
-    'gmail', 'google-calendar', 'notion', 'slack', 'github', 'discord', 
-    'linear', 'vercel', 'twitter', 'sentry', 'reddit', 'asana', 'clickup', 'dropbox'
+    'gmail', 'google-calendar', 'notion', 'slack', 'github', 'discord',
+    'linear', 'twitter', 'sentry', 'reddit', 'asana', 'clickup', 'dropbox',
+    'canva', 'fitbit', 'netlify', 'strava', 'webflow', 'withings',
   ];
+
+  // Platforms that connect via API key — no OAuth redirect
+  const apiKeyPlatformIds = ['vercel', 'trello'];
   
   const primaryRemaining = filteredRemaining.filter(p => primaryPlatformIds.includes(p.id));
-  const comingSoonPlatforms = filteredRemaining.filter(p => !primaryPlatformIds.includes(p.id));
+  const apiKeyRemaining  = filteredRemaining.filter(p => apiKeyPlatformIds.includes(p.id));
+  // Hide truly "coming soon" platforms from the connector hub (they have no routes at all)
+  const comingSoonPlatforms: typeof filteredRemaining = [];
 
   const renderPlatformCard = (p: any) => {
-    const isLive = primaryPlatformIds.includes(p.id);
+    const isApiKey = apiKeyPlatformIds.includes(p.id);
 
     const startAuth = () => {
-      if (!isLive) {
-        alert(`The ${p.name} integration is currently in closed beta. Please check back soon!`);
+      if (isApiKey) {
+        alert(`${p.name} connects via an API key configured in your environment — no OAuth flow required. Your key is already active.`);
         return;
       }
 
@@ -67,7 +74,7 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
     };
 
     return (
-      <div key={p.id} className={styles.readinessCard} onClick={startAuth} style={!isLive ? { cursor: 'pointer' } : {}}>
+      <div key={p.id} className={styles.readinessCard} onClick={startAuth} style={{ cursor: 'pointer' }}>
         <div className={styles.cardHeader}>
           <div 
             className={styles.readinessIcon} 
@@ -80,14 +87,16 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
           </div>
           <div className={styles.readinessInfo}>
             <strong>{p.name}</strong>
-            <span className={styles.availStatusText}>{isLive ? 'Connect Now' : 'Coming Soon'}</span>
+            <span className={styles.availStatusText}>{isApiKey ? 'API Key' : 'Connect Now'}</span>
           </div>
-          {isLive && <span className={styles.addIndicator}>+</span>}
+          {!isApiKey && <span className={styles.addIndicator}>+</span>}
+          {isApiKey && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>🔑</span>}
         </div>
         <p className={styles.platformDesc}>{(p as any).description || 'Integrate this platform to expand your neural knowledge base.'}</p>
       </div>
     );
   };
+
 
   return (
     <div className={styles.readinessContainer}>
@@ -133,6 +142,18 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
         <div className={styles.readinessGrid}>
           {primaryRemaining.map(renderPlatformCard)}
         </div>
+
+        {apiKeyRemaining.length > 0 && (
+          <div style={{ marginTop: '48px' }}>
+            <h3 className={styles.subHeader} style={{ marginBottom: '24px', opacity: 0.7 }}>● API KEY CONNECTIONS</h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '24px', letterSpacing: '0.5px' }}>
+              These platforms authenticate via API token — no OAuth flow needed. Configure their keys in your Vercel environment variables.
+            </p>
+            <div className={styles.readinessGrid} style={{ opacity: 0.85 }}>
+              {apiKeyRemaining.map(renderPlatformCard)}
+            </div>
+          </div>
+        )}
 
         {comingSoonPlatforms.length > 0 && (
           <div style={{ marginTop: '64px' }}>

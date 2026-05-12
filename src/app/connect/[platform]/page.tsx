@@ -59,8 +59,9 @@ function ConnectPlatformInner() {
       }
     }
 
-    // Always navigate back to the connector hub
-    router.replace('/?view=connectors');
+    // Always navigate back to the managed connections view to confirm the new link
+    router.replace('/?view=readiness');
+
   }, [router, params, searchParams]);
 
   return (
