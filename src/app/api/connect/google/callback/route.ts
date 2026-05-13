@@ -162,6 +162,46 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(`/connect/${platform}?oauth=error&reason=token_persist_failed`, await appBaseUrl(request)));
     }
 
+    // ── Activate Gmail Push Notifications via watch() ─────────────────────────
+    // Only needed for Gmail (not Google Calendar)
+    if (platform === 'gmail') {
+      try {
+        const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID ?? 'the-eyes-493904';
+        const topicName = `projects/${projectId}/topics/gmail-notifications`;
+
+        const watchRes = await fetch(
+          'https://gmail.googleapis.com/gmail/v1/users/me/watch',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tokenBody.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              topicName,
+              labelIds: ['INBOX'],
+            }),
+          }
+        );
+
+        if (watchRes.ok) {
+          const watchData = await watchRes.json();
+          console.log('[Gmail Watch] Activated. historyId:', watchData.historyId, 'expiry:', watchData.expiration);
+          // Store historyId so the webhook knows where to start fetching from
+          await supabase.from('oauth_tokens')
+            .update({ metadata: { gmail_history_id: watchData.historyId, gmail_watch_expiry: watchData.expiration } })
+            .eq('user_id', userId)
+            .eq('platform', 'gmail');
+        } else {
+          const watchErr = await watchRes.text();
+          console.warn('[Gmail Watch] Failed to activate push notifications:', watchErr);
+        }
+      } catch (watchErr) {
+        // Non-fatal — sync still works via cron, push is just an enhancement
+        console.warn('[Gmail Watch] Exception activating watch:', watchErr);
+      }
+    }
+
     // Sync is triggered by cron (runs every 5 minutes)
     // Returning immediately gives faster user feedback
     return NextResponse.redirect(new URL(`/connect/${platform}?oauth=success`, await appBaseUrl(request)));
