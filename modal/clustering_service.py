@@ -38,7 +38,7 @@ class ClusterResponse(BaseModel):
 
 
 # ── The actual endpoint ────────────────────────────────────────────────────────
-@app.function(image=image, keep_warm=1)  # keep_warm=1 avoids cold starts for weekly cron
+@app.function(image=image, min_containers=1)  # min_containers=1 avoids cold starts for weekly cron
 @modal.fastapi_endpoint(method="POST")
 def cluster(body: ClusterRequest) -> ClusterResponse:
     import numpy as np
