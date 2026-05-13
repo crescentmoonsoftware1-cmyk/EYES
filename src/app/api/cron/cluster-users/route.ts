@@ -76,7 +76,26 @@ export async function GET(request: Request) {
   return NextResponse.json({ eligible: eligibleUsers.length, results });
 }
 
-// ─── Task #7: Clustering ──────────────────────────────────────────────────────
+// ─── Task #7: Clustering (Modal UMAP + HDBSCAN) ──────────────────────────────
+const MODAL_CLUSTERING_URL = process.env.MODAL_CLUSTERING_URL ?? '';
+const CLUSTERING_SECRET    = process.env.CLUSTERING_SECRET ?? '';
+
+// Converts a StateVector into a fixed-length numerical array for UMAP
+function vectorToArray(v: StateVector): number[] {
+  // Flatten platform_mix into top-5 known platforms (0 if absent)
+  const TOP_PLATFORMS = ['gmail', 'slack', 'notion', 'github', 'google-calendar'];
+  const platformValues = TOP_PLATFORMS.map(p => v.platform_mix?.[p] ?? 0);
+  return [
+    v.message_volume,
+    v.sentiment_score,
+    v.topic_entropy,
+    v.output_cadence,
+    v.social_breadth,
+    v.time_of_day_bias,
+    ...platformValues, // 5 more dims → total = 11 dims
+  ];
+}
+
 async function runClusteringForUser(supabase: any, userId: string): Promise<number> {
   // Fetch last 90 days of state vectors
   const { data: vectors, error } = await supabase
@@ -90,108 +109,160 @@ async function runClusteringForUser(supabase: any, userId: string): Promise<numb
 
   const typedVectors = vectors as StateVector[];
 
-  // Summarize vectors for Claude — describe each week as a digest
-  const weekSummaries = buildWeekSummaries(typedVectors);
+  // ── Step 1: Get cluster assignments from Modal UMAP + HDBSCAN ─────────────
+  let labels: number[] | null = null;
+  let umapCoords: number[][] | null = null;
 
-  // Ask Claude to detect 3-7 behavioral clusters
-  const aiResponse = await invokeModel({
-    capability: 'classify',
-    system: `You are EYES, a behavioral intelligence system. Analyze a user's behavioral state vectors across time.
-Identify 3-7 distinct recurring behavioral states (clusters). Each cluster should represent a genuinely different mode of operation.
-Respond with valid JSON only. No markdown, no explanation outside JSON.`,
-    messages: [{
-      role: 'user',
-      content: `Here are week-by-week behavioral summaries for a user. Each week shows: message volume, sentiment, topic variety, social breadth, dominant platform, dominant topics.
+  if (MODAL_CLUSTERING_URL) {
+    try {
+      const numericalVectors = typedVectors.map(vectorToArray);
+      const res = await fetch(MODAL_CLUSTERING_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vectors: numericalVectors,
+          min_cluster_size: 5,
+          secret: CLUSTERING_SECRET,
+        }),
+      });
 
-${weekSummaries}
-
-Identify 3-7 distinct behavioral clusters. For each cluster, specify which week indices belong to it.
-
-Return exactly:
-{
-  "clusters": [
-    {
-      "draft_label": "3-5 word behavioral state name",
-      "signature": "2-3 sentence description of what makes this state distinctive",
-      "representative_quote": "A quote or phrase that captures this state (can be descriptive)",
-      "characteristics": ["trait1", "trait2", "trait3"],
-      "day_indices": [0, 1, 4, 7]
+      if (res.ok) {
+        const data = await res.json();
+        labels      = data.labels ?? null;
+        umapCoords  = data.umap_reduced ?? null;
+        console.log(`[Clustering] Modal OK — ${data.n_clusters} clusters, noise=${data.noise_ratio}`);
+      } else {
+        console.warn('[Clustering] Modal returned non-OK:', res.status, await res.text());
+      }
+    } catch (err) {
+      console.warn('[Clustering] Modal call failed, falling back to Claude:', err);
     }
-  ]
-}`,
-    }],
-    preference: 'auto',
-    capture: false,
-  });
+  }
 
-  if (!aiResponse) return 0;
+  // ── Step 2: Group vectors by label ────────────────────────────────────────
+  // If Modal succeeded, group by numeric label; otherwise fall back to Claude week-grouping
+  let clusterGroups: Map<number, StateVector[]>;
 
-  let parsed: { clusters: ClusterResult[] } | null = null;
-  try {
-    const jsonMatch = String(aiResponse).match(/\{[\s\S]*\}/);
-    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-  } catch { return 0; }
+  if (labels && labels.length === typedVectors.length) {
+    clusterGroups = new Map();
+    for (let i = 0; i < typedVectors.length; i++) {
+      const label = labels[i];
+      if (label === -1) continue; // Skip noise points
+      if (!clusterGroups.has(label)) clusterGroups.set(label, []);
+      clusterGroups.get(label)!.push(typedVectors[i]);
+    }
+  } else {
+    // Fallback: group by week (Claude handles grouping in label step)
+    clusterGroups = new Map();
+    for (let i = 0; i < typedVectors.length; i += 7) {
+      clusterGroups.set(clusterGroups.size, typedVectors.slice(i, i + 7));
+    }
+  }
 
-  if (!parsed?.clusters?.length) return 0;
+  if (clusterGroups.size === 0) return 0;
 
-  // Increment cluster_version for this user
-  const { data: existing } = await supabase
-    .from('cognitive_clusters')
-    .select('cluster_version')
-    .eq('user_id', userId)
-    .order('cluster_version', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // ── Step 3: Claude writes ONE label + description per cluster ─────────────
+  const nextVersion = await getNextClusterVersion(supabase, userId);
 
-  const nextVersion = (existing?.cluster_version ?? 0) + 1;
-
-  // Mark all previous clusters as not current
   await supabase
     .from('cognitive_clusters')
     .update({ is_current: false })
     .eq('user_id', userId);
 
-  // Upsert new clusters
-  for (let i = 0; i < parsed.clusters.length; i++) {
-    const c = parsed.clusters[i];
-    const clusterId = `cluster-v${nextVersion}-${i + 1}`;
-    const isLast = i === parsed.clusters.length - 1;
+  let clustersWritten = 0;
 
-    // Find which state vectors belong to this cluster
-    const memberVectorIds = (c.day_indices ?? [])
-      .filter(idx => idx >= 0 && idx < typedVectors.length)
-      .map(idx => typedVectors[idx]?.id)
-      .filter(Boolean);
+  for (const [clusterIndex, memberVectors] of clusterGroups.entries()) {
+    // Build a compact summary of this cluster for Claude
+    const avgVol  = Math.round(mean(memberVectors.map(v => v.message_volume)));
+    const avgSent = Math.round(mean(memberVectors.map(v => v.sentiment_score)) * 100) / 100;
+    const avgEnt  = Math.round(mean(memberVectors.map(v => v.topic_entropy)) * 100) / 100;
+    const topics  = [...new Set(memberVectors.map(v => v.dominant_topic).filter(Boolean))].slice(0, 4).join(', ');
+    const platforms = [...new Set(memberVectors.map(v => v.dominant_platform).filter(Boolean))].slice(0, 3).join(', ');
+
+    // ONE Claude call per cluster — just writes the human-readable label
+    const aiResponse = await invokeModel({
+      capability: 'classify',
+      system: 'You label behavioral states for a personal intelligence system. Respond with valid JSON only.',
+      messages: [{
+        role: 'user',
+        content: `This behavioral cluster (${memberVectors.length} days) has:
+avg message volume: ${avgVol}, avg sentiment: ${avgSent}, topic entropy: ${avgEnt}
+dominant topics: ${topics || 'varied'}, dominant platforms: ${platforms || 'varied'}
+
+Return:
+{"label":"3-5 word state name","description":"2-3 sentences describing what makes this state distinctive","characteristics":["trait1","trait2","trait3"]}`,
+      }],
+      preference: 'auto',
+      capture: false,
+    });
+
+    let label = `Cluster ${clusterIndex + 1}`;
+    let description = `A recurring behavioral state observed across ${memberVectors.length} days.`;
+    let characteristics: string[] = [];
+
+    try {
+      const match = String(aiResponse ?? '').match(/\{[\s\S]*?\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        label           = parsed.label ?? label;
+        description     = parsed.description ?? description;
+        characteristics = parsed.characteristics ?? [];
+      }
+    } catch { /* use defaults */ }
+
+    const clusterId = `cluster-v${nextVersion}-${clusterIndex + 1}`;
+    const memberIds = memberVectors.map(v => v.id);
+
+    // Store 2D UMAP coords for this cluster's members (for Mind Map)
+    const clusterCoords = umapCoords
+      ? memberVectors.map((_, i) => {
+          const originalIdx = typedVectors.indexOf(memberVectors[i]);
+          return umapCoords![originalIdx] ?? [0, 0];
+        })
+      : null;
 
     const { data: clusterRow } = await supabase
       .from('cognitive_clusters')
       .upsert({
         user_id:             userId,
         cluster_id:          clusterId,
-        cluster_label:       c.draft_label,
-        cluster_description: c.signature,
-        characteristics:     c.characteristics ?? [],
-        evidence_memory_ids: memberVectorIds,
-        is_current:          isLast, // most recent cluster = current
-        occurrence_count:    memberVectorIds.length,
+        cluster_label:       label,
+        cluster_description: description,
+        characteristics:     characteristics,
+        evidence_memory_ids: memberIds,
+        is_current:          true,
+        occurrence_count:    memberVectors.length,
         cluster_version:     nextVersion,
+        umap_coords:         clusterCoords ? JSON.stringify(clusterCoords) : null,
         updated_at:          new Date().toISOString(),
       }, { onConflict: 'user_id,cluster_id' })
       .select('id')
       .maybeSingle();
 
-    // Update cluster_id on the state_vectors that belong to this cluster
-    if (clusterRow?.id && memberVectorIds.length > 0) {
+    if (clusterRow?.id && memberIds.length > 0) {
       await supabase
         .from('state_vectors')
         .update({ cluster_id: clusterRow.id, cluster_version: nextVersion })
-        .in('id', memberVectorIds)
+        .in('id', memberIds)
         .eq('user_id', userId);
     }
+
+    clustersWritten++;
   }
 
-  console.log(`[Clustering] ✓ user=${userId.slice(0, 8)} clusters=${parsed.clusters.length} v${nextVersion}`);
-  return parsed.clusters.length;
+  console.log(`[Clustering] ✓ user=${userId.slice(0, 8)} clusters=${clustersWritten} v${nextVersion} (Modal=${!!labels})`);
+  return clustersWritten;
+}
+
+async function getNextClusterVersion(supabase: any, userId: string): Promise<number> {
+  const { data } = await supabase
+    .from('cognitive_clusters')
+    .select('cluster_version')
+    .eq('user_id', userId)
+    .order('cluster_version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.cluster_version ?? 0) + 1;
 }
 
 // ─── Task #8: Loop Detection ──────────────────────────────────────────────────
