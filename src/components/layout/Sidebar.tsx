@@ -101,17 +101,6 @@ export default function Sidebar() {
 
 
           <div 
-            className={`${styles.item} ${activeView === 'intelligence' ? styles.itemActive : ''}`} 
-            onClick={() => navigateToView('intelligence')}
-          >
-            <div className={styles.itemIcon}><span style={{fontSize: '18px', filter: 'grayscale(1)'}}>🧠</span></div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Intelligence <span style={{fontSize: '8px', background: 'var(--accent-primary)', color: 'var(--bg-primary)', padding: '2px 4px', borderRadius: '4px', marginLeft: '4px', fontWeight: 800}}>NEW</span></span>
-              <span className={styles.itemDesc}>State clusters, loops & drift</span>
-            </div>
-          </div>
-
-          <div 
             className={`${styles.item} ${activeView === 'history' ? styles.itemActive : ''}`} 
             onClick={() => navigateToView('history')}
           >

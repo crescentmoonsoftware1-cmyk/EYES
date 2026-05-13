@@ -14,9 +14,8 @@ import { AuditView } from './dashboard/AuditView';
 import { SynthesisView } from './dashboard/SynthesisView';
 import { HistoryView } from './dashboard/HistoryView';
 import { ActionQueueView } from './dashboard/ActionQueueView';
-import { IntelligenceView } from './dashboard/IntelligenceView';
 
-type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'history' | 'action-queue' | 'intelligence';
+type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'history' | 'action-queue';
 
 function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const searchParams = useSearchParams();
@@ -284,9 +283,6 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         <ActionQueueView 
           onBack={() => router.push('/?view=dashboard')}
         />
-      )}
-      {activeView === 'intelligence' && (
-        <IntelligenceView onBack={() => setView('dashboard')} />
       )}
     </main>
   );
