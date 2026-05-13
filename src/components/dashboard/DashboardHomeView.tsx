@@ -42,18 +42,20 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
     ? remainingPlatforms 
     : remainingPlatforms.filter(p => (p as any).category === activeCategory);
 
-  // Platforms with a fully-registered OAuth app
+  // Platforms with a fully-registered & working OAuth app
   const primaryPlatformIds = [
     'gmail', 'google-calendar', 'notion', 'slack', 'github', 'discord',
-    'linear', 'twitter', 'sentry', 'asana', 'dropbox',
-    'fitbit', 'strava', 'withings',
+    'asana', 'dropbox',
   ];
 
   // Platforms that connect via API key — no OAuth redirect
   const apiKeyPlatformIds = ['vercel', 'trello'];
 
-  // OAuth app not yet registered — show as Coming Soon (non-clickable)
-  const comingSoonIds = ['clickup', 'netlify', 'webflow', 'canva', 'reddit'];
+  // OAuth redirect URL not yet registered on platform — show as Coming Soon (non-clickable)
+  const comingSoonIds = [
+    'clickup', 'netlify', 'webflow', 'canva', 'reddit',
+    'twitter', 'linear', 'sentry', 'strava', 'fitbit', 'withings',
+  ];
   
   const primaryRemaining   = filteredRemaining.filter(p => primaryPlatformIds.includes(p.id));
   const apiKeyRemaining    = filteredRemaining.filter(p => apiKeyPlatformIds.includes(p.id));
