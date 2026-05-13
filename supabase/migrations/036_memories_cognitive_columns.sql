@@ -10,7 +10,7 @@ ALTER TABLE memories ADD COLUMN IF NOT EXISTS entities_extracted JSONB DEFAULT '
 
 -- Backfill date_bucket from existing timestamp
 UPDATE memories
-SET date_bucket = DATE(COALESCE(timestamp, created_at))
+SET date_bucket = DATE(COALESCE(timestamp, updated_at))
 WHERE date_bucket IS NULL;
 
 -- Backfill content_type based on platform
