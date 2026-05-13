@@ -10,6 +10,9 @@ import {
   ArrowRightIcon
 } from '@/components/common/icons/PlatformIcons';
 import type { Message, PlatformStatus } from '@/types/dashboard';
+import { AlertsBanner } from '@/components/chat/AlertsBanner';
+import { ClusterValidationModal } from '@/components/chat/ClusterValidationModal';
+import { CognitiveRightPanel } from '@/components/chat/CognitiveRightPanel';
 
 /**
  * Converts AI markdown output to rendered HTML.
@@ -52,6 +55,7 @@ function ChatPageInner() {
   const [platforms, setPlatforms] = useState<PlatformStatus[]>([]);
   const [threadId, setThreadId] = useState('');       // local key
   const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
+  const [brainPanelOpen, setBrainPanelOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);
   const hasSubmittedRef = useRef(false);
@@ -210,6 +214,7 @@ function ChatPageInner() {
 
   return (
     <div className={styles.chatRoot}>
+      <ClusterValidationModal />
       <div className={styles.sidebarWrapper}>
         <Sidebar />
       </div>
@@ -217,6 +222,7 @@ function ChatPageInner() {
         <div className={styles.headerWrapper}>
           <Header />
         </div>
+        <AlertsBanner />
         
         <div className={styles.chatContentContainer}>
           <div className={styles.chatColumn}>
@@ -280,10 +286,23 @@ function ChatPageInner() {
                 >
                   <ArrowRightIcon />
                 </button>
+                {/* Brain Panel Toggle */}
+                <button
+                  onClick={() => setBrainPanelOpen(p => !p)}
+                  title="Cognitive Layer"
+                  style={{
+                    background: brainPanelOpen ? 'rgba(99,102,241,0.2)' : 'none',
+                    border: '1px solid rgba(99,102,241,0.3)',
+                    borderRadius: '8px', padding: '6px 10px',
+                    color: '#818cf8', cursor: 'pointer', fontSize: '16px',
+                    marginLeft: '4px', flexShrink: 0,
+                  }}
+                >🧠</button>
               </div>
             </div>
           </div>
         </div>
+        <CognitiveRightPanel isOpen={brainPanelOpen} onClose={() => setBrainPanelOpen(false)} />
       </div>
     </div>
   );
