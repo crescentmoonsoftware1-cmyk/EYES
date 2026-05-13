@@ -42,20 +42,22 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
     ? remainingPlatforms 
     : remainingPlatforms.filter(p => (p as any).category === activeCategory);
 
-  // Platforms with a working OAuth connect route
+  // Platforms with a fully-registered OAuth app
   const primaryPlatformIds = [
     'gmail', 'google-calendar', 'notion', 'slack', 'github', 'discord',
-    'linear', 'twitter', 'sentry', 'reddit', 'asana', 'clickup', 'dropbox',
-    'canva', 'fitbit', 'netlify', 'strava', 'webflow', 'withings',
+    'linear', 'twitter', 'sentry', 'asana', 'dropbox',
+    'fitbit', 'strava', 'withings',
   ];
 
   // Platforms that connect via API key — no OAuth redirect
   const apiKeyPlatformIds = ['vercel', 'trello'];
+
+  // OAuth app not yet registered — show as Coming Soon (non-clickable)
+  const comingSoonIds = ['clickup', 'netlify', 'webflow', 'canva', 'reddit'];
   
-  const primaryRemaining = filteredRemaining.filter(p => primaryPlatformIds.includes(p.id));
-  const apiKeyRemaining  = filteredRemaining.filter(p => apiKeyPlatformIds.includes(p.id));
-  // Hide truly "coming soon" platforms from the connector hub (they have no routes at all)
-  const comingSoonPlatforms: typeof filteredRemaining = [];
+  const primaryRemaining   = filteredRemaining.filter(p => primaryPlatformIds.includes(p.id));
+  const apiKeyRemaining    = filteredRemaining.filter(p => apiKeyPlatformIds.includes(p.id));
+  const comingSoonPlatforms = filteredRemaining.filter(p => comingSoonIds.includes(p.id));
 
   const renderPlatformCard = (p: any) => {
     const isApiKey = apiKeyPlatformIds.includes(p.id);
@@ -65,7 +67,6 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
         alert(`${p.name} connects via an API key configured in your environment — no OAuth flow required. Your key is already active.`);
         return;
       }
-
       let startUrl = `/api/connect/${p.id}/start`;
       if (p.id === 'gmail' || p.id === 'google-calendar') {
         startUrl = `/api/connect/google/start?platform=${p.id}`;
@@ -76,11 +77,11 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
     return (
       <div key={p.id} className={styles.readinessCard} onClick={startAuth} style={{ cursor: 'pointer' }}>
         <div className={styles.cardHeader}>
-          <div 
-            className={styles.readinessIcon} 
-            style={{ 
+          <div
+            className={styles.readinessIcon}
+            style={{
               backgroundColor: (p as any).color?.startsWith('#') ? `${(p as any).color}15` : 'var(--bg-secondary)',
-              border: (p as any).color?.startsWith('#') ? `1px solid ${(p as any).color}30` : '1px solid var(--border-subtle)'
+              border: (p as any).color?.startsWith('#') ? `1px solid ${(p as any).color}30` : '1px solid var(--border-subtle)',
             }}
           >
             {p.icon ? React.cloneElement(p.icon as React.ReactElement<any>, { size: 24 }) : null}
@@ -96,6 +97,56 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
       </div>
     );
   };
+
+  const renderComingSoonCard = (p: any) => (
+    <div
+      key={p.id}
+      className={styles.readinessCard}
+      style={{
+        cursor: 'not-allowed',
+        opacity: 0.55,
+        filter: 'grayscale(40%)',
+        position: 'relative',
+        userSelect: 'none',
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Coming Soon badge */}
+      <div style={{
+        position: 'absolute', top: '12px', right: '12px',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: '99px',
+        padding: '3px 10px',
+        fontSize: '9px',
+        fontWeight: 800,
+        letterSpacing: '1.5px',
+        color: 'var(--text-secondary)',
+        textTransform: 'uppercase',
+      }}>
+        Coming Soon
+      </div>
+
+      <div className={styles.cardHeader}>
+        <div
+          className={styles.readinessIcon}
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          {p.icon ? React.cloneElement(p.icon as React.ReactElement<any>, { size: 24 }) : null}
+        </div>
+        <div className={styles.readinessInfo}>
+          <strong>{p.name}</strong>
+          <span style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '1px', fontWeight: 700 }}>UNAVAILABLE</span>
+        </div>
+      </div>
+      <p className={styles.platformDesc} style={{ color: 'var(--text-secondary)' }}>
+        {(p as any).description || 'Integration coming soon.'}
+      </p>
+    </div>
+  );
 
 
   return (
@@ -157,9 +208,12 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
 
         {comingSoonPlatforms.length > 0 && (
           <div style={{ marginTop: '64px' }}>
-            <h3 className={styles.subHeader} style={{ marginBottom: '32px', opacity: 0.6 }}>● COMING SOON</h3>
-            <div className={styles.readinessGrid} style={{ opacity: 0.7 }}>
-              {comingSoonPlatforms.map(renderPlatformCard)}
+            <h3 className={styles.subHeader} style={{ marginBottom: '8px', opacity: 0.6 }}>● COMING SOON</h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '24px', letterSpacing: '0.5px' }}>
+              These integrations are being set up. Check back soon.
+            </p>
+            <div className={styles.readinessGrid}>
+              {comingSoonPlatforms.map(renderComingSoonCard)}
             </div>
           </div>
         )}
