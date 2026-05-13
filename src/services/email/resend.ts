@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'EYES <hello@the-eyes.app>';
+// Using Resend shared domain until the-eyes.app is purchased.
+// Switch to 'EYES <hello@the-eyes.app>' after buying the domain + adding DNS records.
+const FROM = 'EYES <onboarding@resend.dev>';
 
 // ── Email templates ────────────────────────────────────────────────────────────
 
