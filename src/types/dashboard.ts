@@ -59,6 +59,7 @@ export interface ChatResponse {
 
 export interface Citation {
   sourceId: string;
+  memoryId?: string;
   platform: string;
   title: string | null;
   snippet: string;

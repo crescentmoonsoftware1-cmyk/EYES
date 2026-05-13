@@ -56,6 +56,7 @@ function ChatPageInner() {
   const [threadId, setThreadId] = useState('');       // local key
   const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
   const [brainPanelOpen, setBrainPanelOpen] = useState(false);
+  const [excludedMemories, setExcludedMemories] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);
   const hasSubmittedRef = useRef(false);
@@ -259,6 +260,40 @@ function ChatPageInner() {
                         )}
                         {m.pending && <span className={styles.typingCursor}>▊</span>}
                       </div>
+                      {/* Cited memory exclusion buttons */}
+                      {m.role === 'assistant' && !m.pending && m.citations && m.citations.length > 0 && (
+                        <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {m.citations.filter(c => c.memoryId).map(c => {
+                            const isExcluded = excludedMemories.has(c.memoryId!);
+                            return (
+                              <button
+                                key={c.memoryId}
+                                title={isExcluded ? 'Memory excluded from patterns' : `Don't use "${c.platform}" memory in clustering`}
+                                onClick={async () => {
+                                  if (isExcluded) return;
+                                  await fetch(`/api/memories/${c.memoryId}/exclude`, { method: 'PATCH' });
+                                  setExcludedMemories(prev => new Set([...prev, c.memoryId!]));
+                                }}
+                                style={{
+                                  background: isExcluded ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
+                                  border: `1px solid ${isExcluded ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                                  color: isExcluded ? '#10b981' : '#6b7280',
+                                  borderRadius: '6px', padding: '3px 8px',
+                                  fontSize: '11px', cursor: isExcluded ? 'default' : 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: '4px',
+                                }}
+                              >
+                                {isExcluded ? '✓ Excluded' : `⊘ ${c.platform}`}
+                              </button>
+                            );
+                          })}
+                          {m.citations.some(c => c.memoryId && !excludedMemories.has(c.memoryId)) && (
+                            <span style={{ fontSize: '10px', color: '#374151', alignSelf: 'center', marginLeft: '2px' }}>
+                              exclude from patterns
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
