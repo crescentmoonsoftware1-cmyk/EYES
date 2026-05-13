@@ -42,11 +42,20 @@ export class AuditAnalysisService {
       }));
 
       const extractionPrompt = `
-        Perform a clinical Reputation Audit on these records:
-        ${JSON.stringify(analysisInput)}
-        
-        Extract: Sentiment (-1, 0, +1), Commitments, High-Risk findings.
-        Return JSON ONLY: { "analysis": [ { "id": "uuid", "sentiment": -1|0|1, "isCommitment": true|false, "commitmentText": "...", "isSensitive": true|false } ] }
+You are analyzing a person's complete digital archive to build a Reputation Projection — not a one-time snapshot, but a pattern-level read across time.
+
+Records (${analysisInput.length} total, spanning up to 2 years):
+${JSON.stringify(analysisInput)}
+
+For EACH record, extract:
+- sentiment: -1 (negative), 0 (neutral), +1 (positive)
+- isCommitment: true if this is a promise, task, or stated intention
+- commitmentText: the specific commitment if isCommitment is true
+- isSensitive: true if this could be a reputational risk
+- behaviorType: one of ["output", "communication", "planning", "social", "reflection", "other"]
+
+Return JSON ONLY:
+{ "analysis": [ { "id": "uuid", "sentiment": -1|0|1, "isCommitment": true|false, "commitmentText": "...", "isSensitive": true|false, "behaviorType": "output|communication|planning|social|reflection|other" } ] }
       `;
 
       const analysisRaw = await invokeModel({
@@ -109,12 +118,28 @@ export class AuditAnalysisService {
 
       const riskScore = Math.min(10, Number((( (weightedNegativeMentions * 2) + (weightedUnfulfilledCommitments * 3) ) / (weightedTotalMentions || 1) * 10).toFixed(1)));
 
-      // 4. Real Summary & Strategic Opportunities
+      // 4. Reputation Projection: pattern-level narrative across time
       const summaryPrompt = `
-        Summarize this audit: ${events.length} records, ${negativeMentions} negative, ${unfulfilledCommitmentsCount} tasks. 
-        Risk Score: ${riskScore}/10.
-        Also, extract 3 "Opportunities" (positive trends or areas of strength) and 5 "Top Entities" (most mentioned people/projects).
-        Return JSON ONLY: { "narrative": "...", "opportunities": ["..."], "topEntities": ["..."] }
+You are building a Reputation Projection for someone based on ${events.length} records spanning up to 2 years.
+
+Data summary:
+- Total records: ${events.length}
+- Negative signals: ${negativeMentions}
+- Unfulfilled commitments: ${unfulfilledCommitmentsCount}
+- Risk Score: ${riskScore}/10
+- Platforms covered: ${connectorsCovered.join(', ')}
+
+Your job is to answer 4 questions about this person's pattern across time:
+1. TRAJECTORY: Is the pattern improving, declining, or stable over the period?
+2. DOMINANT PATTERN: What behavioral archetype consistently emerges (e.g., "high-output executor", "ideas-first builder", "relationship-driven collaborator")?
+3. REPUTATION PROJECTION: If this person were scrutinized by an investor, employer, or partner — what pattern would they find in the data?
+4. OPPORTUNITIES: What 3 specific positive patterns or strengths appear consistently that could be leveraged?
+
+Also extract:
+- topEntities: top 5 most mentioned people, projects, or organizations
+
+Return JSON ONLY:
+{ "narrative": "2-3 sentence pattern-level summary", "trajectory": "improving|stable|declining", "dominantPattern": "...", "reputationProjection": "...", "opportunities": ["...", "...", "..."], "topEntities": ["..."] }
       `;
 
       const summaryRaw = await invokeModel({
@@ -138,7 +163,7 @@ export class AuditAnalysisService {
         risk_score: riskScore,
         mentions_count: events.length,
         commitments_count: unfulfilledCommitmentsCount,
-        summary_narrative: summaryResult.narrative || 'Analysis complete.',
+        summary_narrative: summaryResult.narrative || 'Pattern projection complete.',
         connectors_covered: connectorsCovered,
         report_url: null,
         metadata: {
@@ -146,6 +171,9 @@ export class AuditAnalysisService {
           riskFindings: extractedFindings,
           topEntities: summaryResult.topEntities || [],
           opportunities: summaryResult.opportunities || [],
+          trajectory: summaryResult.trajectory || 'stable',
+          dominantPattern: summaryResult.dominantPattern || null,
+          reputationProjection: summaryResult.reputationProjection || null,
           sentimentBalance: weightedTotalMentions > 0 ? (1 - (weightedNegativeMentions / weightedTotalMentions)) : 1.0,
           failureRate: failureRate.toFixed(2),
           complianceRate: complianceRate.toFixed(2),

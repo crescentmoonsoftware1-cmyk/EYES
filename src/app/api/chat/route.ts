@@ -1,6 +1,75 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { generateEmbedding, chatCompletion, chatCompletionStream, invokeModel, invokeModelStream } from '@/services/ai/ai';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { invokeModel, invokeModelStream } from '@/services/ai/ai';
+
+// ── Cognitive context injection ────────────────────────────────────────────
+// Reads from cognitive_clusters, detected_loops, drift_snapshots tables.
+// Returns null silently if tables are empty or don't exist yet.
+async function fetchCognitiveContext(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  try {
+    const [clusterRes, loopsRes, driftRes] = await Promise.allSettled([
+      supabase
+        .from('cognitive_clusters')
+        .select('cluster_label,cluster_description,days_in_cluster')
+        .eq('user_id', userId)
+        .eq('is_current', true)
+        .limit(1)
+        .single(),
+      supabase
+        .from('detected_loops')
+        .select('loop_description,occurrence_count')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .limit(3),
+      supabase
+        .from('drift_snapshots')
+        .select('gaps')
+        .eq('user_id', userId)
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+    ]);
+
+    const parts: string[] = [];
+
+    if (clusterRes.status === 'fulfilled' && clusterRes.value.data) {
+      const c = clusterRes.value.data;
+      parts.push(
+        `CURRENT COGNITIVE STATE: ${c.cluster_label}` +
+        (c.days_in_cluster > 0 ? ` (${c.days_in_cluster} days in this state)` : '') +
+        (c.cluster_description ? `. ${c.cluster_description}` : '')
+      );
+    }
+
+    if (loopsRes.status === 'fulfilled' && Array.isArray(loopsRes.value.data) && loopsRes.value.data.length > 0) {
+      const summary = loopsRes.value.data
+        .map((l: { loop_description: string; occurrence_count: number }) =>
+          `"${l.loop_description}" (${l.occurrence_count}x)`)
+        .join('; ');
+      parts.push(`ACTIVE BEHAVIORAL LOOPS: ${summary}`);
+    }
+
+    if (driftRes.status === 'fulfilled' && driftRes.value.data) {
+      const gaps = driftRes.value.data.gaps as Array<{ gap_summary?: string }>;
+      if (Array.isArray(gaps) && gaps.length > 0) {
+        const driftSummary = gaps.slice(0, 2)
+          .map(g => g.gap_summary)
+          .filter(Boolean)
+          .join('; ');
+        if (driftSummary) parts.push(`RECENT DRIFT DETECTED: ${driftSummary}`);
+      }
+    }
+
+    return parts.length > 0 ? parts.join('\n') : null;
+  } catch {
+    return null; // Cognitive tables may not be populated yet — safe to ignore
+  }
+}
 
 type ChatHistoryMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 type ChatRequestBody = { message?: string; history?: ChatHistoryMessage[] };
@@ -133,6 +202,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Fetch cognitive context in parallel with embedding generation
+    const cognitiveContextPromise = fetchCognitiveContext(supabase as unknown as import('@supabase/supabase-js').SupabaseClient, user.id);
+
     // 1. Generate real-world embedding (via abstraction)
     const retrievalStartedAt = Date.now();
     const queryResult = await invokeModel({
@@ -206,6 +278,8 @@ export async function POST(request: Request) {
       }
     }
 
+    const cognitiveContext = await cognitiveContextPromise;
+
     const diagnostics: ChatDiagnostics = {
       contextCount: citations.length,
       retrievalLatencyMs: Date.now() - retrievalStartedAt,
@@ -218,7 +292,7 @@ export async function POST(request: Request) {
 
     const hasContext = context.trim().length > 0;
 
-    const systemPrompt = `You are EYES — a personal memory OS that surfaces information from the user's synced digital archive.
+    const systemPrompt = `You are EYES — a personal intelligence layer that surfaces information and behavioral patterns from the user's synced digital archive.
 
 STRICT RULES — follow these exactly:
 1. ONLY answer from the CONTEXT records provided below. Do not use general knowledge or make things up.
@@ -227,7 +301,8 @@ STRICT RULES — follow these exactly:
 4. NEVER output [MEMORY X], [GMAIL], [GITHUB], [Unknown Date] or any other internal tags. These are internal labels — strip them completely from your response.
 5. Speak directly and concisely. Match the format to the question — short answers for simple questions, structured for complex ones.
 6. Use **bold** only to highlight a single key fact (a name, date, or number). Do not overformat.
-
+7. When the user's cognitive state, active loops, or drift are known and RELEVANT to the question, briefly reference them. Otherwise ignore them.
+${cognitiveContext ? `\nCOGNITIVE CONTEXT (user's current behavioral state — use when relevant):\n${cognitiveContext}\n` : ''}
 ${hasContext ? `CONTEXT FROM ARCHIVE (internal — do NOT repeat these tags in your response):\n${context}` : 'CONTEXT: No matching records found in the user\'s archive.'}`.trim();
 
     const messages: ChatHistoryMessage[] = [
