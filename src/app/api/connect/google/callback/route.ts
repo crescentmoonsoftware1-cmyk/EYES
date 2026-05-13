@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 
 import { createClient } from '@/utils/supabase/server';
 import { encryptToken } from '@/utils/tokens';
-
 import { getBaseUrl } from '@/utils/url';
+import { sendWelcomeEmail } from '@/services/email/resend';
 
 async function googleRedirectUri(request: Request) {
   const requestOrigin = await getBaseUrl(request);
@@ -201,6 +201,23 @@ export async function GET(request: Request) {
         console.warn('[Gmail Watch] Exception activating watch:', watchErr);
       }
     }
+
+    // ── Welcome email on first-ever connector connection ──────────────────────
+    // Fire-and-forget: check if this is their very first oauth token stored
+    try {
+      const { count } = await supabase
+        .from('oauth_tokens')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+      if (count === 1 || count === 2) { // 1-2 because we just upserted gmail + calendar
+        const userEmail = authData.user.email ?? '';
+        const userName = authData.user.user_metadata?.full_name
+          ?? authData.user.user_metadata?.name
+          ?? userEmail.split('@')[0]
+          ?? 'there';
+        sendWelcomeEmail(userEmail, userName); // non-blocking
+      }
+    } catch { /* non-fatal */ }
 
     // Sync is triggered by cron (runs every 5 minutes)
     // Returning immediately gives faster user feedback

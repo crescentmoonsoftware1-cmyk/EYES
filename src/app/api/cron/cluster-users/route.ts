@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { invokeModel } from '@/services/ai/ai';
+import { getPrompt } from '@/services/prompts/getPrompt';
+import { sendClusterReadyEmail } from '@/services/email/resend';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -67,6 +69,29 @@ export async function GET(request: Request) {
       const loopCount    = await runLoopDetectionForUser(supabase, userId);
       const driftResult  = await runDriftDetectionForUser(supabase, userId);
       results[userId] = { clusters: clusterCount, loops: loopCount, drift: driftResult };
+
+      // Send cluster-ready email on the FIRST ever clustering run (version 1 only)
+      if (clusterCount > 0) {
+        try {
+          const { data: versionCheck } = await supabase
+            .from('cognitive_clusters')
+            .select('cluster_version')
+            .eq('user_id', userId)
+            .eq('cluster_version', 1)
+            .limit(1)
+            .maybeSingle();
+
+          if (versionCheck) { // version 1 just created
+            const { data: userData } = await supabase.auth.admin.getUserById(userId);
+            if (userData?.user?.email) {
+              const name = userData.user.user_metadata?.full_name
+                ?? userData.user.user_metadata?.name
+                ?? userData.user.email.split('@')[0];
+              sendClusterReadyEmail(userData.user.email, name, clusterCount); // non-blocking
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
     } catch (err) {
       console.error(`[Clustering] Failed for user ${userId}:`, err);
       results[userId] = { error: String(err) };
@@ -179,18 +204,14 @@ async function runClusteringForUser(supabase: any, userId: string): Promise<numb
     const topics  = [...new Set(memberVectors.map(v => v.dominant_topic).filter(Boolean))].slice(0, 4).join(', ');
     const platforms = [...new Set(memberVectors.map(v => v.dominant_platform).filter(Boolean))].slice(0, 3).join(', ');
 
-    // ONE Claude call per cluster — just writes the human-readable label
+    // ONE Claude call per cluster — label written from versioned prompt in DB
+    const clusterDescPrompt = await getPrompt('cluster_description');
     const aiResponse = await invokeModel({
       capability: 'classify',
-      system: 'You label behavioral states for a personal intelligence system. Respond with valid JSON only.',
+      system: clusterDescPrompt,
       messages: [{
         role: 'user',
-        content: `This behavioral cluster (${memberVectors.length} days) has:
-avg message volume: ${avgVol}, avg sentiment: ${avgSent}, topic entropy: ${avgEnt}
-dominant topics: ${topics || 'varied'}, dominant platforms: ${platforms || 'varied'}
-
-Return:
-{"label":"3-5 word state name","description":"2-3 sentences describing what makes this state distinctive","characteristics":["trait1","trait2","trait3"]}`,
+        content: `This behavioral cluster (${memberVectors.length} days) has:\navg message volume: ${avgVol}, avg sentiment: ${avgSent}, topic entropy: ${avgEnt}\ndominant topics: ${topics || 'varied'}, dominant platforms: ${platforms || 'varied'}\n\nReturn:\n{"label":"3-5 word state name","description":"2-3 sentences describing what makes this state distinctive","characteristics":["trait1","trait2","trait3"]}`,
       }],
       preference: 'auto',
       capture: false,
