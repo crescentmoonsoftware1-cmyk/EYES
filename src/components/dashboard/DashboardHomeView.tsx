@@ -45,7 +45,7 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
   // Platforms with a fully-registered & working OAuth app
   const primaryPlatformIds = [
     'gmail', 'google-calendar', 'notion', 'slack', 'github', 'discord',
-    'asana', 'dropbox',
+    'dropbox',
   ];
 
   // Platforms that connect via API key — no OAuth redirect
@@ -53,7 +53,7 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
 
   // OAuth redirect URL not yet registered on platform — show as Coming Soon (non-clickable)
   const comingSoonIds = [
-    'clickup', 'netlify', 'webflow', 'canva', 'reddit',
+    'asana', 'clickup', 'netlify', 'webflow', 'canva', 'reddit',
     'twitter', 'linear', 'sentry', 'strava', 'fitbit', 'withings',
   ];
   
