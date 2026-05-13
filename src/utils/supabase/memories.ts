@@ -112,6 +112,8 @@ export async function upsertMemoriesSafely(
             errors++;
           } else {
             inserted++;
+            // Extract entities async — non-blocking, fire-and-forget
+            extractAndStoreEntities(supabase, row).catch(() => {});
           }
         } catch (err) {
           console.error(`[Memories] Error processing ${row.platform}/${row.source_id}:`, err);
@@ -172,6 +174,80 @@ export async function upsertSyncStatusSafely(
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ─── Entity Extraction ────────────────────────────────────────────────────────
+
+/**
+ * Extracts named entities (people, orgs, tools) from a memory using AI.
+ * Stores results in `entities_extracted` column and the `entities` table.
+ * Called async after successful upsert — non-blocking.
+ */
+async function extractAndStoreEntities(
+  supabase: SupabaseClient,
+  row: MemoryUpsertRow
+): Promise<void> {
+  // Skip short content — not worth extracting from
+  if (!row.content || row.content.length < 80) return;
+
+  const { generateEmbedding: _, ...aiModule } = await import('@/services/ai/ai');
+  const { invokeModel } = aiModule;
+
+  const aiResponse = await invokeModel({
+    capability: 'classify',
+    system: 'You extract named entities from text. Respond with valid JSON only.',
+    messages: [{
+      role: 'user',
+      content: `Extract entities from this message. Return JSON array only:
+[{"type":"person|organization|tool|place","name":"Exact Name"}]
+Return [] if no entities found.
+
+Text: ${row.content.slice(0, 1000)}`,
+    }],
+    preference: 'auto',
+    capture: false,
+  });
+
+  if (!aiResponse) return;
+
+  let entities: Array<{ type: string; name: string }> = [];
+  try {
+    const match = String(aiResponse).match(/\[[\s\S]*?\]/);
+    if (match) entities = JSON.parse(match[0]);
+  } catch { return; }
+
+  if (!entities.length) return;
+
+  // Add canonical_id to each entity
+  const enriched = entities.map(e => ({
+    ...e,
+    canonical_id: `${e.type}_${e.name.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`,
+  }));
+
+  // Store in entities_extracted column on the memory
+  try {
+    await supabase
+      .from('memories')
+      .update({ entities_extracted: enriched })
+      .eq('user_id', row.user_id)
+      .eq('platform', row.platform)
+      .eq('source_id', row.source_id);
+  } catch { /* non-critical */ }
+
+  // Upsert into the entities table
+  for (const entity of enriched) {
+    try {
+      await supabase
+        .from('entities')
+        .upsert({
+          user_id:      row.user_id,
+          canonical_id: entity.canonical_id,
+          name:         entity.name,
+          entity_type:  entity.type,
+          last_seen_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,canonical_id' });
+    } catch { /* non-critical */ }
+  }
 }
 
 // Re-export old type for backward compatibility with any remaining usages
