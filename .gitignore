@@ -49,3 +49,20 @@ next-env.d.ts
 
 # agent metadata
 /.gemini
+
+# logs
+server.log
+*.log
+
+# generated / one-off data files
+models.json
+*.csv
+
+# binary office docs (keep in docs/ folder outside git if needed)
+*.pptx
+*.docx
+*.pdf
+
+# python
+__pycache__/
+*.pyc

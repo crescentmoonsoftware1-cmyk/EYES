@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { writeDisconnectAudit } from '@/utils/disconnect-audit';
+import { writeDisconnectAudit } from '@/services/audit/disconnect-audit';
 import {
   isRevocablePlatform,
   providerForPlatform,
