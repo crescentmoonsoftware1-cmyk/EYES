@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
+import { waitUntil } from '@vercel/functions';
 
 /**
  * API Route to initiate a Reputation Audit.
- * In production, this would be triggered by a Stripe Webhook.
- * For the demo, we allow a POST request from the dashboard.
  */
 export async function POST(request: Request) {
   try {
@@ -36,8 +35,8 @@ export async function POST(request: Request) {
       .update({ status: 'analysis' })
       .eq('id', audit.id);
 
-    // 3. RUN ANALYSIS (Background - no await to prevent browser timeout)
-    AuditAnalysisService.runAnalysis(audit.id, user.id);
+    // 3. RUN ANALYSIS (Background - use waitUntil to prevent Vercel from killing the process)
+    waitUntil(AuditAnalysisService.runAnalysis(audit.id, user.id));
 
     return NextResponse.json({
       success: true,

@@ -99,14 +99,11 @@ export async function POST(request: Request) {
       .eq('platform', 'gmail')
       .maybeSingle();
 
-    const url = new URL(request.url);
-    // 'backfill' mode fetches entire history; 'delta' only fetches new items since last sync
-    const mode = url.searchParams.get('mode') || 'delta';
-    const isBackfill = mode === 'backfill';
+    const startTime = Date.now();
+    const MAX_RUN_TIME = 22000; // 22 seconds (Vercel Hobby limit is 10s, Pro is 60s - 22s is a safe middle ground)
     const maxResultsPerPage = 100;
-    // No cap in backfill mode — paginate until the API returns no more pages
-    // Delta mode: fetch up to 200 recent items (fast, catches up quickly)
-    const maxTotalResults = isBackfill ? Infinity : 200;
+    // Cap total results per individual run to prevent memory bloat and timeouts
+    const maxTotalResults = isBackfill ? 500 : 200; 
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
@@ -122,14 +119,19 @@ export async function POST(request: Request) {
     }
 
     let allMessageIds: string[] = [];
-    // In backfill mode resume from saved cursor; in delta mode always start fresh
     let nextPageToken: string | undefined = isBackfill
       ? (currentStatus?.cursor || undefined)
       : undefined;
     let hasMore = true;
 
-    // --- PAGINATION LOOP (no hard cap in backfill mode) ---
+    // --- PAGINATION LOOP (with safety throttle) ---
     while (allMessageIds.length < maxTotalResults && hasMore) {
+      // Check if we are running out of time in the serverless execution window
+      if (Date.now() - startTime > MAX_RUN_TIME) {
+        console.log(`[Gmail Sync] Approaching timeout (${Date.now() - startTime}ms). Pausing run.`);
+        break;
+      }
+
       const fetchUrl = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
       fetchUrl.searchParams.set('maxResults', String(maxResultsPerPage));
       if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
@@ -153,8 +155,8 @@ export async function POST(request: Request) {
         hasMore = false;
         break;
       }
-      // Respect Gmail API rate limits between page fetches
-      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
     const messages: GmailMessageResponse[] = [];
@@ -162,6 +164,13 @@ export async function POST(request: Request) {
 
     // --- RATE LIMIT SHIELD ---
     for (let i = 0; i < allMessageIds.length; i += chunkSize) {
+      // Check if we are running out of time
+      if (Date.now() - startTime > MAX_RUN_TIME) {
+        console.log(`[Gmail Sync] Timeout safety triggered during message fetch (${Date.now() - startTime}ms). Saving progress.`);
+        hasMore = true; // Ensure we mark as syncing/hasMore to pick up the cursor later
+        break;
+      }
+
       const chunkIds = allMessageIds.slice(i, i + chunkSize);
       let attempt = 0;
       let success = false;

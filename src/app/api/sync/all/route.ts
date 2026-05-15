@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { resolveSyncActor } from '@/utils/sync/actor';
+import { waitUntil } from '@vercel/functions';
 
 const SYNC_TIMEOUT_MS = 25000; // Increased timeout for multiple platforms
 
@@ -86,7 +87,14 @@ export async function POST(request: Request) {
       .select('platform')
       .eq('user_id', userId);
 
-    // Direct API-key platforms — no oauth_tokens row needed, include if env key is present
+    // Filter out platforms that are missing critical configuration in this environment
+    const oauthPlatforms = (tokens ?? []).filter(t => {
+      // Check if critical client secrets are missing (Prevents 500s on Vercel)
+      if (t.platform === 'github' && !process.env.GITHUB_CLIENT_SECRET) return false;
+      if (t.platform.startsWith('google') && !process.env.GOOGLE_CLIENT_SECRET) return false;
+      return true;
+    });
+
     const DIRECT_KEY_PLATFORMS: Array<{ platform: string; envKey: string }> = [
       { platform: 'vercel', envKey: 'VERCEL_API_TOKEN' },
       { platform: 'trello', envKey: 'TRELLO_API_KEY' },
@@ -94,11 +102,12 @@ export async function POST(request: Request) {
       { platform: 'devin', envKey: 'DEVIN_API_KEY' },
       { platform: 'cursor', envKey: 'CURSOR_API_KEY' },
     ];
-    const oauthPlatforms = tokens ?? [];
+
     const directPlatforms = DIRECT_KEY_PLATFORMS
       .filter((p) => Boolean(process.env[p.envKey]))
       .filter((p) => !oauthPlatforms.some((t) => t.platform === p.platform))
       .map((p) => ({ platform: p.platform }));
+
     const allPlatforms = [...oauthPlatforms, ...directPlatforms];
 
     if (allPlatforms.length === 0) {
@@ -201,19 +210,22 @@ export async function POST(request: Request) {
       }
     };
 
-    void Promise.allSettled(allPlatforms.map((token) => runPlatformSync(token.platform))).then((settled) => {
-      const fulfilled = settled.filter((item): item is PromiseFulfilledResult<SyncOutcome> => item.status === 'fulfilled');
-      const successCount = fulfilled.filter((item) => item.value.success).length;
-      const failedCount = fulfilled.length - successCount + (settled.length - fulfilled.length);
-      console.log(
-        `[Sync All] Background sync complete. user=${userId} success=${successCount} failed=${failedCount}`
-      );
-    });
+    // 3. LAUNCH BACKGROUND SYNC (Use waitUntil for Vercel persistence)
+    waitUntil(
+      Promise.allSettled(allPlatforms.map((token) => runPlatformSync(token.platform))).then((settled) => {
+        const fulfilled = settled.filter((item): item is PromiseFulfilledResult<SyncOutcome> => item.status === 'fulfilled');
+        const successCount = fulfilled.filter((item) => item.value.success).length;
+        const failedCount = fulfilled.length - successCount + (settled.length - fulfilled.length);
+        console.log(
+          `[Sync All] Background sync complete. user=${userId} success=${successCount} failed=${failedCount}`
+        );
+      })
+    );
 
-    void (async () => {
+    // 4. LAUNCH BACKGROUND EMBEDDING QUEUE
+    waitUntil((async () => {
       try {
         // Queue any newly synced memories that don't have an embedding yet.
-        // Uses memory_id (new unified design) — not the deprecated raw_event_id.
         const { data: unembedded } = await supabase
           .from('memories')
           .select('id')
@@ -229,8 +241,6 @@ export async function POST(request: Request) {
             status: 'pending',
           }));
 
-          // onConflict: ignore duplicates — the unique index on (memory_id) WHERE pending/processing
-          // ensures we never double-queue the same memory.
           const { error: insertError } = await supabase
             .from('embedding_queue')
             .insert(queueItems, { onConflict: 'memory_id' } as Record<string, unknown>);
@@ -244,7 +254,7 @@ export async function POST(request: Request) {
       } catch (err) {
         console.warn('[Sync All] Failed to queue embeddings:', err);
       }
-    })();
+    })());
 
     return NextResponse.json(
       {
