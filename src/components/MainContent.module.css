@@ -427,14 +427,14 @@
 
 .actionCard {
   background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-primary);
   padding: 16px 32px;
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 14px;
   font-weight: 800;
   transition: all var(--transition-main);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -446,6 +446,7 @@
   color: var(--accent-primary);
   box-shadow: var(--shadow-lg);
 }
+
 
 /* NETWORK INTEGRITY / READINESS STYLES */
 .readinessContainer {
