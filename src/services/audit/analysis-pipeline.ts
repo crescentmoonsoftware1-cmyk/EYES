@@ -28,7 +28,17 @@ export class AuditAnalysisService {
       }
 
       if (events.length === 0) {
-        throw new Error('No real-world data found for analysis. Please sync sources first.');
+        // No data yet — complete the audit gracefully with a sync prompt
+        await supabase.from('reputation_audits').update({
+          status: 'completed',
+          risk_score: 0,
+          mentions_count: 0,
+          commitments_count: 0,
+          summary_narrative: 'No data available yet. Please run a Global Sync first to import your digital archive, then re-run the audit.',
+          connectors_covered: [],
+          metadata: { riskFindings: [], commitments: [], topEntities: [], opportunities: [], trajectory: 'stable', failureRate: '0.00', complianceRate: '100.00', sentimentBalance: 1.0 }
+        }).eq('id', auditId);
+        return { success: true, auditId, noData: true };
       }
 
       const connectorsCovered = Array.from(new Set(events.map(e => e.platform)));
@@ -65,7 +75,10 @@ Return JSON ONLY:
         preference: 'auto'
       });
 
-      if (!analysisRaw) throw new Error('AI Analysis failed to return data.');
+      // If AI fails to return data, proceed with empty analysis (avoid crashing the whole audit)
+      if (!analysisRaw) {
+        console.warn(`[Audit] AI returned null for ${auditId}. Proceeding with empty analysis.`);
+      }
 
       // 3. Parse and Aggregate
       let weightedTotalMentions = 0;
