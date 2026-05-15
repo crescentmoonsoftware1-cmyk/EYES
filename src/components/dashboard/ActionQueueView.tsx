@@ -85,11 +85,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
      <div className={styles.queueRoot}>
         <header className={styles.queueHeader}>
            <div className={styles.headerTitleGroup}>
-              <div className={styles.systemStatus}>
-                 <span className={styles.pulseDot} />
-                 NEURAL ENGINE ACTIVE
-              </div>
-              <h1 className={styles.mainTitle}>Action Command Bridge</h1>
+            <h1 className={styles.mainTitle}>Action Command Bridge</h1>
               <p className={styles.subtitle}>Approve autonomous actions discovered across your digital trace.</p>
            </div>
         </header>
