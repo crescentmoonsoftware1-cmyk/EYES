@@ -18,10 +18,16 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+/**
+ * Resolves the acting entity for a sync operation.
+ * Supports both User Session (Dashboard) and Cron Secret (Background) authentication.
+ * ALWAYS returns an Admin Client for successful auth to ensure write permissions.
+ */
 export async function resolveSyncActor(request: Request): Promise<SyncActor | SyncActorError> {
   const cronSecretHeader = request.headers.get('x-cron-secret');
   const cronUserId = request.headers.get('x-cron-user-id');
 
+  // --- CRON / BACKGROUND AUTH ---
   if (cronSecretHeader || cronUserId) {
     if (!cronSecretHeader || !cronUserId) {
       return { error: 'Missing cron authentication headers.', status: 401 };
@@ -36,52 +42,49 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
       return { error: 'Invalid cron user id.', status: 400 };
     }
 
-    let supabase: SupabaseClient;
     try {
-      supabase = await createAdminClient();
-    } catch {
+      const supabase = await createAdminClient();
+      const { data, error } = await supabase.auth.admin.getUserById(cronUserId);
+      
+      if (error || !data.user) {
+        return { error: `Failed to resolve cron user: ${error?.message || 'Not found'}`, status: 500 };
+      }
+
+      const userMetadata = data.user.user_metadata as { name?: string } | undefined;
+
       return {
-        error: 'Server is missing admin configuration for cron sync.',
-        status: 500,
+        supabase,
+        userId: cronUserId,
+        userEmail: data.user.email ?? undefined,
+        userName: userMetadata?.name,
+        mode: 'cron',
       };
+    } catch (err) {
+      return { error: 'Server configuration error in background worker.', status: 500 };
+    }
+  }
+
+  // --- SESSION / DASHBOARD AUTH ---
+  try {
+    const userClient = await createUserClient();
+    const { data: authData, error } = await userClient.auth.getUser();
+
+    if (error || !authData.user) {
+      return { error: 'Unauthorized', status: 401 };
     }
 
-    const { data, error } = await supabase.auth.admin.getUserById(cronUserId);
-    if (error) {
-      return { error: `Failed to resolve cron user: ${error.message}`, status: 500 };
-    }
-
-    if (!data.user) {
-      return { error: 'Cron user not found.', status: 404 };
-    }
-
-    const userMetadata = data.user.user_metadata as { name?: string } | undefined;
+    // Upgrade to Admin Client for the sync process to bypass RLS
+    const supabase = await createAdminClient();
+    const userMetadata = authData.user.user_metadata as { name?: string } | undefined;
 
     return {
       supabase,
-      userId: cronUserId,
-      userEmail: data.user.email ?? undefined,
+      userId: authData.user.id,
+      userEmail: authData.user.email ?? undefined,
       userName: userMetadata?.name,
-      mode: 'cron',
+      mode: 'session',
     };
+  } catch (err) {
+    return { error: 'Failed to initialize neural session.', status: 500 };
   }
-
-  const userClient = await createUserClient();
-  const { data: authData, error } = await userClient.auth.getUser();
-
-  if (error || !authData.user) {
-    return { error: 'Unauthorized', status: 401 };
-  }
-
-  // Use Admin Client for the actual sync operations to bypass RLS barriers in background
-  const supabase = await createAdminClient();
-  const userMetadata = authData.user.user_metadata as { name?: string } | undefined;
-
-  return {
-    supabase,
-    userId: authData.user.id,
-    userEmail: authData.user.email ?? undefined,
-    userName: userMetadata?.name,
-    mode: 'session',
-  };
 }
