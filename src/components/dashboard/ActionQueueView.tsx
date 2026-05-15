@@ -27,6 +27,8 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings'>('all');
   const [logs, setLogs] = useState<string[]>(['INITIALIZING NEURAL LINK...', 'SCANNING GMAIL...', 'CHECKING GITHUB PRs...']);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedAction, setEditedAction] = useState<ActionItem | null>(null);
 
   useEffect(() => {
     const fetchActions = async () => {
@@ -65,15 +67,18 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   }, []);
 
   const handleApprove = async (action: ActionItem) => {
+    const finalAction = editingId === action.id ? editedAction || action : action;
     setProcessingId(action.id);
     try {
       const response = await fetch('/api/actions/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(action)
+        body: JSON.stringify(finalAction)
       });
       if (response.ok) {
         setActions((prev) => prev.filter(a => a.id !== action.id));
+        setEditingId(null);
+        setEditedAction(null);
       }
     } catch (e) {
       console.error(e);
@@ -82,8 +87,23 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
     }
   };
 
+  const startEditing = (action: ActionItem) => {
+    setEditingId(action.id);
+    setEditedAction({ ...action });
+  };
+
+  const handleEditChange = (field: keyof ActionItem, value: string) => {
+    if (editedAction) {
+      setEditedAction({ ...editedAction, [field]: value });
+    }
+  };
+
   const handleDismiss = (id: string) => {
     setActions((prev) => prev.filter(a => a.id !== id));
+    if (editingId === id) {
+      setEditingId(null);
+      setEditedAction(null);
+    }
   };
 
   return (
@@ -146,6 +166,8 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                      {filtered.map(action => {
                        const platformObj = ALL_POSSIBLE_PLATFORMS.find(p => p.id === action.platform.toLowerCase());
                        const isProcessing = processingId === action.id;
+                       const isEditing = editingId === action.id;
+                       const current = isEditing ? editedAction! : action;
 
                        return (
                          <div key={action.id} className={styles.actionCard}>
@@ -155,24 +177,43 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                              </div>
                              <div className={styles.cardContent}>
                                <div className={styles.cardHead}>
-                                 <h4 className={styles.actionTitle}>
-                                   {action.method === 'PATCH' && <span className={styles.crudBadge} style={{ color: 'var(--accent-green)' }}>[UPDATE]</span>}
-                                   {action.method === 'DELETE' && <span className={styles.crudBadge} style={{ color: 'var(--accent-vital)' }}>[DELETE]</span>}
-                                   {action.title}
-                                 </h4>
+                                 {isEditing ? (
+                                   <input 
+                                     className={styles.editTitleInput}
+                                     value={current.title}
+                                     onChange={(e) => handleEditChange('title', e.target.value)}
+                                   />
+                                 ) : (
+                                   <h4 className={styles.actionTitle}>
+                                     {action.method === 'PATCH' && <span className={styles.crudBadge} style={{ color: 'var(--accent-green)' }}>[UPDATE]</span>}
+                                     {action.method === 'DELETE' && <span className={styles.crudBadge} style={{ color: 'var(--accent-vital)' }}>[DELETE]</span>}
+                                     {action.title}
+                                   </h4>
+                                 )}
                                  <span className={styles.confidence}>{action.confidence}% CONFIDENCE</span>
                                </div>
                                <p className={styles.actionDesc}>{action.description}</p>
                                <div className={styles.suggestionBox}>
                                  <span className={styles.suggestionLabel}>PROPOSED COMMAND</span>
-                                 <span className={styles.suggestionText}>{action.suggestedAction}</span>
+                                 {isEditing ? (
+                                   <textarea 
+                                     className={styles.editSuggestionInput}
+                                     value={current.suggestedAction}
+                                     onChange={(e) => handleEditChange('suggestedAction', e.target.value)}
+                                   />
+                                 ) : (
+                                   <span className={styles.suggestionText}>{action.suggestedAction}</span>
+                                 )}
                                </div>
                              </div>
                            </div>
                            <div className={styles.cardFooter}>
                              <button className={styles.approveBtn} onClick={() => handleApprove(action)} disabled={isProcessing}>
-                               {isProcessing ? 'EXECUTING...' : 'APPROVE & EXECUTE'}
+                               {isProcessing ? 'EXECUTING...' : isEditing ? 'SAVE & EXECUTE' : 'APPROVE & EXECUTE'}
                              </button>
+                             {!isEditing && (
+                               <button className={styles.editBtn} onClick={() => startEditing(action)}>EDIT</button>
+                             )}
                              <button className={styles.dismissBtn} onClick={() => handleDismiss(action.id)}>DISMISS</button>
                            </div>
                          </div>
