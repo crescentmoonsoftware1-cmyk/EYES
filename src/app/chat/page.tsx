@@ -238,17 +238,7 @@ function ChatPageInner() {
                   <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.userRow : styles.aiRow}`}>
                     <div className={styles.messageBubble}>
                       {/* Metadata line — only shown when platforms are actually connected */}
-                      {(() => {
-                        const connected = platforms.filter(p => p.connected);
-                        if (m.role !== 'assistant' || m.pending || !m.content || connected.length === 0) return null;
-                        const names = connected.map(p => p.id).join(' + ');
-                        return (
-                          <div className={styles.metaLine}>
-                            Loaded tools, used {names} integration
-                            <span className={styles.metaArrow}> ›</span>
-                          </div>
-                        );
-                      })()}
+
                       <div className={styles.msgBody}>
                         {m.role === 'assistant' && m.content ? (
                           <div
