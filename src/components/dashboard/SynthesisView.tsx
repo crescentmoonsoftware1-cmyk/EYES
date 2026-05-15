@@ -93,36 +93,38 @@ export function SynthesisView({
           </>
         )}
 
-        <div className={styles.commandContainer}>
-          <div className={styles.commandInputBox}>
-            <div className={styles.searchIcon}><SearchIcon /></div>
-            <input 
-              type="text" 
-              className={styles.commandInput}
-              placeholder="Search digital memories..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && query.trim()) {
-                  onSubmit(query.trim());
-                }
-              }}
-              disabled={isStreaming}
-            />
-            <button 
-              className={styles.commandSendBtn} 
-              onClick={() => {
-                if (query.trim()) {
-                  onSubmit(query.trim());
-                }
-              }}
-              disabled={!query.trim() || isStreaming}
-              aria-label="Send query"
-            >
-              <ArrowRightIcon />
-            </button>
+        {messages.length === 0 && (
+          <div className={styles.commandContainer}>
+            <div className={styles.commandInputBox}>
+              <div className={styles.searchIcon}><SearchIcon /></div>
+              <input 
+                type="text" 
+                className={styles.commandInput}
+                placeholder="Search digital memories..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && query.trim()) {
+                    onSubmit(query.trim());
+                  }
+                }}
+                disabled={isStreaming}
+              />
+              <button 
+                className={styles.commandSendBtn} 
+                onClick={() => {
+                  if (query.trim()) {
+                    onSubmit(query.trim());
+                  }
+                }}
+                disabled={!query.trim() || isStreaming}
+                aria-label="Send query"
+              >
+                <ArrowRightIcon />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Dynamic Connected Pills - Only show on landing or minimized row */}
         {connected.length > 0 && (
@@ -166,6 +168,41 @@ export function SynthesisView({
         </div>
       )}
 
+      {/* Floating Chat Input for Active Conversations */}
+      {messages.length > 0 && (
+        <div className={styles.chatCommandWrapper}>
+          <div className={styles.commandContainer} style={{ maxWidth: '800px', margin: '0 auto', background: 'var(--bg-primary)' }}>
+            <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}>
+              <div className={styles.searchIcon}><SearchIcon /></div>
+              <input 
+                type="text" 
+                className={styles.commandInput}
+                placeholder="Ask a follow up..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && query.trim()) {
+                    onSubmit(query.trim());
+                  }
+                }}
+                disabled={isStreaming}
+              />
+              <button 
+                className={styles.commandSendBtn} 
+                onClick={() => {
+                  if (query.trim()) {
+                    onSubmit(query.trim());
+                  }
+                }}
+                disabled={!query.trim() || isStreaming}
+              >
+                <ArrowRightIcon />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {messages.length === 0 && (
         <div className={styles.quickActions}>
            <div className={styles.actionCard} onClick={() => setView('feed')}><span>Memory Feed</span></div>
@@ -176,4 +213,5 @@ export function SynthesisView({
     </div>
   );
 }
+
 

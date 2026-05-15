@@ -961,8 +961,14 @@
   justify-content: center;
 }
 
-.connectedRowMinimized .connectedPills {
-  gap: 8px;
+.chatCommandWrapper {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  padding: 20px 0;
+  background: linear-gradient(transparent, var(--bg-primary) 20%);
+  z-index: 10;
+  margin-top: auto;
 }
 
 
