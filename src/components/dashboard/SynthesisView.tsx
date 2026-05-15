@@ -98,6 +98,8 @@ export function SynthesisView({
             <div className={styles.commandInputBox}>
               <div className={styles.searchIcon}><SearchIcon /></div>
               <input 
+                id="memory-search"
+                name="query"
                 type="text" 
                 className={styles.commandInput}
                 placeholder="Search digital memories..."

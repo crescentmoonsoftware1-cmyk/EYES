@@ -128,7 +128,10 @@ export default function LoginPage() {
                 <div className={styles.inputStack}>
                   <div className={styles.fieldGroup}>
                     <input
+                      id="email"
+                      name="email"
                       type="email"
+                      autoComplete="email"
                       className={styles.elegantInput}
                       placeholder="Email address"
                       value={email}
@@ -140,7 +143,10 @@ export default function LoginPage() {
                   {!isForgotPasswordMode && (
                     <div className={styles.fieldGroup}>
                       <input
+                        id="password"
+                        name="password"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
                         className={styles.elegantInput}
                         placeholder="Password"
                         value={password}
