@@ -113,12 +113,85 @@ const platformConfigs: Array<{
     scopes: ['read'],
   },
   {
+    id: 'netlify',
+    name: 'Netlify',
+    env: ['NETLIFY_AUTH_TOKEN'],
+    scopes: ['read'],
+  },
+  {
+    id: 'supabase',
+    name: 'Supabase',
+    env: ['SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_SUPABASE_URL'],
+    scopes: ['read'],
+  },
+  {
     id: 'sentry',
     name: 'Sentry',
     env: ['SENTRY_AUTH_TOKEN'],
     scopes: ['event:read', 'project:read'],
   },
+  {
+    id: 'posthog',
+    name: 'PostHog',
+    env: ['POSTHOG_API_KEY'],
+    scopes: ['read'],
+  },
+  {
+    id: 'webflow',
+    name: 'Webflow',
+    env: ['WEBFLOW_API_TOKEN'],
+    scopes: ['read'],
+  },
+  {
+    id: 'devin',
+    name: 'Devin',
+    env: ['DEVIN_API_KEY'],
+    scopes: ['read'],
+  },
+  {
+    id: 'cursor',
+    name: 'Cursor',
+    env: ['CURSOR_SESSION_TOKEN'],
+    scopes: ['read'],
+  },
+  {
+    id: 'canva',
+    name: 'Canva',
+    env: ['CANVA_API_KEY'],
+    scopes: ['read'],
+  },
+  {
+    id: 'strava',
+    name: 'Strava',
+    env: ['STRAVA_CLIENT_ID', 'STRAVA_CLIENT_SECRET'],
+    scopes: ['activity:read'],
+  },
+  {
+    id: 'fitbit',
+    name: 'Fitbit',
+    env: ['FITBIT_CLIENT_ID', 'FITBIT_CLIENT_SECRET'],
+    scopes: ['activity', 'heartrate'],
+  },
+  {
+    id: 'withings',
+    name: 'Withings',
+    env: ['WITHINGS_CLIENT_ID', 'WITHINGS_CLIENT_SECRET'],
+    scopes: ['user.metrics'],
+  },
+  {
+    id: 'sonos',
+    name: 'Sonos',
+    env: ['SONOS_CLIENT_ID', 'SONOS_CLIENT_SECRET'],
+    scopes: ['playback-control-all'],
+  },
+  {
+    id: 'philips-hue',
+    name: 'Philips Hue',
+    env: ['HUE_BRIDGE_IP', 'HUE_USER_TOKEN'],
+    scopes: ['read'],
+  },
 ];
+
 
 /**
  * Helper to map between Frontend IDs (hyphenated) and Database IDs (underscored)
