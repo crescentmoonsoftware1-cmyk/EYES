@@ -580,9 +580,9 @@
 }
 
 .filterChipActive {
-  background: #1a1a1a;
-  color: #ffffff;
-  border-color: #1a1a1a;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  border-color: var(--accent-primary);
 }
 
 .addIndicator {
@@ -908,3 +908,40 @@
   line-height: 1.6;
   margin: 0;
 }
+
+/* HISTORY ENHANCEMENTS */
+.tabsContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+}
+
+.tabsContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.loadingText {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 40px;
+  animation: pulse 2s infinite;
+}
+
+.statusSuccess {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #10b981 !important;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
