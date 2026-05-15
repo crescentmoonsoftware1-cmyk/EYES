@@ -1,22 +1,24 @@
 .loginPageContainer {
-  min-height: 100vh;
+  height: 100vh;
   background-color: #FFFFFF;
   color: #2B2B2B;
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden; /* Prevent scrolling */
   font-family: var(--font-sans);
+  justify-content: center; /* Center content vertically */
 }
 
 .loginContent {
-  flex: 1;
   display: flex;
   max-width: 1440px;
   width: 100%;
   margin: 0 auto;
-  padding: clamp(40px, 5vh, 80px) 60px;
-  align-items: flex-start;
+  padding: 0 60px;
+  align-items: center; /* Center items vertically */
+  justify-content: space-between;
+  gap: 80px;
 }
 
 /* ─── Left Section (Auth) ─── */
@@ -29,7 +31,7 @@
 }
 
 .header {
-  margin-bottom: clamp(24px, 5vh, 60px);
+  margin-bottom: 24px;
 }
 
 .logoRow {
@@ -57,7 +59,7 @@
 }
 
 .authHero {
-  margin-bottom: clamp(24px, 6vh, 60px);
+  margin-bottom: 24px;
 }
 
 .megaHeroTitle {
@@ -89,9 +91,9 @@
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid #D4D4D4;
   border-radius: 24px;
-  padding: clamp(24px, 5vh, 48px);
+  padding: 32px;
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.05);
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .socialAuthRow {
@@ -239,7 +241,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 60px 0;
+  padding: 0;
 }
 
 .vaultWindow {
