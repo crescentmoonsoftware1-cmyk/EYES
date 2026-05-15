@@ -43,11 +43,11 @@
 [data-theme='light'] {
   /* FEATURE-FIRST (Light) - Airy, minimalist glass */
   --bg-primary: #FFFFFF;      
-  --bg-secondary: #F0F2F5; /* Darker secondary for better contrast */
-  --bg-card: rgba(255, 255, 255, 0.9); /* More opaque */
+  --bg-secondary: #FAFAFB; /* Switched from F0F2F5 to a cleaner, icy white */
+  --bg-card: rgba(255, 255, 255, 0.95); /* More pure white */
   --bg-card-hover: #FFFFFF;
 
-  --text-primary: #111111;    
+  --text-primary: #000000;    
   --text-secondary: #555555;
   --text-muted: #888888;
 
@@ -57,14 +57,14 @@
   --accent-green: #0077AA;
   --accent-red: #CC0000;
 
-  --border-primary: rgba(0, 0, 0, 0.12); /* Increased visibility */
-  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-primary: rgba(0, 0, 0, 0.1); /* Slightly more subtle but clean */
+  --border-subtle: rgba(0, 0, 0, 0.05);
 
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
-  --shadow-lg: 0 16px 48px rgba(0,0,0,0.15);
+  --shadow-sm: 0 2px 10px rgba(0,0,0,0.05);
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.08);
+  --shadow-lg: 0 20px 50px rgba(0,0,0,0.12);
 
-  --glass-blur: blur(20px);
+  --glass-blur: blur(25px);
 }
 
 * {

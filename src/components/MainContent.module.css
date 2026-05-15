@@ -67,8 +67,8 @@
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
+  background: transparent; /* Removed cement */
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -493,7 +493,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-secondary);
+  background: transparent; /* Removed cement */
+  border: 1px solid var(--border-primary);
 }
 
 .readinessInfo {
@@ -807,11 +808,12 @@
 }
 
 .proposedActionBox {
-  background: var(--bg-secondary);
+  background: rgba(0, 209, 255, 0.05); /* Tinted with accent instead of cement */
   padding: 20px;
   border-radius: 12px;
   border-left: 4px solid var(--accent-green);
   margin-bottom: 24px;
+  border: 1px solid rgba(0, 209, 255, 0.1);
 }
 
 .proposedLabel {
