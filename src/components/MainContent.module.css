@@ -929,10 +929,12 @@
   gap: 8px;
   margin-bottom: 32px;
   border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 16px;
+  padding: 8px 0 16px; /* Added 8px top padding to prevent clipping */
   overflow-x: auto;
-  scrollbar-width: none; /* Hide scrollbar for clean look */
+  overflow-y: hidden; /* Prevent vertical scroll while allowing horizontal */
+  scrollbar-width: none;
 }
+
 
 .tabsContainer::-webkit-scrollbar {
   display: none;
