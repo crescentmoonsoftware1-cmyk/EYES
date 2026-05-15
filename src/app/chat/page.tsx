@@ -336,8 +336,8 @@ function ChatPageInner() {
               </div>
             </div>
           </div>
+          <CognitiveRightPanel isOpen={brainPanelOpen} onClose={() => setBrainPanelOpen(false)} />
         </div>
-        <CognitiveRightPanel isOpen={brainPanelOpen} onClose={() => setBrainPanelOpen(false)} />
       </div>
     </div>
   );

@@ -91,46 +91,69 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
   return (
     <div style={{
-      width: '320px', flexShrink: 0,
-      background: '#0d1117', borderLeft: '1px solid rgba(255,255,255,0.07)',
+      width: '380px', flexShrink: 0,
+      background: 'rgba(13, 17, 23, 0.7)',
+      backdropFilter: 'blur(20px)',
+      borderLeft: '1px solid rgba(99, 102, 241, 0.2)',
       display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
+      boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
+      animation: 'panelSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
     }}>
-      {/* Header */}
+      {/* Neural Glow Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)',
+        padding: '20px 24px', 
+        background: 'linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
       }}>
-        <span style={{ color: '#a78bfa', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em' }}>
-          COGNITIVE LAYER
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ 
+            width: '8px', height: '8px', borderRadius: '50%', 
+            background: '#818cf8', boxShadow: '0 0 10px #6366f1' 
+          }} />
+          <span style={{ 
+            color: '#a78bfa', fontSize: '12px', fontWeight: 800, 
+            letterSpacing: '0.15em', textTransform: 'uppercase' 
+          }}>
+            Cognitive Intelligence
+          </span>
+        </div>
         <button onClick={onClose} style={{
-          background: 'none', border: 'none', color: '#6b7280',
-          cursor: 'pointer', fontSize: '18px', lineHeight: 1,
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', 
+          color: '#9ca3af', borderRadius: '50%', width: '28px', height: '28px',
+          cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', transition: 'all 0.2s'
         }}>×</button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      {/* Modern Tabs */}
+      <div style={{ 
+        display: 'flex', padding: '4px', background: 'rgba(0,0,0,0.2)',
+        margin: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'
+      }}>
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             style={{
-              flex: 1, padding: '10px 4px', background: 'none',
-              border: 'none', borderBottom: activeTab === t.id ? '2px solid #6366f1' : '2px solid transparent',
-              color: activeTab === t.id ? '#818cf8' : '#4b5563',
-              cursor: 'pointer', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em',
+              flex: 1, padding: '8px 4px', background: activeTab === t.id ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              border: 'none', borderRadius: '8px',
+              color: activeTab === t.id ? '#c084fc' : '#6b7280',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer', fontSize: '11px', fontWeight: 700, 
+              letterSpacing: '0.02em',
             }}
           >{t.label}</button>
         ))}
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+      {/* Content Area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
         {loading && (
-          <p style={{ color: '#4b5563', fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
-            Loading cognitive data…
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '60px', gap: '12px' }}>
+            <div className="neural-spinner" />
+            <p style={{ color: '#4b5563', fontSize: '12px', fontWeight: 500 }}>Synchronizing Patterns...</p>
+          </div>
         )}
 
         {!loading && activeTab === 'mindmap' && (
