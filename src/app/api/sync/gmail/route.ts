@@ -102,8 +102,9 @@ export async function POST(request: Request) {
     const startTime = Date.now();
     const MAX_RUN_TIME = 22000; // 22 seconds (Vercel Hobby limit is 10s, Pro is 60s - 22s is a safe middle ground)
     const maxResultsPerPage = 100;
+    const isBackfill = new URL(request.url).searchParams.get('backfill') === 'true';
     // Cap total results per individual run to prevent memory bloat and timeouts
-    const maxTotalResults = isBackfill ? 500 : 200; 
+    const maxTotalResults = isBackfill ? 500 : 200;
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
