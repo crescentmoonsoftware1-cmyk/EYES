@@ -91,8 +91,18 @@ Return JSON ONLY:
       const extractedFindings: any[] = [];
       
       const nowTs = Date.now();
-      const jsonMatch = analysisRaw.match(/\{[\s\S]*\}/);
-      const analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { analysis: [] };
+      // CRITICAL: Guard against null/undefined from AI — calling .match() on null throws TypeError
+      // which crashes the entire audit into the catch block, producing "AI Analysis failed" errors.
+      let analysisResult: { analysis: any[] } = { analysis: [] };
+      if (analysisRaw) {
+        try {
+          const jsonMatch = analysisRaw.match(/\{[\s\S]*\}/);
+          if (jsonMatch) analysisResult = JSON.parse(jsonMatch[0]);
+        } catch (parseErr) {
+          console.warn(`[Audit] Failed to parse AI analysis JSON for ${auditId}:`, parseErr);
+          // analysisResult stays as { analysis: [] } — audit continues with zero findings
+        }
+      }
       
       analysisResult.analysis.forEach((a: any) => {
         const evt = events.find(e => e.id === a.id);
@@ -165,7 +175,14 @@ Return JSON ONLY:
       });
 
       const summaryMatch = summaryRaw?.match(/\{[\s\S]*\}/);
-      const summaryResult = summaryMatch ? JSON.parse(summaryMatch[0]) : { narrative: summaryRaw, opportunities: [], topEntities: [] };
+      let summaryResult: { narrative?: string; trajectory?: string; dominantPattern?: string; reputationProjection?: string; opportunities?: string[]; topEntities?: string[] } = { narrative: summaryRaw ?? undefined, opportunities: [], topEntities: [] };
+      if (summaryMatch) {
+        try {
+          summaryResult = JSON.parse(summaryMatch[0]);
+        } catch (parseErr) {
+          console.warn(`[Audit] Failed to parse summary JSON for ${auditId}:`, parseErr);
+        }
+      }
 
       // 6. Persist analysis results to DB
       console.log(`[Audit] Finalizing database record for ${auditId}...`);

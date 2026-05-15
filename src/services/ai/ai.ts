@@ -17,11 +17,17 @@ let anthropicEnabled = Boolean(ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith
 // Paste your OpenRouter API key in .env.local as OPENROUTER_API_KEY=...
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-// Free model rotation: openrouter/free auto-selects whichever free model has
-// active endpoints right now — eliminates 404s from stale hardcoded model IDs.
+// Free model rotation — all :free models require NO credit balance on OpenRouter.
+// Model list sourced live from OpenRouter /api/v1/models (May 2026).
+// The list is tried in order; 404/429 models are skipped automatically.
 const OPENROUTER_FREE_MODELS = [
-  'openrouter/auto',                         // Smart auto-router (best available)
-  'meta-llama/llama-3.3-70b-instruct:free',  // Named fallback if auto fails
+  'deepseek/deepseek-v4-flash:free',           // DeepSeek V4 Flash — fast & reliable
+  'google/gemma-4-27b-it:free',                // Gemma 4 27B — Google free
+  'google/gemma-4-31b-it:free',                // Gemma 4 31B — Google free (larger)
+  'nvidia/nemotron-3-super-120b-a12b:free',    // Nvidia 120B — strong free model
+  'minimax/minimax-m2.5:free',                 // MiniMax M2.5 — reliable free
+  'meta-llama/llama-3.3-70b-instruct:free',   // Llama 3.3 70B — backup
+  'openrouter/free',                            // Last resort: OpenRouter auto-selects any free model
 ];
 
 // Paste your Gemini API key in .env.local as GEMINI_API_KEY=...
@@ -226,11 +232,27 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
         });
         if (res.ok) {
           const body = await res.json();
-          const text = body?.choices?.[0]?.message?.content;
+          const message = body?.choices?.[0]?.message;
+          let text = '';
+
+          if (typeof message?.content === 'string') {
+            text = message.content;
+          } else if (Array.isArray(message?.content)) {
+            // Standard array-of-parts format
+            text = message.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
+          } else if (message?.multi_modal_data?.multi_modal_parts) {
+            // Non-standard multimodal format (e.g. DeepSeek on OpenRouter)
+            text = message.multi_modal_data.multi_modal_parts
+              .filter((p: any) => p.type === 'text')
+              .map((p: any) => p.text)
+              .join('');
+          }
+
           if (text) {
             console.log(`[AI] OpenRouter responded (${orModel})`);
             return text;
           }
+          console.warn(`[AI] OpenRouter ${orModel} returned empty content, trying next model...`);
         } else if (res.status === 429) {
           // Honour the upstream retry-after and try next model
           const errBody = await res.json().catch(() => ({}));
