@@ -91,68 +91,69 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
   return (
     <div style={{
-      width: '380px', flexShrink: 0,
-      background: 'rgba(13, 17, 23, 0.7)',
-      backdropFilter: 'blur(20px)',
-      borderLeft: '1px solid rgba(99, 102, 241, 0.2)',
-      display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
-      boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
-      animation: 'panelSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+      position: 'absolute',
+      right: '24px', top: '80px', bottom: '24px',
+      width: '420px', 
+      background: 'rgba(10, 10, 10, 0.75)',
+      backdropFilter: 'blur(30px) saturate(180%)',
+      border: '1px solid rgba(99, 102, 241, 0.15)',
+      borderRadius: '24px',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 20px rgba(99, 102, 241, 0.05)',
+      zIndex: 100,
+      animation: 'hologramFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
     }}>
-      {/* Neural Glow Header */}
+      {/* Holographic Header */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '20px 24px', 
-        background: 'linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        padding: '24px 28px', 
+        background: 'linear-gradient(to bottom, rgba(99, 102, 241, 0.05), transparent)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ 
-            width: '8px', height: '8px', borderRadius: '50%', 
-            background: '#818cf8', boxShadow: '0 0 10px #6366f1' 
-          }} />
-          <span style={{ 
-            color: '#a78bfa', fontSize: '12px', fontWeight: 800, 
-            letterSpacing: '0.15em', textTransform: 'uppercase' 
-          }}>
-            Cognitive Intelligence
-          </span>
+        <div>
+          <h2 style={{ 
+            color: '#fff', fontSize: '16px', fontWeight: 700, 
+            letterSpacing: '-0.02em', margin: 0 
+          }}>Neural Intelligence</h2>
+          <p style={{ color: '#6366f1', fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', marginTop: '4px', textTransform: 'uppercase' }}>
+            Cognitive Layer Active
+          </p>
         </div>
         <button onClick={onClose} style={{
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', 
-          color: '#9ca3af', borderRadius: '50%', width: '28px', height: '28px',
+          background: 'rgba(255,255,255,0.05)', border: 'none', 
+          color: '#fff', borderRadius: '50%', width: '32px', height: '32px',
           cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', transition: 'all 0.2s'
+          justifyContent: 'center', opacity: 0.6, transition: 'opacity 0.2s'
         }}>×</button>
       </div>
 
-      {/* Modern Tabs */}
+      {/* Futuristic Tabs */}
       <div style={{ 
-        display: 'flex', padding: '4px', background: 'rgba(0,0,0,0.2)',
-        margin: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'
+        display: 'flex', gap: '8px', padding: '0 28px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.05)'
       }}>
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
             style={{
-              flex: 1, padding: '8px 4px', background: activeTab === t.id ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-              border: 'none', borderRadius: '8px',
-              color: activeTab === t.id ? '#c084fc' : '#6b7280',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              padding: '6px 12px', background: activeTab === t.id ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+              border: '1px solid',
+              borderColor: activeTab === t.id ? 'rgba(99, 102, 241, 0.4)' : 'transparent',
+              borderRadius: '20px',
+              color: activeTab === t.id ? '#a78bfa' : '#4b5563',
               cursor: 'pointer', fontSize: '11px', fontWeight: 700, 
-              letterSpacing: '0.02em',
+              transition: 'all 0.3s'
             }}
           >{t.label}</button>
         ))}
       </div>
 
       {/* Content Area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
         {loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '60px', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '60px', gap: '16px' }}>
             <div className="neural-spinner" />
-            <p style={{ color: '#4b5563', fontSize: '12px', fontWeight: 500 }}>Synchronizing Patterns...</p>
+            <p style={{ color: '#4b5563', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>MAPPING SYNAPSES...</p>
           </div>
         )}
 
@@ -164,6 +165,7 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
         {!loading && activeTab === 'people' && <PeopleTab correlations={correlations} />}
       </div>
     </div>
+
   );
 }
 
