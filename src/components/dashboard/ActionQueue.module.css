@@ -204,18 +204,19 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
   transition: all var(--transition-main);
+  max-width: 800px; /* Constrain width for better readability */
+  margin: 0 auto;
 }
 
 .actionCard:hover {
-  border-color: var(--accent-green);
+  border-color: var(--accent-vital);
   box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
 }
 
 .cardMain {
-  padding: 32px;
+  padding: 24px;
   display: flex;
-  gap: 24px;
+  gap: 20px;
 }
 
 .platformIcon {
@@ -265,9 +266,10 @@
 
 .suggestionBox {
   background: var(--bg-secondary);
-  padding: 20px;
+  padding: 16px 20px;
   border-radius: 12px;
-  border-left: 4px solid var(--accent-green);
+  border-left: 3px solid var(--accent-vital);
+  margin-top: 8px;
 }
 
 .suggestionLabel {
@@ -286,10 +288,10 @@
 }
 
 .cardFooter {
-  background: var(--bg-secondary);
-  padding: 20px 32px;
+  background: rgba(0, 0, 0, 0.02);
+  padding: 16px 24px;
   display: flex;
-  gap: 16px;
+  gap: 12px;
   border-top: 1px solid var(--border-subtle);
 }
 
