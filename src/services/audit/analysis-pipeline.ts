@@ -34,11 +34,11 @@ export class AuditAnalysisService {
       const connectorsCovered = Array.from(new Set(events.map(e => e.platform)));
       
       // 2. Real Claude Analysis (Optimized chunking)
-      const significantRecords = events.slice(0, 100);
+      const significantRecords = events.slice(0, 40);
       const analysisInput = significantRecords.map(e => ({
         id: e.id,
         date: e.timestamp,
-        text: `${e.title ?? ''}: ${e.content}`.slice(0, 400)
+        text: `${e.title ?? ''}: ${e.content}`.slice(0, 300)
       }));
 
       const extractionPrompt = `
@@ -61,8 +61,8 @@ Return JSON ONLY:
       const analysisRaw = await invokeModel({
         capability: 'classify',
         messages: [{ role: 'user', content: extractionPrompt }],
-        system: 'You are a clinical intelligence analyst.',
-        preference: 'claude' // Explicitly use Claude for extraction accuracy
+        system: 'You are a clinical intelligence analyst. Return JSON only.',
+        preference: 'auto'
       });
 
       if (!analysisRaw) throw new Error('AI Analysis failed to return data.');
@@ -117,6 +117,8 @@ Return JSON ONLY:
       });
 
       const riskScore = Math.min(10, Number((( (weightedNegativeMentions * 2) + (weightedUnfulfilledCommitments * 3) ) / (weightedTotalMentions || 1) * 10).toFixed(1)));
+      const failureRate = events.length > 0 ? (negativeMentions / events.length) * 100 : 0;
+      const complianceRate = 100 - failureRate;
 
       // 4. Reputation Projection: pattern-level narrative across time
       const summaryPrompt = `
@@ -151,10 +153,6 @@ Return JSON ONLY:
 
       const summaryMatch = summaryRaw?.match(/\{[\s\S]*\}/);
       const summaryResult = summaryMatch ? JSON.parse(summaryMatch[0]) : { narrative: summaryRaw, opportunities: [], topEntities: [] };
-
-      // 5. Persist and Finalize (PDF generated on-demand — nothing stored in Supabase Storage)
-      const failureRate = events.length > 0 ? (negativeMentions / events.length) * 100 : 0;
-      const complianceRate = 100 - failureRate;
 
       // 6. Persist analysis results to DB
       console.log(`[Audit] Finalizing database record for ${auditId}...`);
