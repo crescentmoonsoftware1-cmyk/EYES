@@ -123,8 +123,11 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
 
                 if (loading) return (
                   <div className={styles.loadingBox}>
-                    <div className={styles.spinner} />
-                    <span>EXTRACTING INTENT...</span>
+                    <div className={styles.neuralPulseRing}>
+                      <div className={styles.pulseInner} />
+                    </div>
+                    <span className={styles.loadingTitle}>NEURAL DISCOVERY ACTIVE</span>
+                    <p className={styles.loadingDetail}>Extracting intent from your digital trace...</p>
                   </div>
                 );
 
