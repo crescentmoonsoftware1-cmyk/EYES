@@ -67,13 +67,15 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
     };
   }
 
-  const supabase = await createUserClient();
-  const { data: authData, error } = await supabase.auth.getUser();
+  const userClient = await createUserClient();
+  const { data: authData, error } = await userClient.auth.getUser();
 
   if (error || !authData.user) {
     return { error: 'Unauthorized', status: 401 };
   }
 
+  // Use Admin Client for the actual sync operations to bypass RLS barriers in background
+  const supabase = createAdminClient();
   const userMetadata = authData.user.user_metadata as { name?: string } | undefined;
 
   return {

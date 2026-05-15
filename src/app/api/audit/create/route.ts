@@ -8,12 +8,15 @@ import { waitUntil } from '@vercel/functions';
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userClient = await createClient();
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Use Admin Client for database operations to bypass RLS barriers
+    const supabase = await createAdminClient();
 
     // 1. Create the pending audit record (Step 1)
     const { data: audit, error: createError } = await supabase
