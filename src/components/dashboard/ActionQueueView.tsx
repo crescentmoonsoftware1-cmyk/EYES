@@ -177,8 +177,30 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                 );
               })()}
            </main>
+
+           <aside className={styles.telemetrySidebar}>
+             <div className={styles.sidebarSection}>
+               <h5>NEURAL DISCOVERY</h5>
+               <div className={styles.telemetryStat}>
+                 <span className={styles.telemetryLabel}>Fragments Audited</span>
+                 <span className={styles.telemetryValue}>100 / 100</span>
+               </div>
+               <div className={styles.telemetryStat}>
+                 <span className={styles.telemetryLabel}>System Logic</span>
+                 <span className={styles.telemetryValue} style={{ color: 'var(--accent-green)' }}>STABLE</span>
+               </div>
+             </div>
+
+             <div className={styles.sidebarSection}>
+               <h5>DISCOVERY FEED</h5>
+               <div className={styles.logList}>
+                 {logs.map((log, i) => (
+                   <div key={i} className={styles.logItem}>{log}</div>
+                 ))}
+               </div>
+             </div>
+           </aside>
         </div>
-     
      </div>
   );
 }
