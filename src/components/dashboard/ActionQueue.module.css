@@ -219,9 +219,9 @@
 }
 
 .cardMain {
-  padding: 24px;
+  padding: 16px 20px;
   display: flex;
-  gap: 20px;
+  gap: 16px;
 }
 
 .platformIcon {
@@ -247,7 +247,7 @@
 }
 
 .actionTitle {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
@@ -263,18 +263,18 @@
 }
 
 .actionDesc {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text-secondary);
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .suggestionBox {
   background: var(--bg-secondary);
-  padding: 16px 20px;
-  border-radius: 12px;
-  border-left: 3px solid var(--accent-vital);
-  margin-top: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border-left: 2px solid var(--accent-vital);
+  margin-top: 4px;
 }
 
 .suggestionLabel {
@@ -287,16 +287,17 @@
 }
 
 .suggestionText {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.4;
 }
 
 .cardFooter {
-  background: rgba(0, 0, 0, 0.02);
-  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.015);
+  padding: 10px 20px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   border-top: 1px solid var(--border-subtle);
 }
 
