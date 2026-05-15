@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
     img-src 'self' blob: data: https:;
     font-src 'self' https://fonts.gstatic.com data:;
     media-src 'self' https: blob: data:;
-    connect-src 'self' https:;
+    connect-src 'self' https: wss: ws:;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
