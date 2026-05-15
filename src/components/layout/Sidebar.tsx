@@ -72,7 +72,7 @@ export default function Sidebar() {
             className={`${styles.item} ${activeView === 'dashboard' ? styles.itemActive : ''}`} 
             onClick={() => navigateToView('chat')}
           >
-            <div className={styles.itemIcon}><ChatIcon /></div>
+            <div className={styles.itemIcon}><span style={{fontSize: '18px', filter: 'grayscale(1)'}}>💬</span></div>
             <div className={styles.itemMain}>
               <span className={styles.itemLabel}>Chat</span>
               <span className={styles.itemDesc}>Start a new thread</span>
@@ -83,7 +83,7 @@ export default function Sidebar() {
             className={`${styles.item} ${activeView === 'connectors' ? styles.itemActive : ''}`} 
             onClick={() => navigateToView('connectors')}
           >
-            <div className={styles.itemIcon}><ConnectorsIcon /></div>
+            <div className={styles.itemIcon}><span style={{fontSize: '18px', filter: 'grayscale(1)'}}>🔗</span></div>
             <div className={styles.itemMain}>
               <span className={styles.itemLabel}>Connectors</span>
               <span className={styles.itemDesc}>Manage connected sources</span>
@@ -106,7 +106,7 @@ export default function Sidebar() {
             className={`${styles.item} ${activeView === 'history' ? styles.itemActive : ''}`} 
             onClick={() => navigateToView('history')}
           >
-            <div className={styles.itemIcon}><HistoryIcon /></div>
+            <div className={styles.itemIcon}><span style={{fontSize: '18px', filter: 'grayscale(1)'}}>🕒</span></div>
             <div className={styles.itemMain}>
               <span className={styles.itemLabel}>History</span>
               <span className={styles.itemDesc}>Review runs and activity</span>
@@ -118,9 +118,10 @@ export default function Sidebar() {
       <div className={styles.footer}>
         <div className={styles.readinessCard} onClick={() => navigateToView('readiness')}>
           <div className={styles.readinessHeader}>
-             <span className={styles.readinessIcon}><EyeIconSmall /></span>
+             <span className={styles.readinessIcon} style={{fontSize: '14px', filter: 'grayscale(1)'}}>👁️</span>
              <span className={styles.readinessTitle}>SOURCE READINESS</span>
           </div>
+
           <div className={styles.readinessContent}>
             <div className={styles.gaugeWrapper}>
               <svg viewBox="0 0 100 100" className={styles.gaugeSvg}>
