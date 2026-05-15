@@ -40,6 +40,8 @@ Each action must have:
   "description": "A brief explanation of the context",
   "suggestedAction": "What the AI will do (e.g. 'Add event to Google Calendar for May 10, 4:00 PM')",
   "actionType": "CALENDAR" | "LINEAR_TICKET" | "SLACK_REPLY" | "REMINDER",
+  "method": "POST" | "PATCH" | "DELETE",
+  "eventId": "Optional ID of an existing event for UPDATE or DELETE",
   "confidence": number (1-100),
   "teamId": "Required for LINEAR_TICKET actions if known",
   "channelId": "Required for SLACK_REPLY actions if known",

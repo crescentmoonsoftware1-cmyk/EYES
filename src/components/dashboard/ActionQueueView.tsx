@@ -13,6 +13,7 @@ interface ActionItem {
   description: string;
   suggestedAction: string;
   actionType: string;
+  method?: 'POST' | 'PATCH' | 'DELETE';
   confidence: number;
 }
 
@@ -95,112 +96,116 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
         </header>
 
         <div className={styles.contentGrid}>
-           <main className={styles.actionListContainer}>
-              <div className={styles.listHeader}>
-                 <span className={styles.countBadge}>{actions.length} PENDING ACTIONS</span>
-                 <div className={styles.filterChips}>
-                    <button
-                      className={activeFilter === 'all' ? styles.chipActive : styles.chip}
-                      onClick={() => setActiveFilter('all')}
-                    >All</button>
-                    <button
-                      className={activeFilter === 'priority' ? styles.chipActive : styles.chip}
-                      onClick={() => setActiveFilter('priority')}
-                    >Priority</button>
-                    <button
-                      className={activeFilter === 'meetings' ? styles.chipActive : styles.chip}
-                      onClick={() => setActiveFilter('meetings')}
-                    >Meetings</button>
-                 </div>
-              </div>
+            <main className={styles.actionListContainer}>
+               <div className={styles.listHeader}>
+                  <span className={styles.countBadge}>{actions.length} PENDING ACTIONS</span>
+                  <div className={styles.filterChips}>
+                     <button
+                       className={activeFilter === 'all' ? styles.chipActive : styles.chip}
+                       onClick={() => setActiveFilter('all')}
+                     >All</button>
+                     <button
+                       className={activeFilter === 'priority' ? styles.chipActive : styles.chip}
+                       onClick={() => setActiveFilter('priority')}
+                     >Priority</button>
+                     <button
+                       className={activeFilter === 'meetings' ? styles.chipActive : styles.chip}
+                       onClick={() => setActiveFilter('meetings')}
+                     >Meetings</button>
+                  </div>
+               </div>
 
-              {(() => {
-                const filtered = actions.filter(a => {
-                  if (activeFilter === 'priority') return a.confidence >= 80;
-                  if (activeFilter === 'meetings') return a.actionType === 'CALENDAR';
-                  return true;
-                });
+               {(() => {
+                 const filtered = actions.filter(a => {
+                   if (activeFilter === 'priority') return a.confidence >= 80;
+                   if (activeFilter === 'meetings') return a.actionType === 'CALENDAR';
+                   return true;
+                 });
 
-                if (loading) return (
-                  <div className={styles.loadingBox}>
+                 if (loading) return (
+                   <div className={styles.loadingBox}>
                     <div className={styles.neuralPulseRing}>
                       <div className={styles.pulseInner} />
                     </div>
                     <span className={styles.loadingTitle}>NEURAL DISCOVERY ACTIVE</span>
                     <p className={styles.loadingDetail}>Extracting intent from your digital trace...</p>
                   </div>
-                );
+                 );
 
-                if (filtered.length === 0) return (
-                  <div className={styles.emptyCard}>
-                    <div className={styles.emptyIcon}><BoltIcon size={48} /></div>
-                    <h3>Inbox Zero</h3>
-                    <p>{activeFilter !== 'all' ? `No ${activeFilter} actions found.` : 'No actionable items detected in the latest neural scan.'}</p>
-                    <button className={styles.refreshBtn} onClick={() => window.location.reload()}>RE-SCAN NOW</button>
-                  </div>
-                );
+                 if (filtered.length === 0) return (
+                   <div className={styles.emptyCard}>
+                     <div className={styles.emptyIcon}><BoltIcon size={48} /></div>
+                     <h3>Inbox Zero</h3>
+                     <p>{activeFilter !== 'all' ? `No ${activeFilter} actions found.` : 'No actionable items detected in the latest neural scan.'}</p>
+                     <button className={styles.refreshBtn} onClick={() => window.location.reload()}>RE-SCAN NOW</button>
+                   </div>
+                 );
 
-                return (
-                  <div className={styles.cardList}>
-                    {filtered.map(action => {
-                      const platformObj = ALL_POSSIBLE_PLATFORMS.find(p => p.id === action.platform.toLowerCase());
-                      const isProcessing = processingId === action.id;
+                 return (
+                   <div className={styles.cardList}>
+                     {filtered.map(action => {
+                       const platformObj = ALL_POSSIBLE_PLATFORMS.find(p => p.id === action.platform.toLowerCase());
+                       const isProcessing = processingId === action.id;
 
-                      return (
-                        <div key={action.id} className={styles.actionCard}>
-                          <div className={styles.cardMain}>
-                            <div className={styles.platformIcon}>
-                              {platformObj?.icon ? React.cloneElement(platformObj.icon as any, { size: 24 }) : <span>{action.platform[0]}</span>}
-                            </div>
-                            <div className={styles.cardContent}>
-                              <div className={styles.cardHead}>
-                                <h4 className={styles.actionTitle}>{action.title}</h4>
-                                <span className={styles.confidence}>{action.confidence}% CONFIDENCE</span>
-                              </div>
-                              <p className={styles.actionDesc}>{action.description}</p>
-                              <div className={styles.suggestionBox}>
-                                <span className={styles.suggestionLabel}>PROPOSED COMMAND</span>
-                                <span className={styles.suggestionText}>{action.suggestedAction}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className={styles.cardFooter}>
-                            <button className={styles.approveBtn} onClick={() => handleApprove(action)} disabled={isProcessing}>
-                              {isProcessing ? 'EXECUTING...' : 'APPROVE & EXECUTE'}
-                            </button>
-                            <button className={styles.dismissBtn} onClick={() => handleDismiss(action.id)}>DISMISS</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-           </main>
+                       return (
+                         <div key={action.id} className={styles.actionCard}>
+                           <div className={styles.cardMain}>
+                             <div className={styles.platformIcon}>
+                               {platformObj?.icon ? React.cloneElement(platformObj.icon as any, { size: 24 }) : <span>{action.platform[0]}</span>}
+                             </div>
+                             <div className={styles.cardContent}>
+                               <div className={styles.cardHead}>
+                                 <h4 className={styles.actionTitle}>
+                                   {action.method === 'PATCH' && <span className={styles.crudBadge} style={{ color: 'var(--accent-green)' }}>[UPDATE]</span>}
+                                   {action.method === 'DELETE' && <span className={styles.crudBadge} style={{ color: 'var(--accent-vital)' }}>[DELETE]</span>}
+                                   {action.title}
+                                 </h4>
+                                 <span className={styles.confidence}>{action.confidence}% CONFIDENCE</span>
+                               </div>
+                               <p className={styles.actionDesc}>{action.description}</p>
+                               <div className={styles.suggestionBox}>
+                                 <span className={styles.suggestionLabel}>PROPOSED COMMAND</span>
+                                 <span className={styles.suggestionText}>{action.suggestedAction}</span>
+                               </div>
+                             </div>
+                           </div>
+                           <div className={styles.cardFooter}>
+                             <button className={styles.approveBtn} onClick={() => handleApprove(action)} disabled={isProcessing}>
+                               {isProcessing ? 'EXECUTING...' : 'APPROVE & EXECUTE'}
+                             </button>
+                             <button className={styles.dismissBtn} onClick={() => handleDismiss(action.id)}>DISMISS</button>
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 );
+               })()}
+            </main>
 
-           <aside className={styles.telemetrySidebar}>
-             <div className={styles.sidebarSection}>
-               <h5>NEURAL DISCOVERY</h5>
-               <div className={styles.telemetryStat}>
-                 <span className={styles.telemetryLabel}>Fragments Audited</span>
-                 <span className={styles.telemetryValue}>100 / 100</span>
-               </div>
-               <div className={styles.telemetryStat}>
-                 <span className={styles.telemetryLabel}>System Logic</span>
-                 <span className={styles.telemetryValue} style={{ color: 'var(--accent-green)' }}>STABLE</span>
-               </div>
-             </div>
+            <aside className={styles.telemetrySidebar}>
+              <div className={styles.sidebarSection}>
+                <h5>NEURAL DISCOVERY</h5>
+                <div className={styles.telemetryStat}>
+                  <span className={styles.telemetryLabel}>Fragments Audited</span>
+                  <span className={styles.telemetryValue}>100 / 100</span>
+                </div>
+                <div className={styles.telemetryStat}>
+                  <span className={styles.telemetryLabel}>System Logic</span>
+                  <span className={styles.telemetryValue} style={{ color: 'var(--accent-green)' }}>STABLE</span>
+                </div>
+              </div>
 
-             <div className={styles.sidebarSection}>
-               <h5>DISCOVERY FEED</h5>
-               <div className={styles.logList}>
-                 {logs.map((log, i) => (
-                   <div key={i} className={styles.logItem}>{log}</div>
-                 ))}
-               </div>
-             </div>
-           </aside>
-        </div>
+              <div className={styles.sidebarSection}>
+                <h5>DISCOVERY FEED</h5>
+                <div className={styles.logList}>
+                  {logs.map((log, i) => (
+                    <div key={i} className={styles.logItem}>{log}</div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+         </div>
      </div>
   );
 }
