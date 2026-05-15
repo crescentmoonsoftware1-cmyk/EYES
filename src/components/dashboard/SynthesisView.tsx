@@ -81,17 +81,17 @@ export function SynthesisView({
   }, []);
 
   return (
-    <div className={styles.heroLayout}>
-      <div className={styles.heroContent}>
-        {/* Exact Logo from Screenshot */}
-        <h1 className={styles.brandDisplayTitle}>The EYES</h1>
-        
-        <div className={styles.heroSummary}>
-          <div className={styles.shieldIcon}><ShieldIcon size={18} /></div>
-          <span>Indexed <strong>{totalMemories.toLocaleString()}</strong> records across your connected sources.</span>
-        </div>
-
-
+    <div className={`${styles.heroLayout} ${messages.length > 0 ? styles.chatModeLayout : ''}`}>
+      <div className={`${styles.heroContent} ${messages.length > 0 ? styles.heroContentMinimized : ''}`}>
+        {messages.length === 0 && (
+          <>
+            <h1 className={styles.brandDisplayTitle}>The EYES</h1>
+            <div className={styles.heroSummary}>
+              <div className={styles.shieldIcon}><ShieldIcon size={18} /></div>
+              <span>Indexed <strong>{totalMemories.toLocaleString()}</strong> records across your connected sources.</span>
+            </div>
+          </>
+        )}
 
         <div className={styles.commandContainer}>
           <div className={styles.commandInputBox}>
@@ -104,7 +104,7 @@ export function SynthesisView({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && query.trim()) {
-                  router.push(`/chat?q=${encodeURIComponent(query.trim())}`);
+                  onSubmit(query.trim());
                 }
               }}
               disabled={isStreaming}
@@ -113,7 +113,7 @@ export function SynthesisView({
               className={styles.commandSendBtn} 
               onClick={() => {
                 if (query.trim()) {
-                  router.push(`/chat?q=${encodeURIComponent(query.trim())}`);
+                  onSubmit(query.trim());
                 }
               }}
               disabled={!query.trim() || isStreaming}
@@ -124,21 +124,19 @@ export function SynthesisView({
           </div>
         </div>
 
-        {/* Dynamic Connected Pills */}
+        {/* Dynamic Connected Pills - Only show on landing or minimized row */}
         {connected.length > 0 && (
-          <div className={styles.connectedRow}>
-            <span className={styles.connectedLabel}>CONNECTED</span>
+          <div className={`${styles.connectedRow} ${messages.length > 0 ? styles.connectedRowMinimized : ''}`}>
+            {messages.length === 0 && <span className={styles.connectedLabel}>CONNECTED</span>}
             <div className={styles.connectedPills}>
               {connected.map(p => {
                 const config = ALL_POSSIBLE_PLATFORMS.find(ap => ap.id === p.id);
-                // Simple heuristic: if sync_progress is 100, we assume it's healthy, else it might be degraded/syncing
                 const isHealthy = p.sync_progress === 100;
                 
                 return (
                   <div key={p.id} className={styles.miniConnectionPill} onClick={() => setView('readiness')} style={{ cursor: 'pointer' }} title={isHealthy ? 'Connection Healthy' : 'Action Required / Syncing'}>
                     <div className={`${styles.statusDot} ${isHealthy ? styles.statusDotHealthy : styles.statusDotDegraded}`} />
-                    {config?.icon ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 16 }) : null}
-                    <span style={{ textTransform: 'capitalize' }}>{p.id.replace('-', ' ')}</span>
+                    {config?.icon ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 14 }) : null}
                   </div>
                 );
               })}
@@ -162,18 +160,20 @@ export function SynthesisView({
                   )}
                   {m.pending && <span className={styles.typingCursor}>▊</span>}
                 </div>
-
              </div>
            ))}
            <div ref={messagesEndRef} />
         </div>
       )}
 
-      <div className={styles.quickActions}>
-         <div className={styles.actionCard} onClick={() => setView('feed')}><span>Memory Feed</span></div>
-         <div className={styles.actionCard} onClick={() => setView('timeline')}><span>Time Line</span></div>
-         <div className={styles.actionCard} onClick={() => setView('audit')}><span>Audit</span></div>
-      </div>
+      {messages.length === 0 && (
+        <div className={styles.quickActions}>
+           <div className={styles.actionCard} onClick={() => setView('feed')}><span>Memory Feed</span></div>
+           <div className={styles.actionCard} onClick={() => setView('timeline')}><span>Time Line</span></div>
+           <div className={styles.actionCard} onClick={() => setView('audit')}><span>Audit</span></div>
+        </div>
+      )}
     </div>
   );
 }
+
