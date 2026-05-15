@@ -22,6 +22,15 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const router = useRouter();
   const viewParam = searchParams.get('view') as ViewMode | null;
   const activeView = viewParam || 'dashboard';
+  const newChatTrigger = searchParams.get('new');
+
+  // Reset chat if 'new' trigger is present
+  useEffect(() => {
+    if (newChatTrigger) {
+      setMessages([]);
+      setThreadId(Math.random().toString(36).substring(7));
+    }
+  }, [newChatTrigger]);
 
   const [summary, setSummary] = useState<AuditSummary>({ 
     totalMemories: 0, 

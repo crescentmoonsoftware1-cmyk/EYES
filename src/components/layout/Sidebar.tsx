@@ -48,8 +48,10 @@ export default function Sidebar() {
   const offset = circumference - (coverageScore / 100) * circumference;
 
   const navigateToView = (view: string) => {
-    if (view === 'chat' || view === 'dashboard') {
-      router.push('/'); // Launcher home
+    if (view === 'chat') {
+      router.push(`/?view=dashboard&new=${Date.now()}`);
+    } else if (view === 'dashboard') {
+      router.push('/');
     } else {
       router.push(`/?view=${view}`);
     }

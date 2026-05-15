@@ -11,19 +11,19 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch the 30 most recent memories from the unified memories table
+    // Fetch the 15 most recent memories from the unified memories table
     const { data: memories, error } = await supabase
       .from('memories')
       .select('id, platform, event_type, title, content, timestamp, author')
       .eq('user_id', user.id)
       .not('content', 'is', null)
       .order('timestamp', { ascending: false })
-      .limit(30);
+      .limit(15);
 
     if (error) throw error;
 
     const memoryContext = (memories && memories.length > 0)
-      ? memories.map(m => `[ID: ${m.id}] [Platform: ${m.platform}] [Type: ${m.event_type || 'unknown'}] [Time: ${m.timestamp}] ${m.author ?? 'Unknown'}: ${m.title ?? ''} - ${m.content.slice(0, 300)}`).join('\n')
+      ? memories.map(m => `[ID: ${m.id}] [Platform: ${m.platform}] [Type: ${m.event_type || 'unknown'}] [Time: ${m.timestamp}] ${m.author ?? 'Unknown'}: ${m.title ?? ''} - ${m.content.slice(0, 200)}`).join('\n')
       : 'No memories indexed yet.';
 
     const prompt = `
