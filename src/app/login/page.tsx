@@ -219,11 +219,24 @@ export default function LoginPage() {
               <div className={styles.sidebarItem} style={{ width: '50%' }} />
             </div>
             <div className={styles.vaultMain}>
+              {/* Internal Neural Video Feed */}
+              <div className={styles.vaultVideoOverlay}>
+                <video 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline 
+                  className={styles.vaultBgVideo}
+                >
+                  <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-neural-network-4410-large.mp4" type="video/mp4" />
+                </video>
+              </div>
+
               <div className={styles.vaultHeader}>
                 <div className={styles.sidebarItem} style={{ width: '100px', height: '12px' }} />
                 <div className={styles.vaultSearch} />
               </div>
-              <div className={styles.vaultGrid}>
+              <div className={styles.vaultGrid} style={{ position: 'relative', zIndex: 2 }}>
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className={styles.vaultCard}>
                     <div className={styles.vaultCardIcon} />
