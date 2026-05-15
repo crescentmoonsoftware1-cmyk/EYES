@@ -242,6 +242,23 @@
   align-items: center;
   justify-content: flex-end;
   padding: 0;
+  position: relative; /* Needed for absolute video overlay */
+}
+
+.videoOverlay {
+  position: absolute;
+  inset: -100px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.15; /* Sublte presence */
+  filter: grayscale(1) brightness(1.2);
+  mix-blend-mode: multiply;
+}
+
+.bgVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .vaultWindow {

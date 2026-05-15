@@ -190,6 +190,21 @@ export default function LoginPage() {
           onMouseMove={handleMouseMove} 
           onMouseLeave={handleMouseLeave}
         >
+          {/* Background Video Clip */}
+          <div className={styles.videoOverlay}>
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className={styles.bgVideo}
+              poster="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=2832"
+            >
+              <source src="https://cdn.pixabay.com/vimeo/327334630/neural-network-12716.mp4?width=1280&hash=f51a24d5e86a5170d10d10d10d10d10d10d10d10" type="video/mp4" />
+              <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-neural-network-4410-large.mp4" type="video/mp4" />
+            </video>
+          </div>
+
           <div 
             className={styles.vaultWindow}
             style={{ 
