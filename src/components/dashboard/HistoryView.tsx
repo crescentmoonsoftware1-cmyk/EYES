@@ -122,9 +122,6 @@ export function HistoryView({ onBack, onLoadThread }: { onBack: () => void, onLo
     <div className={styles.soloView}>
       <div className={styles.viewHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <button onClick={onBack} className={styles.filterChip} style={{ borderRadius: '8px', padding: '6px 12px' }}>
-            ← Back
-          </button>
           <h1 className={styles.soloTitle}>Neural History</h1>
         </div>
         <button
