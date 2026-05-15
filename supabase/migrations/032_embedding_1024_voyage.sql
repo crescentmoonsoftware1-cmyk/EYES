@@ -49,6 +49,30 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 AS $$
+  WITH semantic_matches AS (
+    SELECT
+      m.id,
+      (1 - (m.embedding <=> query_embedding))::FLOAT AS similarity
+    FROM memories m
+    WHERE m.user_id = user_id_arg
+      AND m.embedding IS NOT NULL
+      AND (start_date IS NULL OR m.timestamp >= start_date)
+      AND (end_date   IS NULL OR m.timestamp <= end_date)
+    ORDER BY m.embedding <=> query_embedding
+    LIMIT 50
+  ),
+  keyword_matches AS (
+    SELECT
+      m.id,
+      ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT AS keyword_rank
+    FROM memories m
+    WHERE m.user_id = user_id_arg
+      AND m.fts @@ websearch_to_tsquery('english', query_text)
+      AND (start_date IS NULL OR m.timestamp >= start_date)
+      AND (end_date   IS NULL OR m.timestamp <= end_date)
+    ORDER BY ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text)) DESC
+    LIMIT 50
+  )
   SELECT
     m.id,
     m.platform,
@@ -58,24 +82,19 @@ AS $$
     m.content,
     m.author,
     m.source_url,
-    m.timestamp            AS event_timestamp,
+    m.timestamp AS event_timestamp,
     m.metadata,
     m.is_flagged,
-    (1 - (m.embedding <=> query_embedding))::FLOAT                            AS similarity,
-    ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT     AS keyword_rank,
+    COALESCE(sm.similarity, (1 - (m.embedding <=> query_embedding))::FLOAT) AS similarity,
+    COALESCE(km.keyword_rank, ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT) AS keyword_rank,
     (
-      (1 - (m.embedding <=> query_embedding)) * 0.7
-      + ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text)) * 0.3
-    )::FLOAT                                                                   AS combined_score
+      COALESCE(sm.similarity, (1 - (m.embedding <=> query_embedding))::FLOAT) * 0.7
+      + COALESCE(km.keyword_rank, ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT) * 0.3
+    )::FLOAT AS combined_score
   FROM memories m
-  WHERE m.user_id = user_id_arg
-    AND m.embedding IS NOT NULL
-    AND (start_date IS NULL OR m.timestamp >= start_date)
-    AND (end_date   IS NULL OR m.timestamp <= end_date)
-    AND (
-      (1 - (m.embedding <=> query_embedding)) > 0.15
-      OR m.fts @@ websearch_to_tsquery('english', query_text)
-    )
+  LEFT JOIN semantic_matches sm ON m.id = sm.id
+  LEFT JOIN keyword_matches km ON m.id = km.id
+  WHERE sm.id IS NOT NULL OR km.id IS NOT NULL
   ORDER BY combined_score DESC
   LIMIT match_count;
 $$;
