@@ -11,14 +11,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch the 15 most recent memories from the unified memories table
+    // Fetch the 100 most recent memories from the unified memories table
     const { data: memories, error } = await supabase
       .from('memories')
       .select('id, platform, event_type, title, content, timestamp, author')
       .eq('user_id', user.id)
       .not('content', 'is', null)
       .order('timestamp', { ascending: false })
-      .limit(15);
+      .limit(100);
 
     if (error) throw error;
 

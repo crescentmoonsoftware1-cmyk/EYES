@@ -42,6 +42,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
       }
     };
     fetchActions();
+    const refreshInterval = setInterval(fetchActions, 30000); // Live update every 30s
 
     // Rotate dummy logs to make it feel alive
     const logInterval = setInterval(() => {
@@ -56,7 +57,10 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
       setLogs(prev => [systemLogs[Math.floor(Math.random() * systemLogs.length)], ...prev.slice(0, 4)]);
     }, 4000);
 
-    return () => clearInterval(logInterval);
+    return () => {
+      clearInterval(refreshInterval);
+      clearInterval(logInterval);
+    };
   }, []);
 
   const handleApprove = async (action: ActionItem) => {
