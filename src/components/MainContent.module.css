@@ -568,12 +568,12 @@
 }
 
 .filterChip {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  padding: 6px 16px;
+  background: transparent; /* Removed cement color */
+  border: 1px solid var(--border-primary); /* Sharper border */
+  padding: 6px 18px;
   border-radius: 99px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800; /* Bolder text */
   color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition-main);
@@ -582,16 +582,18 @@
 .filterChip:hover {
   border-color: var(--accent-primary);
   color: var(--text-primary);
-  background: var(--bg-primary);
-  transform: translateY(-1px);
+  background: var(--bg-secondary);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
 
 .filterChipActive {
-  background: var(--accent-primary);
-  color: var(--bg-primary);
-  border-color: var(--accent-primary);
+  background: var(--accent-primary) !important;
+  color: var(--bg-primary) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: var(--shadow-md);
 }
+
 
 .addIndicator {
   margin-left: auto;
