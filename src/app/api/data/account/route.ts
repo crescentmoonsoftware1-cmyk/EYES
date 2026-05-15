@@ -8,7 +8,7 @@ import {
   type ProviderName,
   type ProviderRevocationResult,
   type RevocablePlatform,
-} from '@/utils/provider-revocation';
+} from '@/services/auth/provider-revocation';
 import { createClient } from '@/utils/supabase/server';
 
 const ACCOUNT_PURGE_CONFIRMATION = 'DELETE_ALL_DATA';

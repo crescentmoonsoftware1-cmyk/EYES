@@ -18,7 +18,7 @@ vi.mock('@/utils/supabase/server', () => ({
   createClient: hoisted.createClientMock,
 }));
 
-vi.mock('@/utils/oauth', () => ({
+vi.mock('@/services/auth/oauth', () => ({
   getValidGoogleToken: hoisted.getValidGoogleTokenMock,
   getValidLinearToken: hoisted.getValidLinearTokenMock,
   getValidSlackToken: hoisted.getValidSlackTokenMock,

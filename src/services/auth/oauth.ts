@@ -274,3 +274,215 @@ export async function getValidGithubToken(
   return decryptToken(tokenRow.access_token);
 }
 
+/**
+ * Checks if a Discord OAuth access token is valid and refreshes it if necessary.
+ */
+export async function getValidDiscordToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('platform', 'discord')
+    .maybeSingle();
+
+  if (!tokenRow || !tokenRow.access_token) return null;
+
+  const now = new Date();
+  const expiresAt = tokenRow.expires_at ? new Date(tokenRow.expires_at) : null;
+  
+  // Discord tokens typically last 7 days. Refresh if less than 1 hour remains.
+  if (expiresAt && (expiresAt.getTime() - now.getTime()) > 60 * 60 * 1000) {
+    return decryptToken(tokenRow.access_token);
+  }
+
+  if (!tokenRow.refresh_token) {
+    return decryptToken(tokenRow.access_token);
+  }
+
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    console.warn('[OAuth] Missing Discord credentials for token refresh.');
+    return decryptToken(tokenRow.access_token);
+  }
+
+  try {
+    const response = await fetch('https://discord.com/api/v10/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'refresh_token',
+        refresh_token: decryptToken(tokenRow.refresh_token),
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`[OAuth] Discord refresh failed (${response.status})`);
+      return decryptToken(tokenRow.access_token);
+    }
+
+    const payload = await response.json();
+    const newAccessToken = payload.access_token;
+    const newRefreshToken = payload.refresh_token;
+    const newExpiresAt = new Date(Date.now() + payload.expires_in * 1000).toISOString();
+
+    await supabase
+      .from('oauth_tokens')
+      .update({
+        access_token: encryptToken(newAccessToken),
+        refresh_token: newRefreshToken ? encryptToken(newRefreshToken) : tokenRow.refresh_token,
+        expires_at: newExpiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('platform', 'discord');
+
+    return newAccessToken;
+  } catch (err) {
+    console.error('[OAuth] Discord refresh error:', err);
+    return decryptToken(tokenRow.access_token);
+  }
+}
+
+/**
+ * Checks if a Reddit OAuth access token is valid and refreshes it if necessary.
+ */
+export async function getValidRedditToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('platform', 'reddit')
+    .maybeSingle();
+
+  if (!tokenRow || !tokenRow.access_token) return null;
+
+  const now = new Date();
+  const expiresAt = tokenRow.expires_at ? new Date(tokenRow.expires_at) : null;
+  
+  if (expiresAt && (expiresAt.getTime() - now.getTime()) > 5 * 60 * 1000) {
+    return decryptToken(tokenRow.access_token);
+  }
+
+  if (!tokenRow.refresh_token) {
+    console.warn(`[OAuth] Cannot refresh reddit for ${userId}: No refresh_token found.`);
+    return decryptToken(tokenRow.access_token);
+  }
+
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    console.warn('[OAuth] Missing Reddit credentials for token refresh.');
+    return decryptToken(tokenRow.access_token);
+  }
+
+  try {
+    const authHeader = btoa(`${clientId}:${clientSecret}`);
+    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${authHeader}`
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: decryptToken(tokenRow.refresh_token),
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`[OAuth] Reddit refresh failed (${response.status})`);
+      return null;
+    }
+
+    const payload = await response.json();
+    if (!payload.access_token) return null;
+
+    const newAccessToken = payload.access_token;
+    const newRefreshToken = payload.refresh_token || decryptToken(tokenRow.refresh_token);
+    const newExpiresAt = payload.expires_in 
+      ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
+      : null;
+
+    await supabase
+      .from('oauth_tokens')
+      .update({
+        access_token: encryptToken(newAccessToken),
+        refresh_token: encryptToken(newRefreshToken),
+        expires_at: newExpiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('platform', 'reddit');
+
+    return newAccessToken;
+  } catch (err) {
+    console.error('[OAuth] Reddit refresh error:', err);
+    return null;
+  }
+}
+
+/**
+ * Retrieves a valid Slack token. Slack user tokens generally don't expire 
+ * unless rotating tokens are enabled in the App settings.
+ */
+export async function getValidSlackToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'slack')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Linear token. 
+ */
+export async function getValidLinearToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'linear')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Vercel token.
+ */
+export async function getValidVercelToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'vercel')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}

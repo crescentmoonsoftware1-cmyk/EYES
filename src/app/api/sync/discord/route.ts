@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/upsert';
-import { getValidDiscordToken } from '@/utils/oauth';
+import { getValidDiscordToken } from '@/services/auth/oauth';
 import { scoreDiscordEvent } from '@/utils/risk/scorer';
 
 type DiscordChannelCursor = {

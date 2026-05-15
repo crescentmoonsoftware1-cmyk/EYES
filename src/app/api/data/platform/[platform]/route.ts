@@ -6,7 +6,7 @@ import {
   providerForPlatform,
   revokeProviderAccess,
   type ProviderRevocationResult,
-} from '@/utils/provider-revocation';
+} from '@/services/auth/provider-revocation';
 import { createClient } from '@/utils/supabase/server';
 
 const SUPPORTED_PLATFORMS = new Set([

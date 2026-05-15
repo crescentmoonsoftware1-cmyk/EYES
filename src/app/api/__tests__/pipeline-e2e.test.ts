@@ -273,7 +273,7 @@ vi.mock('@/utils/sync/actor', () => ({
   })),
 }));
 
-vi.mock('@/utils/oauth', () => ({
+vi.mock('@/services/auth/oauth', () => ({
   getValidGithubToken: vi.fn(async () => 'github-token'),
 }));
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { upsertMemoriesSafely, upsertSyncStatusSafely } from '@/utils/supabase/memories';
-import { getValidGithubToken } from '@/utils/oauth';
+import { getValidGithubToken } from '@/services/auth/oauth';
 import { scoreGithubEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
 

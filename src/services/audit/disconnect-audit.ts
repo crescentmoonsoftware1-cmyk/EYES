@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { ProviderRevocationResult, RevocablePlatform } from '@/utils/provider-revocation';
+import type { ProviderRevocationResult, RevocablePlatform } from '@/services/auth/provider-revocation';
 
 export type DisconnectAuditAction = 'disconnect' | 'purge_platform' | 'purge_account';
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { upsertMemoriesSafely, upsertSyncStatusSafely } from '@/utils/supabase/memories';
-import { getValidGoogleToken } from '@/utils/oauth';
+import { getValidGoogleToken } from '@/services/auth/oauth';
 import { scoreGmailEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { getValidGoogleToken, getValidLinearToken, getValidSlackToken } from '@/utils/oauth';
+import { getValidGoogleToken, getValidLinearToken, getValidSlackToken } from '@/services/auth/oauth';
 
 type ActionBody = {
   actionId?: string;

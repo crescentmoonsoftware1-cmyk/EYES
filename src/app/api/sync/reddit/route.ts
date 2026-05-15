@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { getValidRedditToken } from '@/utils/oauth';
+import { getValidRedditToken } from '@/services/auth/oauth';
 import { scoreRedditEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
 

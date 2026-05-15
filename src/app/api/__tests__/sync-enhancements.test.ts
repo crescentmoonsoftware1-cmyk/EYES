@@ -52,7 +52,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/utils/oauth', () => ({
+vi.mock('@/services/auth/oauth', () => ({
   getValidGoogleToken: hoisted.getValidGoogleTokenMock,
   getValidSlackToken: hoisted.getValidSlackTokenMock,
   getValidDiscordToken: hoisted.getValidDiscordTokenMock,

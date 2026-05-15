@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getValidGoogleToken } from '@/utils/oauth';
+import { getValidGoogleToken } from '@/services/auth/oauth';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { resolveSyncActor } from '@/utils/sync/actor';
 
