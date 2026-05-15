@@ -213,7 +213,7 @@ export default function LoginPage() {
                   playsInline 
                   className={styles.vaultBgVideo}
                 >
-                  <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-neural-network-4410-large.mp4" type="video/mp4" />
+                  <source src="https://i.imgur.com/8Q9lZ7T.mp4" type="video/mp4" />
                 </video>
               </div>
 

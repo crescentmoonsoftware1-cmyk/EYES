@@ -313,8 +313,8 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.6; /* Increased visibility */
-  filter: none; /* Removed grayscale for better clarity */
+  opacity: 0.8; /* High visibility */
+  filter: drop-shadow(0 0 20px rgba(0, 209, 255, 0.15)); /* Holographic glow */
 }
 
 .vaultBgVideo {
