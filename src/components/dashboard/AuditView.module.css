@@ -416,3 +416,34 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+.errorIcon {
+  font-size: 64px;
+  margin-bottom: 24px;
+}
+
+.errorDescription {
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 400px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.rerunBtn {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rerunBtn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-primary);
+}
+

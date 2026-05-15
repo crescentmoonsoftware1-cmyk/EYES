@@ -51,6 +51,8 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     return () => {};
   }, [activeAudit?.status]);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   // Poll a specific audit by id so the UI updates in near-real-time
   useEffect(() => {
     if (!activeAudit?.id) return;
@@ -68,10 +70,11 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
         if (data.status === 'completed') {
           setAuditMode('completed');
+          setErrorMessage(null);
           stopped = true;
         }
         if (data.status === 'failed') {
-          setAuditMode('dashboard');
+          setErrorMessage(data.summaryNarrative || 'The neural analysis encountered an unexpected error.');
           stopped = true;
         }
       } catch (err) {
@@ -205,23 +208,43 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     );
   }
 
-  // 2. RUNNING STATE
-  if (auditMode === 'running') {
+  // 2. RUNNING / FAILED STATE
+  if (auditMode === 'running' || errorMessage) {
     return (
       <div className={styles.auditContainer}>
         <div className={styles.scanningContainer}>
-          <div className={styles.neuralPulse} />
-          <div className={styles.scanningText}>
-            {activeAudit?.status === 'pending' ? 'QUEUEING REQUEST...' :
-              activeAudit?.status === 'analysis' ? 'DEEP NEURAL ANALYSIS...' :
-                'FINALIZING PDF REPORT...'}
-          </div>
-          <div className={styles.scanningProgress}>
-            <div className={styles.progressBar}>
-              <div className={styles.progressFill} />
-            </div>
-            <p>Analyzing cross-platform vectors. This usually takes 30-45 seconds.</p>
-          </div>
+          {errorMessage ? (
+            <>
+              <div className={styles.errorIcon}>⚠️</div>
+              <div className={styles.scanningText}>ANALYSIS FAILED</div>
+              <p className={styles.errorDescription}>{errorMessage}</p>
+              <button 
+                className={styles.rerunBtn} 
+                style={{ marginTop: '20px' }}
+                onClick={() => {
+                  setErrorMessage(null);
+                  setAuditMode('dashboard');
+                }}
+              >
+                RETURN TO CONTROL CENTER
+              </button>
+            </>
+          ) : (
+            <>
+              <div className={styles.neuralPulse} />
+              <div className={styles.scanningText}>
+                {activeAudit?.status === 'pending' ? 'QUEUEING REQUEST...' :
+                  activeAudit?.status === 'analysis' ? 'DEEP NEURAL ANALYSIS...' :
+                    'FINALIZING PDF REPORT...'}
+              </div>
+              <div className={styles.scanningProgress}>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill} />
+                </div>
+                <p>Analyzing cross-platform vectors. This usually takes 30-45 seconds.</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
