@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createClient as createUserClient } from '@/utils/supabase/server';
-import { createAdminClient } from '@/utils/supabase/admin';
+import { createClient as createUserClient, createAdminClient } from '@/utils/supabase/server';
 
 export type SyncActor = {
   supabase: SupabaseClient;
@@ -39,7 +38,7 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
 
     let supabase: SupabaseClient;
     try {
-      supabase = createAdminClient();
+      supabase = await createAdminClient();
     } catch {
       return {
         error: 'Server is missing admin configuration for cron sync.',
@@ -75,7 +74,7 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
   }
 
   // Use Admin Client for the actual sync operations to bypass RLS barriers in background
-  const supabase = createAdminClient();
+  const supabase = await createAdminClient();
   const userMetadata = authData.user.user_metadata as { name?: string } | undefined;
 
   return {
