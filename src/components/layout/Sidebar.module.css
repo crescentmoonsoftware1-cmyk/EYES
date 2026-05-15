@@ -96,8 +96,14 @@
 .itemActive {
   background-color: var(--bg-card);
   color: var(--text-primary);
-  border: 1px solid var(--accent-primary);
+  border: 1px solid var(--border-primary); /* Use border-primary for cleaner look */
   box-shadow: var(--shadow-sm);
+  background-color: rgba(255, 255, 255, 0.08); /* Slight lift */
+}
+
+[data-theme='light'] .itemActive {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .itemIcon {
@@ -116,17 +122,18 @@
 .footer { margin-top: auto; padding-top: 24px; }
 
 .readinessCard {
-  background: var(--bg-secondary);
+  background: var(--bg-card); /* Changed from secondary to card for contrast */
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-primary); /* Stronger border */
   padding: 16px;
   cursor: pointer;
   transition: var(--transition-main);
+  box-shadow: var(--shadow-sm);
 }
 
 .readinessCard:hover { 
-  background: var(--bg-card); 
-  border-color: var(--border-primary);
+  background: var(--bg-card-hover); 
+  border-color: var(--accent-primary);
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
 }
