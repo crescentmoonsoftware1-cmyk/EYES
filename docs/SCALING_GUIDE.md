@@ -70,3 +70,31 @@ If the UI displays *"All AI providers are currently unavailable"*, check the fol
 1.  **OpenRouter Balance**: Ensure credits are > $0.
 2.  **API Rate Limits**: Check the logs for `429 Too Many Requests`.
 3.  **Token Encryption Key**: Verify `TOKEN_ENCRYPTION_KEY` matches the key used to encrypt the stored platform tokens.
+
+⚠️  Common Root Cause
+In most cases, "AI Unavailable" errors are caused by an exhausted OpenRouter balance or a mismatch in the TOKEN_ENCRYPTION_KEY. Check these two first before escalating.
+
+## 7. Cost Analysis (100-User Scale)
+
+To maintain a production-grade experience for 100 users, the estimated monthly burn is divided into Fixed Infrastructure and Variable AI Usage.
+
+### A. Fixed Monthly Infrastructure ($45/mo)
+| Service | Plan | Monthly Cost | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Vercel** | Pro Plan | $20.00 | Higher timeouts (60s) and faster builds. |
+| **Supabase** | Pro Plan | $25.00 | Vector storage for 1M+ memories and daily backups. |
+
+### B. Variable Monthly AI Usage (Estimated ~$150 - $300/mo)
+*Costs depend on how active your 100 users are.*
+
+| Service | Metric | Estimated Cost | Details |
+| :--- | :--- | :--- | :--- |
+| **OpenRouter / Gemini** | Chat Reasoning | $1.00 - $2.50 / user | Based on ~500 messages per user/mo. |
+| **Cohere** | Embeddings | $0.20 - $0.50 / user | Based on syncing 10k items per user/mo. |
+
+### C. Total Estimated Budget
+*   **Total Monthly**: **~$195.00 - $345.00**
+*   **Cost Per User**: **~$1.95 - $3.45**
+
+> [!TIP]
+> **Cost Saving Strategy**: By setting `AI_CHAT_PREFERENCE="gemini"` and using `gemini-2.0-flash`, you can reduce the Chat Reasoning cost by nearly 60% compared to using Claude 3.5 Sonnet, with very little loss in accuracy for memory retrieval.
