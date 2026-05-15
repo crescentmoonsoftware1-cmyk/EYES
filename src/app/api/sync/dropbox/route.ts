@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken, encryptToken } from '@/utils/tokens';
+import { decryptToken, encryptToken } from '@/services/auth/tokens';
 
 type DropboxFile = {
   '.tag': string; id: string; name: string; path_display: string;

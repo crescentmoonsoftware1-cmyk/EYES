@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken, encryptToken } from '@/utils/tokens';
+import { decryptToken, encryptToken } from '@/services/auth/tokens';
 
 type FitbitActivity = { logId: number; activityName?: string; activityTypeId?: number; calories?: number; steps?: number; distance?: number; duration?: number; averageHeartRate?: number; startTime?: string; originalStartTime?: string };
 type FitbitSleepSummary = { dateOfSleep?: string; duration?: number; efficiency?: number; minutesAsleep?: number; minutesAwake?: number; startTime?: string };

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken } from '@/utils/tokens';
+import { decryptToken } from '@/services/auth/tokens';
 
 type AsanaTask = {
   gid: string; name: string; notes?: string; completed?: boolean;

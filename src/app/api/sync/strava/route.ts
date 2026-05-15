@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken, encryptToken } from '@/utils/tokens';
+import { decryptToken, encryptToken } from '@/services/auth/tokens';
 
 type StravaActivity = { id: number; name: string; type: string; sport_type?: string; distance?: number; moving_time?: number; elapsed_time?: number; total_elevation_gain?: number; average_heartrate?: number; max_heartrate?: number; start_date?: string; suffer_score?: number | null; achievement_count?: number };
 

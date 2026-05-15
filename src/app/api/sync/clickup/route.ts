@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken } from '@/utils/tokens';
+import { decryptToken } from '@/services/auth/tokens';
 
 type ClickUpTask = { id: string; name: string; description?: string; status?: { status: string }; due_date?: string | null; date_created?: string; date_updated?: string; assignees?: Array<{ username?: string }>; list?: { name?: string }; folder?: { name?: string }; space?: { id?: string } };
 type ClickUpList = { id: string; name: string; task_count?: number; folder?: { id?: string; name?: string } };

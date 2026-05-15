@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken, encryptToken } from '@/utils/tokens';
+import { decryptToken, encryptToken } from '@/services/auth/tokens';
 
 type CanvaDesign = { id: string; title?: string; created_at?: string; updated_at?: string; thumbnail?: { url?: string }; urls?: { view_url?: string } };
 

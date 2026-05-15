@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/upsert';
-import { decryptToken } from '@/utils/tokens';
+import { decryptToken } from '@/services/auth/tokens';
 import { scoreTwitterEvent } from '@/utils/risk/scorer';
 
 type TweetV2 = {

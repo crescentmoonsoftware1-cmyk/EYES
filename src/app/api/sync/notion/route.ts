@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken } from '@/utils/tokens';
+import { decryptToken } from '@/services/auth/tokens';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { scoreNotionEvent } from '@/utils/risk/scorer';
 

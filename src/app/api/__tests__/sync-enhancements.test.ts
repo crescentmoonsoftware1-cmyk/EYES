@@ -58,7 +58,7 @@ vi.mock('@/utils/oauth', () => ({
   getValidDiscordToken: hoisted.getValidDiscordTokenMock,
 }));
 
-vi.mock('@/utils/tokens', () => ({
+vi.mock('@/services/auth/tokens', () => ({
   decryptToken: hoisted.decryptTokenMock,
 }));
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken } from '@/utils/tokens';
+import { decryptToken } from '@/services/auth/tokens';
 
 type NetlifySite = { id: string; name: string; url?: string; custom_domain?: string | null; created_at?: string; updated_at?: string; published_deploy?: { id?: string; state?: string; created_at?: string } };
 type NetlifyDeploy = { id: string; site_id: string; site_name?: string; state?: string; branch?: string; title?: string; created_at?: string; error_message?: string | null };

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/utils/supabase/server';
-import { encryptToken } from '@/utils/tokens';
+import { encryptToken } from '@/services/auth/tokens';
 import { getBaseUrl } from '@/utils/url';
 import { sendWelcomeEmail } from '@/services/email/resend';
 

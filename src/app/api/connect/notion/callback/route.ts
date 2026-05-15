@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/utils/supabase/server';
-import { encryptToken } from '@/utils/tokens';
+import { encryptToken } from '@/services/auth/tokens';
 
 function getRequestBaseUrl(request: Request) {
   const host = request.headers.get('host') || 'localhost:3000';

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { decryptToken } from '@/utils/tokens';
+import { decryptToken } from '@/services/auth/tokens';
 
 type WebflowSite = { id: string; displayName?: string; shortName?: string; lastUpdated?: string; createdOn?: string; previewUrl?: string };
 type WebflowPage = { id: string; slug?: string; title?: string; lastUpdated?: string; createdOn?: string; publishedPath?: string };
