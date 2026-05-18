@@ -184,6 +184,14 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       }),
       });
 
+      if (!response.ok) {
+        const errText = response.status === 401
+          ? 'Session expired — please refresh the page and log in again.'
+          : `Chat failed (${response.status}). Please try again.`;
+        setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', content: errText, pending: false }]);
+        return;
+      }
+
       if (response.ok && response.body) {
         const citationsHeader = response.headers.get('X-Citations');
         let citations: Citation[] = [];
