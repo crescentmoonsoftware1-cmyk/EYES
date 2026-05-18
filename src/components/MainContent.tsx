@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import styles from './MainContent.module.css';
-import type { AuditSummary, PlatformStatus, FeedItem, Message } from '@/types/dashboard';
+import type { AuditSummary, Citation, PlatformStatus, FeedItem, Message } from '@/types/dashboard';
 
 // Modular View Components
 import { DashboardHomeView } from './dashboard/DashboardHomeView';
@@ -186,7 +186,6 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
 
       if (response.ok && response.body) {
         const citationsHeader = response.headers.get('X-Citations');
-        interface Citation { id: string; platform?: string; title?: string; source_url?: string | null; }
         let citations: Citation[] = [];
         if (citationsHeader) {
           try {

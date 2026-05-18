@@ -9,7 +9,7 @@ import {
   SearchIcon, 
   ArrowRightIcon
 } from '@/components/common/icons/PlatformIcons';
-import type { Message } from '@/types/dashboard';
+import type { Message, Citation } from '@/types/dashboard';
 import { AlertsBanner } from '@/components/chat/AlertsBanner';
 import { ClusterValidationModal } from '@/components/chat/ClusterValidationModal';
 import { CognitiveRightPanel } from '@/components/chat/CognitiveRightPanel';
@@ -132,7 +132,6 @@ function ChatPageInner() {
 
       if (response.ok && response.body) {
         const citationsHeader = response.headers.get('X-Citations');
-        interface Citation { id?: string; memoryId?: string; platform?: string; title?: string; source_url?: string | null; }
         let citations: Citation[] = [];
         if (citationsHeader) {
           try {
