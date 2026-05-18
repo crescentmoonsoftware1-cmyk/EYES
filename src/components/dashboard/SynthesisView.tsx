@@ -8,8 +8,7 @@ import {
   ShieldIcon 
 } from '../common/icons/PlatformIcons';
 import { useRouter } from 'next/navigation';
-import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
-import type { Message, PlatformStatus } from '@/types/dashboard';
+import type { Message } from '@/types/dashboard';
 
 /**
  * Lightweight inline markdown renderer.
@@ -53,7 +52,6 @@ interface SynthesisViewProps {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   setView: (v: ViewMode) => void;
   totalMemories: number;
-  platforms?: PlatformStatus[];
 }
 
 export function SynthesisView({
@@ -65,10 +63,8 @@ export function SynthesisView({
   messagesEndRef,
   setView,
   totalMemories,
-  platforms = []
 }: SynthesisViewProps) {
   const router = useRouter();
-  const connected = platforms.filter(p => p.connected);
   const [digest, setDigest] = React.useState<string[] | null>(null);
   const [loadingDigest, setLoadingDigest] = React.useState(true);
 
@@ -130,25 +126,8 @@ export function SynthesisView({
           </div>
         )}
 
-        {/* Dynamic Connected Pills - Only show on landing or minimized row */}
-        {connected.length > 0 && (
-          <div className={`${styles.connectedRow} ${messages.length > 0 ? styles.connectedRowMinimized : ''}`}>
-            {messages.length === 0 && <span className={styles.connectedLabel}>CONNECTED</span>}
-            <div className={styles.connectedPills}>
-              {connected.map(p => {
-                const config = ALL_POSSIBLE_PLATFORMS.find(ap => ap.id === p.id);
-                const isHealthy = p.status === 'connected';
-                
-                return (
-                  <div key={p.id} className={styles.miniConnectionPill} onClick={() => setView('readiness')} style={{ cursor: 'pointer' }} title={isHealthy ? 'Connection Healthy' : 'Action Required / Syncing'}>
-                    <div className={`${styles.statusDot} ${isHealthy ? styles.statusDotHealthy : styles.statusDotDegraded}`} />
-                    {config?.icon ? React.cloneElement(config.icon, { size: 14 } as React.HTMLAttributes<SVGElement>) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+
+
       </div>
 
       {messages.length > 0 && (
