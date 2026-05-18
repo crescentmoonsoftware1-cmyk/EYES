@@ -487,6 +487,12 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
         controller.enqueue(encoder.encode(result.response.text()));
       } catch (err) {
         console.error('[AI Stream] Gemini fallback failed:', err);
+        // Enqueue a visible error so the chat bubble shows something instead of blank
+        controller.enqueue(encoder.encode(
+          'I\'m having trouble connecting to my AI providers right now. ' +
+          'Please check that GEMINI_API_KEY, OPENROUTER_API_KEY, or ANTHROPIC_API_KEY ' +
+          'is set in your Vercel environment variables and try again.'
+        ));
       } finally {
         controller.close();
       }
