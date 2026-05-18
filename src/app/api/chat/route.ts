@@ -147,11 +147,10 @@ function sanitizeHeaderValue(value: string) {
 }
 
 function resolveBaseUrl(request: Request) {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   try {
     return new URL(request.url).origin;
   } catch {
-    return 'http://localhost:3000';
+    return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   }
 }
 

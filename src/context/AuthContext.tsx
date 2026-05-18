@@ -697,11 +697,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('[Auth] Background sync fan-out failed:', error);
       } finally {
         syncInFlight = false;
-        if (syncTriggered) {
-          // Refresh UI shortly after trigger and again after providers usually finish.
-          setTimeout(emitRealtimeRefreshEvent, 1200);
-          setTimeout(emitRealtimeRefreshEvent, 4500);
-        }
+        // Note: no manual pulse here — the Supabase realtime subscription on
+        // sync_status will fire queueRefresh() automatically when rows change.
       }
     };
 
