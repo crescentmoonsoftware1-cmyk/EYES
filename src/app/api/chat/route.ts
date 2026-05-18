@@ -215,7 +215,7 @@ export async function POST(request: Request) {
     let citations: ChatCitation[] = [];
     let retrievalError: string | null = null;
 
-    if (queryResult) {
+    if (queryResult && typeof queryResult === 'object' && 'embedding' in queryResult) {
       // 2. Real Hybrid Similarity Search
       const { data: matches, error: matchError } = await supabase.rpc('hybrid_search', {
         query_text: message,
