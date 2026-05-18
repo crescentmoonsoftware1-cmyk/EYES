@@ -640,11 +640,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     });
 
-    channel.subscribe((status: string) => {
-      if (status === 'SUBSCRIBED') {
-        emitRealtimeRefreshEvent();
-      }
-    });
+    channel.subscribe();
 
     return () => {
       if (refreshTimer) {

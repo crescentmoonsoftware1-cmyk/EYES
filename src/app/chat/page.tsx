@@ -9,7 +9,7 @@ import {
   SearchIcon, 
   ArrowRightIcon
 } from '@/components/common/icons/PlatformIcons';
-import type { Message, PlatformStatus } from '@/types/dashboard';
+import type { Message } from '@/types/dashboard';
 import { AlertsBanner } from '@/components/chat/AlertsBanner';
 import { ClusterValidationModal } from '@/components/chat/ClusterValidationModal';
 import { CognitiveRightPanel } from '@/components/chat/CognitiveRightPanel';
@@ -52,7 +52,6 @@ function ChatPageInner() {
   const [query, setQuery] = useState(initialQuery);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [platforms, setPlatforms] = useState<PlatformStatus[]>([]);
   const [threadId, setThreadId] = useState('');       // local key
   const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
   const [brainPanelOpen, setBrainPanelOpen] = useState(false);
@@ -95,14 +94,6 @@ function ChatPageInner() {
   // Initialize
   useEffect(() => {
     setThreadId(Math.random().toString(36).substring(7));
-    
-    // Load platforms for metadata
-    fetch('/api/platform-readiness')
-      .then(res => res.json())
-      .then(data => {
-        if (data.platforms) setPlatforms(data.platforms);
-      })
-      .catch(err => console.error('Failed to load platforms:', err));
 
     // If there's an initial query, trigger it (once)
     if (initialQuery && !hasSubmittedRef.current) {
