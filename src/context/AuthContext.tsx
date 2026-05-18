@@ -784,8 +784,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return { success: false, message: 'Not authenticated' };
 
     try {
-      const dbUpdates: any = {};
-      const authUpdates: any = {};
+      const dbUpdates: { name?: string; avatar?: string } = {};
+      const authUpdates: { name?: string } = {};
 
       if (updates.name) {
         dbUpdates.name = updates.name;

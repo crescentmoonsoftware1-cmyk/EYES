@@ -56,13 +56,15 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
   useEffect(() => {
     if (!isOpen) return;
-    setLoading(true);
 
-    Promise.allSettled([
-      fetch('/api/cognitive/state-vectors?days=90').then(r => r.json()),
-      fetch('/api/cognitive/status').then(r => r.json()),
-      fetch('/api/cognitive/entity-correlations').then(r => r.json()),
-    ]).then(([vecRes, statusRes, corrRes]) => {
+    const load = async () => {
+      setLoading(true);
+      const [vecRes, statusRes, corrRes] = await Promise.allSettled([
+        fetch('/api/cognitive/state-vectors?days=90').then(r => r.json()),
+        fetch('/api/cognitive/status').then(r => r.json()),
+        fetch('/api/cognitive/entity-correlations').then(r => r.json()),
+      ]);
+
       if (vecRes.status === 'fulfilled') {
         const vecs: StateVectorDay[] = vecRes.value.vectors ?? [];
         setVectors(vecs);
@@ -77,7 +79,9 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
         setCorrelations(corrRes.value.correlations ?? []);
       }
       setLoading(false);
-    });
+    };
+
+    void load();
   }, [isOpen]);
 
   if (!isOpen) return null;

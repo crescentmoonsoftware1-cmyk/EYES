@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { buildDeterministicChunks } from '@/services/ai/chunking';
 import { generateEmbedding } from '@/services/ai/ai';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +61,7 @@ export async function upsertMemoriesSafely(
   });
 
   let inserted = 0;
-  let skipped = 0;
+  const skipped = 0;
   let errors = 0;
 
   // Process in batches of 10 to avoid overwhelming the embedding API
@@ -190,7 +189,7 @@ async function extractAndStoreEntities(
   // Skip short content — not worth extracting from
   if (!row.content || row.content.length < 80) return;
 
-  const { generateEmbedding: _, ...aiModule } = await import('@/services/ai/ai');
+  const aiModule = await import('@/services/ai/ai');
   const { invokeModel } = aiModule;
 
   const aiResponse = await invokeModel({

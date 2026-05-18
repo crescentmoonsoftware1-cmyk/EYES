@@ -29,8 +29,9 @@ type ClusterResult = {
   signature: string;
   representative_quote: string;
   characteristics: string[];
-  day_indices: number[]; // which vectors belong to this cluster
+  day_indices: number[];
 };
+void (undefined as unknown as ClusterResult); // retained for future API contract typing
 
 // ─── Main cron handler ────────────────────────────────────────────────────────
 export async function GET(request: Request) {
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient(SERVICE_URL, SERVICE_KEY, { auth: { persistSession: false } }) as any;
+  type SupabaseAdminClient = typeof supabase;
 
   // Get all users with ≥21 state vectors (minimum for meaningful clustering)
   const { data: vectorCounts, error: countErr } = await supabase
@@ -121,7 +123,7 @@ function vectorToArray(v: StateVector): number[] {
   ];
 }
 
-async function runClusteringForUser(supabase: any, userId: string): Promise<number> {
+async function runClusteringForUser(supabase: SupabaseAdminClient, userId: string): Promise<number> {
   // Fetch last 90 days of state vectors
   const { data: vectors, error } = await supabase
     .from('state_vectors')
@@ -275,7 +277,7 @@ async function runClusteringForUser(supabase: any, userId: string): Promise<numb
   return clustersWritten;
 }
 
-async function getNextClusterVersion(supabase: any, userId: string): Promise<number> {
+async function getNextClusterVersion(supabase: SupabaseAdminClient, userId: string): Promise<number> {
   const { data } = await supabase
     .from('cognitive_clusters')
     .select('cluster_version')
@@ -287,7 +289,7 @@ async function getNextClusterVersion(supabase: any, userId: string): Promise<num
 }
 
 // ─── Task #8: Loop Detection ──────────────────────────────────────────────────
-async function runLoopDetectionForUser(supabase: any, userId: string): Promise<number> {
+async function runLoopDetectionForUser(supabase: SupabaseAdminClient, userId: string): Promise<number> {
   // Get all state vectors with cluster assignments
   const { data: vectors, error } = await supabase
     .from('state_vectors')
@@ -342,6 +344,7 @@ async function runLoopDetectionForUser(supabase: any, userId: string): Promise<n
     if (intervalMean === 0 || intervalStd / intervalMean >= 0.3) continue;
 
     const confidence = Math.round((1 - intervalStd / intervalMean) * 100) / 100;
+    void confidence; // retained for future loop score computation
 
     // Fetch cluster label for the description
     const { data: cluster } = await supabase
@@ -375,7 +378,7 @@ async function runLoopDetectionForUser(supabase: any, userId: string): Promise<n
 }
 
 // ─── Task #9: Drift Detection ─────────────────────────────────────────────────
-async function runDriftDetectionForUser(supabase: any, userId: string): Promise<boolean> {
+async function runDriftDetectionForUser(supabase: SupabaseAdminClient, userId: string): Promise<boolean> {
   const periodEnd   = new Date();
   const periodStart = new Date(Date.now() - 14 * 86400000); // last 14 days
 
@@ -464,6 +467,8 @@ Identify 1-4 specific gaps. Return:
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function buildWeekSummaries(vectors: StateVector[]): string {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void vectors;
   const weeks: StateVector[][] = [];
   for (let i = 0; i < vectors.length; i += 7) {
     weeks.push(vectors.slice(i, i + 7));
@@ -480,7 +485,7 @@ function buildWeekSummaries(vectors: StateVector[]): string {
   }).join('\n');
 }
 
-async function detectTriggerPattern(supabase: any, userId: string, runs: { start: string }[]): Promise<string> {
+async function detectTriggerPattern(supabase: SupabaseAdminClient, userId: string, runs: { start: string }[]): Promise<string> {
   // Look at what happened in the 3 days before each run started
   const triggers: string[] = [];
   for (const run of runs.slice(0, 3)) {

@@ -75,7 +75,7 @@ ${memoryContext}
       console.warn('Failed to parse AI response, using mock data.');
     }
 
-    let finalActions: any[] = parsed.actions || [];
+    const finalActions: unknown[] = parsed.actions || [];
     
     return NextResponse.json({ actions: finalActions });
 

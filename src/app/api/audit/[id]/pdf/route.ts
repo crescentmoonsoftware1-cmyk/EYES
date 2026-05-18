@@ -40,8 +40,23 @@ export async function GET(
     }
 
     const meta = audit.metadata || {};
-    const commitments: any[]  = meta.commitments   || [];
-    const riskFindings: any[] = meta.riskFindings   || [];
+
+    interface AuditCommitment {
+      text?: string;
+      platform?: string;
+      status?: string;
+      citation?: string;
+      date?: string;
+    }
+    interface AuditRiskFinding {
+      severity?: string;
+      finding?: string;
+      impact?: string;
+      evidence?: string;
+    }
+
+    const commitments: AuditCommitment[] = meta.commitments  || [];
+    const riskFindings: AuditRiskFinding[] = meta.riskFindings || [];
     const topEntities: string[] = meta.topEntities  || [];
     const opportunities: string[] = meta.opportunities || [];
     const connectors: string[] = audit.connectors_covered || [];
@@ -151,7 +166,8 @@ export async function GET(
       // ══════════════════════════════════════════════════════════════════
       // PAGES 3–5 — PER-CONNECTOR BREAKDOWN
       // ══════════════════════════════════════════════════════════════════
-      const connectorPages = Math.max(connectors.length, 3);
+      const connectorPages = connectors.length;
+      void connectorPages; // retained for future page-count display
       for (let i = 0; i < 3; i++) {
         doc.addPage(); bg();
         const platform = connectors[i];
@@ -167,7 +183,7 @@ export async function GET(
         doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text(`Platform Breakdown: ${platform.toUpperCase()}`, 50, 80);
         hRule(110);
 
-        const platformCommitments = commitments.filter((c: any) => c.platform === platform);
+        const platformCommitments = commitments.filter(c => c.platform === platform);
         const perPlatformCount = Math.round((audit.mentions_count ?? 0) / Math.max(connectors.length, 1));
 
         doc.font(FONT_MONO).fontSize(8).fillColor(GRAY)
@@ -186,7 +202,7 @@ export async function GET(
 
         doc.font(FONT_BOLD).fontSize(11).text('Significant Records', 50, 265);
         const recordsToShow = platformCommitments.length > 0 ? platformCommitments : commitments.slice(i * 2, i * 2 + 2);
-        recordsToShow.slice(0, 3).forEach((c: any, ci: number) => {
+        recordsToShow.slice(0, 3).forEach((c, ci: number) => {
           const ry = 285 + ci * 95;
           doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
           doc.font(FONT_BODY).fontSize(9).fillColor(INK)
@@ -214,7 +230,7 @@ export async function GET(
       if (commitments.length === 0) {
         doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No commitments detected.', 50, 155);
       } else {
-        commitments.slice(0, 7).forEach((c: any, i: number) => {
+        commitments.slice(0, 7).forEach((c, i: number) => {
           const cy = 155 + i * 55;
           doc.font(FONT_BODY).fontSize(9).fillColor(INK)
              .text(`${i + 1}. ${(c.text ?? '').slice(0, 100)}`, 50, cy, { width: mid - 70 });
@@ -249,7 +265,7 @@ export async function GET(
         doc.font(FONT_BODY).fontSize(11).fillColor(GRAY)
            .text('No significant risk findings were detected in this audit cycle.', 50, 140);
       } else {
-        riskFindings.slice(0, 5).forEach((f: any, i: number) => {
+        riskFindings.slice(0, 5).forEach((f, i: number) => {
           const ry = 130 + i * 112;
           doc.rect(50, ry, W - 100, 100).strokeColor(LIGHT).lineWidth(0.5).stroke();
           const accent = f.severity === 'High' ? RED : f.severity === 'Medium' ? AMBER : GREEN;
@@ -275,7 +291,7 @@ export async function GET(
       if (commitments.length === 0) {
         doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No citations to index.', 50, 130);
       } else {
-        commitments.slice(0, 14).forEach((c: any, i: number) => {
+        commitments.slice(0, 14).forEach((c, i: number) => {
           const cy = 125 + i * 32;
           doc.font(FONT_MONO).fontSize(8).fillColor(INK)
              .text(`${i + 1}. [${(c.platform ?? '').toUpperCase()}] ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'} — ID: ${(c.citation ?? '').slice(0, 8)}`, 50, cy);

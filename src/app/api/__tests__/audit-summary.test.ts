@@ -108,6 +108,7 @@ describe('GET /api/audit-summary', () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost';
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
 
+    const today = new Date().toISOString();
     createClientMock.mockResolvedValue(
       createSupabaseFixture({
         syncStatus: {
@@ -115,12 +116,12 @@ describe('GET /api/audit-summary', () => {
             {
               platform: 'gmail',
               total_items: 12,
-              last_sync_at: '2026-05-07T10:00:00.000Z',
+              last_sync_at: today,
             },
             {
               platform: 'github',
               total_items: 8,
-              last_sync_at: '2026-05-08T08:00:00.000Z',
+              last_sync_at: today,
             },
           ],
           error: null,
@@ -130,7 +131,7 @@ describe('GET /api/audit-summary', () => {
             {
               id: 'event-1',
               platform: 'github',
-              timestamp: '2026-05-08T08:05:00.000Z',
+              timestamp: today,
               content: 'Merged a private incident note.',
               flag_severity: 'HEAVY',
               is_flagged: true,
@@ -138,7 +139,7 @@ describe('GET /api/audit-summary', () => {
             {
               id: 'event-2',
               platform: 'gmail',
-              timestamp: '2026-05-08T07:55:00.000Z',
+              timestamp: today,
               content: 'Sent a direct response with sensitive details.',
               flag_severity: 'DIRECT',
               is_flagged: true,

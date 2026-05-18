@@ -18,7 +18,7 @@ export default function TermsOfService() {
           <p>Last Updated: {new Date().toLocaleDateString()}</p>
           <br/>
           <h2 style={{ color: 'var(--text-primary)', fontSize: '20px', marginTop: '24px' }}>1. Acceptance of Terms</h2>
-          <p>By accessing and using The EYES ("Service"), you accept and agree to be bound by the terms and provision of this agreement.</p>
+          <p>By accessing and using The EYES (&quot;Service&quot;), you accept and agree to be bound by the terms and provision of this agreement.</p>
           
           <h2 style={{ color: 'var(--text-primary)', fontSize: '20px', marginTop: '24px' }}>2. Description of Service</h2>
           <p>The EYES provides a centralized neural archive indexing platform. You are responsible for ensuring you have the legal right to connect any third-party accounts (Google, Slack, etc.) to this service.</p>

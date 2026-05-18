@@ -173,7 +173,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                          <div key={action.id} className={styles.actionCard}>
                            <div className={styles.cardMain}>
                              <div className={styles.platformIcon}>
-                               {platformObj?.icon ? React.cloneElement(platformObj.icon as any, { size: 24 }) : <span>{action.platform[0]}</span>}
+                                {platformObj?.icon ? React.cloneElement(platformObj.icon as React.ReactElement, { size: 24 } as React.HTMLAttributes<SVGElement>) : <span>{action.platform[0]}</span>}
                              </div>
                              <div className={styles.cardContent}>
                                <div className={styles.cardHead}>

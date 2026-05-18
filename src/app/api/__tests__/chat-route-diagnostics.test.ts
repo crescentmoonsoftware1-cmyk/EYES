@@ -43,7 +43,20 @@ const hoisted = vi.hoisted(() => {
         })),
       },
       rpc: vi.fn(async () => ({
-        data: state.matches,
+        data: state.matches.map(m => ({
+          ...m,
+          platform: 'github',
+          source_id: 'repo-123',
+          event_type: 'commit',
+          title: 'Reliability fix',
+          author: 'dev',
+          source_url: null,
+          timestamp: '2026-04-08T08:00:00.000Z',
+          metadata: {},
+          is_flagged: false,
+          keyword_rank: 0,
+          combined_score: m.similarity,
+        })),
         error: null,
       })),
       from: vi.fn((table: string) => {
@@ -106,7 +119,7 @@ const hoisted = vi.hoisted(() => {
     });
   });
 
-  const invokeModelMock = vi.fn(async (options: any) => {
+  const invokeModelMock = vi.fn(async (options: { capability: string }) => {
     if (options.capability === 'embed') {
       return { embedding: [0.12, 0.44], tokens: 5 };
     }

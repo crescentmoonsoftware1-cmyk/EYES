@@ -1,6 +1,6 @@
-import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
-import { Commitment, ReputationAudit } from '@/types/dashboard';
+import { Commitment } from '@/types/dashboard';
 
 /**
  * Reputation Audit: Core Analysis Pipeline (REAL WORLD ONLY)
@@ -83,18 +83,34 @@ Return JSON ONLY:
       // 3. Parse and Aggregate
       let weightedTotalMentions = 0;
       let weightedNegativeMentions = 0;
-      let weightedNeutralMentions = 0;
+      const weightedNeutralMentions = 0; // reserved for future sentiment scoring
       let weightedUnfulfilledCommitments = 0;
       let negativeMentions = 0;
       let unfulfilledCommitmentsCount = 0;
       const extractedCommitments: Commitment[] = [];
-      const extractedFindings: any[] = [];
+
+      interface RiskFinding {
+        severity: string;
+        finding: string;
+        evidence: string;
+        impact: string;
+      }
+      const extractedFindings: RiskFinding[] = [];
+
+      interface AnalysisItem {
+        id: string;
+        sentiment: -1 | 0 | 1;
+        isCommitment: boolean;
+        commitmentText?: string;
+        isSensitive: boolean;
+        behaviorType: string;
+      }
       
       const nowTs = Date.now();
       // CRITICAL: Guard against null/undefined from AI — calling .match() on null throws TypeError
       // which crashes the entire audit into the catch block, producing "AI Analysis failed" errors.
-      let analysisResult: { analysis: any[] } = { analysis: [] };
-      if (analysisRaw) {
+      let analysisResult: { analysis: AnalysisItem[] } = { analysis: [] };
+      if (analysisRaw && typeof analysisRaw === 'string') {
         try {
           const jsonMatch = analysisRaw.match(/\{[\s\S]*\}/);
           if (jsonMatch) analysisResult = JSON.parse(jsonMatch[0]);
@@ -104,7 +120,7 @@ Return JSON ONLY:
         }
       }
       
-      analysisResult.analysis.forEach((a: any) => {
+      analysisResult.analysis.forEach((a: AnalysisItem) => {
         const evt = events.find(e => e.id === a.id);
         if (!evt) return;
 
@@ -138,6 +154,9 @@ Return JSON ONLY:
            });
         }
       });
+
+      // Suppress unused variable: weightedNeutralMentions is retained for future scoring expansion
+      void weightedNeutralMentions;
 
       const riskScore = Math.min(10, Number((( (weightedNegativeMentions * 2) + (weightedUnfulfilledCommitments * 3) ) / (weightedTotalMentions || 1) * 10).toFixed(1)));
       const failureRate = events.length > 0 ? (negativeMentions / events.length) * 100 : 0;

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { upsertMemoriesSafely, upsertSyncStatusSafely } from '@/utils/supabase/memories';
+import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidGoogleToken } from '@/services/auth/oauth';
 import { scoreGmailEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
@@ -66,7 +66,7 @@ function extractTextFromPart(part: GmailMessagePart | undefined): string {
 }
 
 export async function POST(request: Request) {
-  let actor: any = null;
+  let actor: { supabase: ReturnType<typeof Object.create>; userId: string } | null = null;
   try {
     actor = await resolveSyncActor(request);
     if ('status' in actor) {
@@ -227,7 +227,7 @@ export async function POST(request: Request) {
       return {
         user_id: userId,
         platform: 'gmail',
-        source_id: message.id,    // maps to platform's original ID
+        platform_id: message.id,
         event_type: 'email',
         title: subject,
         content,
@@ -246,41 +246,33 @@ export async function POST(request: Request) {
       };
     }));
 
-    // upsertMemoriesSafely: stores to unified memories table AND generates embeddings inline
-    const upsertResult = await upsertMemoriesSafely(supabase, events);
-    console.log(`[Gmail Sync] Upserted ${upsertResult.inserted} memories, ${upsertResult.errors} errors for user ${userId}`);
-
-    const { count: totalMemories } = await supabase
-      .from('memories')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
+    // upsertRawEventsSafely: stores to unified memories table
+    await upsertRawEventsSafely(supabase, events);
+    console.log(`[Gmail Sync] Upserted ${events.length} events for user ${userId}`);
 
     // Save the new cursor (nextPageToken) back to Supabase
-    const [, profileUpdate] = await Promise.all([
+    await Promise.all([
       upsertSyncStatusSafely(supabase, {
         user_id: userId,
         platform: 'gmail',
         status: hasMore ? 'syncing' : 'connected',
-        sync_progress: hasMore ? 50 : 100, // Visual hint that more is coming
+        sync_progress: hasMore ? 50 : 100,
         total_items: (currentStatus?.total_items || 0) + events.length,
         last_sync_at: new Date().toISOString(),
-        next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(), // Sync every 30m
-        cursor: hasMore ? nextPageToken : null, // Clear cursor if finished
+        next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
+        cursor: hasMore ? nextPageToken : null,
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        memories_indexed: totalMemories ?? events.length,
+        memories_indexed: events.length,
         updated_at: new Date().toISOString(),
       }).eq('user_id', userId),
     ]);
 
-    if (profileUpdate.error) throw profileUpdate.error;
-
-    return NextResponse.json({ 
-      ok: true, 
-      syncedMessages: events.length, 
-      totalMemories,
-      hasMore 
+    return NextResponse.json({
+      ok: true,
+      syncedMessages: events.length,
+      hasMore,
     });
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : String(error);

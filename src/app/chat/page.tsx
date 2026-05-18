@@ -141,10 +141,11 @@ function ChatPageInner() {
 
       if (response.ok && response.body) {
         const citationsHeader = response.headers.get('X-Citations');
-        let citations: any[] = [];
+        interface Citation { id?: string; memoryId?: string; platform?: string; title?: string; source_url?: string | null; }
+        let citations: Citation[] = [];
         if (citationsHeader) {
           try {
-            citations = JSON.parse(atob(citationsHeader.replace(/-/g, '+').replace(/_/g, '/')));
+            citations = JSON.parse(atob(citationsHeader.replace(/-/g, '+').replace(/_/g, '/'))) as Citation[];
           } catch (e) {
             console.warn('[Chat] Failed to parse citations header:', e);
           }

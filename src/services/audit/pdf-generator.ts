@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/server';
 import { ReputationAudit } from '@/types/dashboard';
 
 /**
@@ -9,8 +9,10 @@ import { ReputationAudit } from '@/types/dashboard';
 
 export class PDFGenerationService {
   static async generateAndUpload(audit: ReputationAudit, userId: string): Promise<string> {
-    return new Promise(async (resolve, reject) => {
-      try {
+    return new Promise((resolve) => {
+      void userId; // used inside the async block below
+      (async () => {
+        try {
         const doc = new PDFDocument({
           size: 'A4',
           margin: 0,
@@ -176,7 +178,7 @@ export class PDFGenerationService {
         // Ensure bucket exists
         try {
           await supabase.storage.createBucket('audits', { public: false });
-        } catch (e) {
+        } catch (_e) {
           // Ignore if already exists
         }
 
@@ -193,7 +195,7 @@ export class PDFGenerationService {
 
         if (uploadError) {
           console.error('[PDF] Upload failed:', uploadError);
-          resolve(null as any);
+          resolve(null as unknown as string);
           return;
         }
 
@@ -204,16 +206,17 @@ export class PDFGenerationService {
 
         if (signedError) {
           console.error('[PDF] Signed URL generation failed:', signedError);
-          resolve(null as any);
+          resolve(null as unknown as string);
           return;
         }
 
         resolve(signedData.signedUrl);
 
-      } catch (err) {
-        console.error('[PDF] Generation failed:', err);
-        resolve(null as any);
-      }
+        } catch (err) {
+          console.error('[PDF] Generation failed:', err);
+          resolve(null as unknown as string);
+        }
+      })();
     });
   }
 }

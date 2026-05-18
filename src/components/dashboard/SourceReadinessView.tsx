@@ -119,7 +119,7 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
                 <div key={p.id} className={`${styles.readinessCard} ${styles.connectedCard} ${isSyncing ? styles.cardSyncing : ''} ${isError ? styles.cardError : ''}`} style={{ cursor: 'default' }}>
                   <div className={styles.cardHeader}>
                     <div className={styles.readinessIcon}>
-                      {config?.icon ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 24 }) : null}
+                      {config?.icon ? React.cloneElement(config.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
                     </div>
                     <div className={styles.readinessInfo}>
                       <strong>{p.name}</strong>
@@ -174,7 +174,7 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
             <div key={p.id} className={styles.readinessCard} style={{ background: 'var(--bg-secondary)', borderStyle: 'dashed', cursor: 'default' }}>
               <div className={styles.cardHeader}>
                 <div className={styles.readinessIcon} style={{ filter: 'grayscale(1)' }}>
-                  {p.icon ? React.cloneElement(p.icon as React.ReactElement<any>, { size: 24 }) : null}
+                  {p.icon ? React.cloneElement(p.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
                 </div>
                 <div className={styles.readinessInfo}>
                   <strong>{p.name}</strong>

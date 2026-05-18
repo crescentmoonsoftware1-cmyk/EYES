@@ -190,10 +190,10 @@ export async function GET() {
     model,
     reason,
     checks: {
-      anthropicChat: anthropicCheck,
+      claudeChat: anthropicCheck,
       geminiChat: geminiCheck,
       supabase: supabaseCheck,
-    } as any,
+    },
     lastCheckedAt: new Date().toISOString(),
   };
 

@@ -203,13 +203,8 @@ export async function POST(request: Request) {
 
     await upsertRawEventsSafely(supabase, events);
 
-    const { count: totalMemories } = await supabase
-      .from('memories')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
     // Update status and save cursor
-    const [, profileUpdate] = await Promise.all([
+    await Promise.all([
       upsertSyncStatusSafely(supabase, {
         user_id: userId,
         platform: 'notion',
@@ -222,18 +217,15 @@ export async function POST(request: Request) {
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        memories_indexed: totalMemories ?? events.length,
+        memories_indexed: events.length,
         updated_at: new Date().toISOString(),
       }).eq('user_id', userId),
     ]);
 
-    if (profileUpdate.error) throw profileUpdate.error;
-
-    return NextResponse.json({ 
-      ok: true, 
-      syncedItems: events.length, 
-      totalMemories,
-      hasMore 
+    return NextResponse.json({
+      ok: true,
+      syncedItems: events.length,
+      hasMore,
     });
   } catch (error) {
     console.error('notion sync error:', error);

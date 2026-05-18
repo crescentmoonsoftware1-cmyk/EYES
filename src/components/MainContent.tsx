@@ -135,7 +135,8 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     if (!isStreaming && messages.length > 0 && threadId) {
       try {
         const saved = JSON.parse(localStorage.getItem('eyes_chat_history') || '[]');
-        const existingIndex = saved.findIndex((t: any) => t.id === threadId);
+        interface StoredThread { id: string; [key: string]: unknown; }
+        const existingIndex = saved.findIndex((t: StoredThread) => t.id === threadId);
         const newThread = {
           id: threadId,
           title: messages[0].content.slice(0, 40) + '...',
@@ -183,10 +184,11 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
 
       if (response.ok && response.body) {
         const citationsHeader = response.headers.get('X-Citations');
-        let citations: any[] = [];
+        interface Citation { id: string; platform?: string; title?: string; source_url?: string | null; }
+        let citations: Citation[] = [];
         if (citationsHeader) {
           try {
-            citations = JSON.parse(atob(citationsHeader.replace(/-/g, '+').replace(/_/g, '/')));
+            citations = JSON.parse(atob(citationsHeader.replace(/-/g, '+').replace(/_/g, '/'))) as Citation[];
           } catch (e) {
             console.warn('[Dashboard] Failed to parse citations header:', e);
           }

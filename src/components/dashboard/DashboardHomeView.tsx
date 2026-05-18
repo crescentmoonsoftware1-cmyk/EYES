@@ -5,6 +5,15 @@ import styles from '../MainContent.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { PlatformStatus } from '@/types/dashboard';
 
+interface PlatformConfig {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: React.ReactElement;
+  description?: string;
+  category?: string;
+}
+
 interface DashboardHomeViewProps {
   platforms: PlatformStatus[];
 }
@@ -38,9 +47,9 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
   const remainingPlatforms = ALL_POSSIBLE_PLATFORMS.filter(p => !platforms.find(ap => ap.id === p.id)?.connected);
   const categories = ['All', 'Productivity', 'Development', 'Social', 'Creative', 'Health'];
 
-  const filteredRemaining = activeCategory === 'All' 
-    ? remainingPlatforms 
-    : remainingPlatforms.filter(p => (p as any).category === activeCategory);
+  const filteredRemaining = activeCategory === 'All'
+    ? remainingPlatforms
+    : remainingPlatforms.filter(p => (p as PlatformConfig).category === activeCategory);
 
   // Platforms with a fully-registered & working OAuth app
   const primaryPlatformIds = [
@@ -61,7 +70,7 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
   const apiKeyRemaining    = filteredRemaining.filter(p => apiKeyPlatformIds.includes(p.id));
   const comingSoonPlatforms = filteredRemaining.filter(p => comingSoonIds.includes(p.id));
 
-  const renderPlatformCard = (p: any) => {
+  const renderPlatformCard = (p: PlatformConfig) => {
     const isApiKey = apiKeyPlatformIds.includes(p.id);
 
     const startAuth = () => {
@@ -82,11 +91,11 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
           <div
             className={styles.readinessIcon}
             style={{
-              backgroundColor: (p as any).color?.startsWith('#') ? `${(p as any).color}15` : 'var(--bg-secondary)',
-              border: (p as any).color?.startsWith('#') ? `1px solid ${(p as any).color}30` : '1px solid var(--border-subtle)',
+              backgroundColor: p.color?.startsWith('#') ? `${p.color}15` : 'var(--bg-secondary)',
+              border: p.color?.startsWith('#') ? `1px solid ${p.color}30` : '1px solid var(--border-subtle)',
             }}
           >
-            {p.icon ? React.cloneElement(p.icon as React.ReactElement<any>, { size: 24 }) : null}
+            {p.icon ? React.cloneElement(p.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
           </div>
           <div className={styles.readinessInfo}>
             <strong>{p.name}</strong>
@@ -95,12 +104,12 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
           {!isApiKey && <span className={styles.addIndicator}>+</span>}
           {isApiKey && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>🔑</span>}
         </div>
-        <p className={styles.platformDesc}>{(p as any).description || 'Integrate this platform to expand your neural knowledge base.'}</p>
+        <p className={styles.platformDesc}>{p.description || 'Integrate this platform to expand your neural knowledge base.'}</p>
       </div>
     );
   };
 
-  const renderComingSoonCard = (p: any) => (
+  const renderComingSoonCard = (p: PlatformConfig) => (
     <div
       key={p.id}
       className={styles.readinessCard}
@@ -137,7 +146,7 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
             border: '1px solid var(--border-subtle)',
           }}
         >
-          {p.icon ? React.cloneElement(p.icon as React.ReactElement<any>, { size: 24 }) : null}
+          {p.icon ? React.cloneElement(p.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
         </div>
         <div className={styles.readinessInfo}>
           <strong>{p.name}</strong>
@@ -145,7 +154,7 @@ export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
         </div>
       </div>
       <p className={styles.platformDesc} style={{ color: 'var(--text-secondary)' }}>
-        {(p as any).description || 'Integration coming soon.'}
+        {p.description || 'Integration coming soon.'}
       </p>
     </div>
   );

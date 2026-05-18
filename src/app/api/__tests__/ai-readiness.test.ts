@@ -30,7 +30,7 @@ describe("GET /api/ai-readiness", () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-test";
     delete process.env.GEMINI_API_KEY;
 
-    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: Parameters<typeof fetch>[0]) => {
       if (url.toString().includes('anthropic')) {
         return { ok: true, status: 200, text: async () => "{}" } as Response;
       }

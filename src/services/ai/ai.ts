@@ -61,13 +61,28 @@ export interface AIInvokeOptions {
   messages?: AIHistoryMessage[];
   system?: string;
   preference?: AIPreference;
-  capture?: boolean; 
+  capture?: boolean;
+}
+
+export type EmbedResult = { embedding: number[] };
+export type InvokeResult = EmbedResult | string | null;
+
+/** Gemini generateContent config shape — avoids `any` on contentConfig */
+interface GeminiContentConfig {
+  contents: Array<{ role: string; parts: Array<{ text: string }> }>;
+  systemInstruction?: string;
+}
+
+/** OpenRouter message part — text or non-text */
+interface OpenRouterPart {
+  type: string;
+  text?: string;
 }
 
 /**
  * Unified Model Invocation Interface - REAL WORLD ONLY (NO DEMO)
  */
-export async function invokeModel(options: AIInvokeOptions): Promise<any> {
+export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResult> {
   const { capability, messages = [], system = "", preference = 'auto', capture = true } = options;
 
   if (capability === 'embed') {
@@ -135,8 +150,8 @@ async function handleEmbedding(text: string) {
         const errText = await res.text();
         console.warn(`[AI] Cohere embedding non-OK (${res.status}):`, errText);
       }
-    } catch (err: any) {
-      console.warn('[AI] Cohere embedding failed:', err?.message ?? err);
+    } catch (err: unknown) {
+      console.warn('[AI] Cohere embedding failed:', err instanceof Error ? err.message : err);
     }
   }
 
@@ -168,8 +183,8 @@ async function handleEmbedding(text: string) {
         const errText = await res.text();
         console.warn(`[AI] Voyage embedding non-OK (${res.status}):`, errText);
       }
-    } catch (err: any) {
-      console.warn('[AI] Voyage embedding failed:', err?.message ?? err);
+    } catch (err: unknown) {
+      console.warn('[AI] Voyage embedding failed:', err instanceof Error ? err.message : err);
     }
   }
 
@@ -180,15 +195,17 @@ async function handleEmbedding(text: string) {
   }
   try {
     const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
+    // outputDimensionality is an extension not yet in the SDK type but supported at runtime
     const result = await model.embedContent({
       content: { role: 'user', parts: [{ text: input }] },
       taskType: TaskType.RETRIEVAL_QUERY,
-      outputDimensionality: EMBED_DIMS, // 1024 — matches voyage-3 dimension
-    } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      outputDimensionality: EMBED_DIMS,
+    } as Parameters<typeof model.embedContent>[0]);
     console.log('[AI] Gemini embedding OK (fallback)');
     return { embedding: Array.from(result.embedding.values) };
-  } catch (err: any) {
-    console.error('[AI] Gemini embedding failed:', err?.message || err);
+  } catch (err: unknown) {
+    console.error('[AI] Gemini embedding failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -239,12 +256,12 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
             text = message.content;
           } else if (Array.isArray(message?.content)) {
             // Standard array-of-parts format
-            text = message.content.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
+            text = (message.content as OpenRouterPart[]).filter(p => p.type === 'text').map(p => p.text ?? '').join('');
           } else if (message?.multi_modal_data?.multi_modal_parts) {
             // Non-standard multimodal format (e.g. DeepSeek on OpenRouter)
-            text = message.multi_modal_data.multi_modal_parts
-              .filter((p: any) => p.type === 'text')
-              .map((p: any) => p.text)
+            text = (message.multi_modal_data.multi_modal_parts as OpenRouterPart[])
+              .filter(p => p.type === 'text')
+              .map(p => p.text ?? '')
               .join('');
           }
 
@@ -261,12 +278,11 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
           if (retryAfter > 0 && retryAfter < 30) await new Promise(r => setTimeout(r, retryAfter * 1000));
           continue; // try next model in rotation
         } else {
-          const errText = await res.text();
           console.warn(`[AI] OpenRouter ${orModel} non-OK (${res.status}), trying next model...`);
           continue; // 404/503/etc — model unavailable, try next in rotation
         }
-      } catch (err: any) {
-        console.warn(`[AI] OpenRouter ${orModel} failed:`, err?.message ?? err);
+      } catch (err: unknown) {
+        console.warn(`[AI] OpenRouter ${orModel} failed:`, err instanceof Error ? err.message : err);
       }
     }
   }
@@ -286,10 +302,14 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
 
       const contentBlock = response.content[0];
       if (contentBlock && contentBlock.type === 'text') return contentBlock.text;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If Anthropic reports billing/credit errors, disable it for the runtime to avoid noisy failures
-      const msg = err?.error?.error?.message || err?.message || String(err);
-      if (typeof msg === 'string' && /credit|balance|billing|quota/i.test(msg)) {
+      const errObj = err as Record<string, unknown>;
+      const msg = String(
+        (errObj?.['error'] as Record<string, unknown>)?.['message'] ??
+        (err instanceof Error ? err.message : err)
+      );
+      if (/credit|balance|billing|quota/i.test(msg)) {
         anthropicEnabled = false;
         console.warn('[AI Abstraction] Disabling Anthropic (billing/credit issue):', msg);
       } else {
@@ -301,10 +321,10 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
   // ── 3. Gemini Flash (LAST RESORT) ───────────────────────────────────────────
   try {
     const model = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-    const contentConfig: any = {
-      contents: history.map(h => ({ 
-        role: h.role === 'assistant' ? 'model' : 'user', 
-        parts: [{ text: h.content }] 
+    const contentConfig: GeminiContentConfig = {
+      contents: history.map(h => ({
+        role: h.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: h.content }],
       })),
     };
     // Only set systemInstruction if non-empty (Gemini API requirement)
@@ -323,7 +343,7 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
  * Streaming version of the unified interface
  */
 export async function invokeModelStream(options: AIInvokeOptions): Promise<ReadableStream> {
-  const { messages = [], system = "", preference = 'auto' } = options;
+  const { messages = [], system = "", preference: _preference = 'auto' } = options;
   const encoder = new TextEncoder();
 
   const history = messages
@@ -381,8 +401,8 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
                     } catch { /* skip malformed SSE lines */ }
                   }
                 }
-              } catch (streamErr: any) {
-                console.warn(`[AI Stream] OpenRouter ${orModel} stream error:`, streamErr?.message ?? streamErr);
+              } catch (streamErr: unknown) {
+                console.warn(`[AI Stream] OpenRouter ${orModel} stream error:`, streamErr instanceof Error ? streamErr.message : streamErr);
               } finally {
                 controller.close();
               }
@@ -396,12 +416,11 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
           if (retryAfter > 0 && retryAfter < 30) await new Promise(r => setTimeout(r, retryAfter * 1000));
           continue;
         } else {
-          const errText = await res.text().catch(() => res.status.toString());
           console.warn(`[AI Stream] OpenRouter ${orModel} non-OK (${res.status}), trying next model...`);
           continue; // 404/503/etc — model unavailable, try next in rotation
         }
-      } catch (err: any) {
-        console.warn(`[AI Stream] OpenRouter ${orModel} fetch failed:`, err?.message ?? err);
+      } catch (err: unknown) {
+        console.warn(`[AI Stream] OpenRouter ${orModel} fetch failed:`, err instanceof Error ? err.message : err);
       }
     }
   }
@@ -427,13 +446,13 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
                 wroteAnything = true;
               }
             }
-          } catch (e: any) {
-            console.warn('[AI Stream] Claude loop error, falling back to Gemini:', e?.message ?? e);
+          } catch (e: unknown) {
+            console.warn('[AI Stream] Claude loop error, falling back to Gemini:', e instanceof Error ? e.message : e);
             // If Claude failed mid-stream (e.g. 400 credit error), pipe Gemini output instead
             if (!wroteAnything) {
               try {
                 const gModel = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-                const cfg: any = {
+                const cfg: GeminiContentConfig = {
                   contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
                 };
                 if (system && system.trim()) cfg.systemInstruction = system;
@@ -448,8 +467,8 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
           }
         }
       });
-    } catch (err: any) {
-      console.warn(`[AI Stream] Claude stream init failed, using Gemini:`, err?.message ?? err);
+    } catch (err: unknown) {
+      console.warn(`[AI Stream] Claude stream init failed, using Gemini:`, err instanceof Error ? err.message : err);
     }
   }
 
@@ -458,7 +477,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
     async start(controller) {
       try {
         const model = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-        const contentConfig: any = {
+        const contentConfig: GeminiContentConfig = {
           contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
         };
         if (system && system.trim()) {

@@ -61,21 +61,28 @@ function ConnectPlatformInner() {
     const p = typeof params?.platform === 'string' ? params.platform : '';
     const oauthStatus = searchParams?.get('oauth');
     const reason = searchParams?.get('reason') ?? '';
-    setPlatform(p);
 
     if (oauthStatus === 'success' && p) {
       triggerBackgroundSync(p);
       try { sessionStorage.setItem('eyes-post-connect', p); } catch (_) {}
-      setState('success');
+      // Batch all state mutations to avoid synchronous cascading render warning
+      setTimeout(() => {
+        setPlatform(p);
+        setState('success');
+      }, 0);
       // Redirect after brief success flash
       setTimeout(() => router.replace('/?view=readiness'), 1200);
 
     } else if (oauthStatus === 'error') {
-      setErrorReason(reason);
-      setState('error');
+      setTimeout(() => {
+        setPlatform(p);
+        setErrorReason(reason);
+        setState('error');
+      }, 0);
       // Do NOT auto-redirect on error — let user read the message
 
     } else {
+      setTimeout(() => setPlatform(p), 0);
       // No oauth param = direct visit, just redirect
       router.replace('/?view=readiness');
     }

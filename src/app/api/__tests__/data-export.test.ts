@@ -109,15 +109,16 @@ const hoisted = vi.hoisted(() => {
             return builder;
           }),
           eq: vi.fn(() => builder),
+          not: vi.fn(() => builder),
           maybeSingle: vi.fn(async () => resolve()),
           order: vi.fn(async () => {
-            if (table === 'raw_events') {
+            if (table === 'memories') {
               return {
                 data: [
                   {
                     id: 'event-1',
                     platform: 'github',
-                    platform_id: 'repo-1',
+                    source_id: 'repo-1',
                     event_type: 'commit',
                     title: 'Improved retry strategy',
                     content: 'Adjusted retry backoff and telemetry',
@@ -169,7 +170,7 @@ describe('GET /api/data/export', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toContain('text/csv');
     expect(response.headers.get('Content-Disposition')).toContain('.csv');
-    expect(text).toContain('platform,platform_id,event_type');
+    expect(text).toContain('platform,source_id,event_type');
     expect(text).toContain('github');
     expect(text).toContain('Improved retry strategy');
   });

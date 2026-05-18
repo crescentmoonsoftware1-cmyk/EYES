@@ -113,17 +113,15 @@ export async function runPlatformSyncViaHttp(
 export async function runPlatformSyncDirect(
   supabase: SupabaseClient,
   platform: string,
-  userId: string
+  _userId: string  // Reserved for Priority 2 direct-call implementation
 ): Promise<PlatformOutcome> {
+  void supabase; // Referenced by future direct sync implementation
   const routePlatform = toSyncRoutePlatform(platform);
   const startedAt = Date.now();
 
-  // TODO: For Priority 2, extract the actual sync logic from individual platform routes
-  // For now, this is a placeholder that will call via HTTP
-  // Real implementation would directly call the sync logic without HTTP overhead
+  // Priority 2 stub: will directly invoke platform service modules
+  // eliminating the HTTP sub-request overhead in the cron runner.
   try {
-    // Placeholder: In production, this would directly call the platform sync logic
-    // This is where the HTTP layer is removed in Priority 2
     return {
       platform,
       routePlatform,

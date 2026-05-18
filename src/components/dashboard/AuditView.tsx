@@ -66,7 +66,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         const data = await res.json();
         if (!data) return;
 
-        setActiveAudit(prev => ({ ...(prev || {}), ...data } as any));
+        setActiveAudit(prev => ({ ...(prev ?? {} as Partial<ReputationAudit>), ...data } as ReputationAudit));
 
         if (data.status === 'completed') {
           setAuditMode('completed');

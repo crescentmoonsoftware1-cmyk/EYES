@@ -52,7 +52,21 @@ export async function POST(request: Request) {
       last_sync_at: new Date().toISOString(),
     });
 
-    let allEvents: any[] = [];
+    interface CalendarItem {
+      id: string;
+      summary?: string;
+      description?: string;
+      creator?: { email?: string };
+      start?: { dateTime?: string; date?: string };
+      end?: { dateTime?: string; date?: string };
+      htmlLink?: string;
+    }
+    interface CalendarListResponse {
+      items?: CalendarItem[];
+      nextPageToken?: string;
+    }
+
+    let allEvents: CalendarItem[] = [];
     let nextPageToken: string | undefined = currentStatus?.cursor || undefined;
     let hasMore = true;
 
@@ -78,7 +92,7 @@ export async function POST(request: Request) {
       }, { status: 502 });
     }
 
-    const body = (await response.json()) as { items?: any[], nextPageToken?: string };
+    const body = (await response.json()) as CalendarListResponse;
     allEvents = body.items ?? [];
     nextPageToken = body.nextPageToken;
     hasMore = !!nextPageToken;

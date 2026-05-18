@@ -59,7 +59,7 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
         userName: userMetadata?.name,
         mode: 'cron',
       };
-    } catch (err) {
+    } catch {
       return { error: 'Server configuration error in background worker.', status: 500 };
     }
   }
@@ -84,7 +84,7 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
       userName: userMetadata?.name,
       mode: 'session',
     };
-  } catch (err) {
+  } catch {
     return { error: 'Failed to initialize neural session.', status: 500 };
   }
 }

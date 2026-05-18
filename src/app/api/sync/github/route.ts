@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { upsertMemoriesSafely, upsertSyncStatusSafely } from '@/utils/supabase/memories';
+import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidGithubToken } from '@/services/auth/oauth';
 import { scoreGithubEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor } from '@/utils/sync/actor';
@@ -24,7 +24,7 @@ function formatDate(input: string | null) {
 }
 
 export async function POST(request: Request) {
-  let actor: any = null;
+  let actor: { supabase: ReturnType<typeof Object.create>; userId: string; userEmail?: string; userName?: string } | null = null;
   try {
     actor = await resolveSyncActor(request);
     if ('status' in actor) {
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       return {
         user_id: userId,
         platform: 'github',
-        source_id: String(repo.id),   // GitHub's numeric repo ID as string
+        platform_id: String(repo.id),
         event_type: 'repository',
         title: repo.full_name,
         content,
@@ -168,16 +168,11 @@ export async function POST(request: Request) {
       };
     }));
 
-    const upsertResult = await upsertMemoriesSafely(supabase, rawEvents);
-    console.log(`[GitHub Sync] Upserted ${upsertResult.inserted} memories, ${upsertResult.errors} errors for user ${userId}`);
-
-    const { count: totalMemories } = await supabase
-      .from('memories')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
+    await upsertRawEventsSafely(supabase, rawEvents);
+    console.log(`[GitHub Sync] Upserted ${rawEvents.length} events for user ${userId}`);
 
     // Save the next page for the next run
-    const [, profileUpdate] = await Promise.all([
+    await Promise.all([
       upsertSyncStatusSafely(supabase, {
         user_id: userId,
         platform: 'github',
@@ -190,18 +185,15 @@ export async function POST(request: Request) {
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        memories_indexed: totalMemories ?? rawEvents.length,
+        memories_indexed: rawEvents.length,
         updated_at: now,
       }).eq('user_id', userId),
     ]);
 
-    if (profileUpdate.error) throw profileUpdate.error;
-
     return NextResponse.json({
       ok: true,
       syncedRepos: rawEvents.length,
-      totalMemories: totalMemories ?? rawEvents.length,
-      hasMore
+      hasMore,
     });
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : String(error);

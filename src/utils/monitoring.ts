@@ -232,7 +232,15 @@ export async function getRecoverableFailedJobs(
       return [];
     }
 
-    return ((data ?? []) as any[]).map(row => ({
+    return ((data ?? []) as Array<{
+      job_id: string;
+      job_type: 'sync' | 'embedding' | 'escalation';
+      user_id: string;
+      platform: string;
+      error_message: string;
+      is_retriable: boolean;
+      created_at: string;
+    }>).map(row => ({
       jobId: row.job_id,
       type: row.job_type,
       userId: row.user_id,
@@ -310,7 +318,7 @@ export async function getSystemHealthSummary(
 
     // Determine overall health
     let overallHealth: 'healthy' | 'degraded' | 'critical' = 'healthy';
-    let queueHealth = queueMetrics?.health ?? 'healthy';
+    const queueHealth = queueMetrics?.health ?? 'healthy';
     let embeddingQueueHealth: 'healthy' | 'warning' | 'critical' = 'healthy';
 
     if (embeddingQueue) {

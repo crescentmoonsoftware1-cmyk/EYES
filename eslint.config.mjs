@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local developer utility/debug scripts (CommonJS, not part of the production build)
+    "check-db.js",
+    "run-live-audit.js",
+    "scripts/embed-memories.mjs",
   ]),
 ]);
 

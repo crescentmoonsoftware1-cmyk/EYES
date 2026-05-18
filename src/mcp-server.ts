@@ -7,10 +7,9 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
-import { getValidGoogleToken } from "./utils/oauth.js";
-import { encryptToken, decryptToken } from "./utils/tokens.js";
+
 
 // Load environment variables for local execution
 dotenv.config();
@@ -24,6 +23,28 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/**
+ * Fetches a stored Google OAuth access token for the given user and service.
+ * Reads directly from the oauth_tokens table — mirrors the production sync pattern.
+ */
+async function getValidGoogleToken(
+  client: SupabaseClient,
+  userId: string,
+  service: string
+): Promise<string | null> {
+  interface OAuthTokenRow { access_token: string | null; }
+  const { data, error } = await client
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('provider', service)
+    .maybeSingle() as { data: OAuthTokenRow | null; error: unknown };
+
+  if (error || !data?.access_token) return null;
+  return data.access_token;
+}
+
 
 /**
  * EYES MCP Server
@@ -110,16 +131,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       if (error) throw error;
 
-      const formattedResults = (matches || []).map((m: any) => 
+      interface MemoryMatch { content: string; similarity: number; }
+      const formattedResults = (matches as MemoryMatch[] || []).map((m) =>
         `[Memory] ${m.content}\n(Similarity: ${Math.round(m.similarity * 100)}%)`
       ).join("\n---\n");
 
       return {
         content: [{ type: "text", text: formattedResults || "No matching memories found." }],
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       return {
-        content: [{ type: "text", text: `Error searching memories: ${err.message}` }],
+        content: [{ type: "text", text: `Error searching memories: ${errMsg}` }],
         isError: true,
       };
     }
@@ -168,9 +191,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return {
         content: [{ type: "text", text: `Successfully ${method === 'POST' ? 'created' : method === 'PATCH' ? 'updated' : 'deleted'} calendar event.` }],
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       return {
-        content: [{ type: "text", text: `Error managing calendar: ${err.message}` }],
+        content: [{ type: "text", text: `Error managing calendar: ${errMsg}` }],
         isError: true,
       };
     }

@@ -158,7 +158,7 @@ export async function GET(request: Request) {
     const errorResult = results.find((result) => (result as { error?: unknown }).error);
 
     if (errorResult) {
-      console.error('[Google OAuth] Supabase upsert failed:', (errorResult as any).error);
+      console.error('[Google OAuth] Supabase upsert failed:', (errorResult as { error?: unknown }).error);
       return NextResponse.redirect(new URL(`/connect/${platform}?oauth=error&reason=token_persist_failed`, await appBaseUrl(request)));
     }
 
@@ -222,8 +222,9 @@ export async function GET(request: Request) {
     // Sync is triggered by cron (runs every 5 minutes)
     // Returning immediately gives faster user feedback
     return NextResponse.redirect(new URL(`/connect/${platform}?oauth=success`, await appBaseUrl(request)));
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     console.error('[Google OAuth] Fatal Error:', err);
-    return NextResponse.redirect(new URL(`/connect/${platformFromState}?oauth=error&reason=internal_server_error&msg=${encodeURIComponent(err.message)}`, await appBaseUrl(request)));
+    return NextResponse.redirect(new URL(`/connect/${platformFromState}?oauth=error&reason=internal_server_error&msg=${encodeURIComponent(errMsg)}`, await appBaseUrl(request)));
   }
 }

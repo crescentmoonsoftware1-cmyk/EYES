@@ -9,7 +9,7 @@ import {
 } from '../common/icons/PlatformIcons';
 import { useRouter } from 'next/navigation';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
-import type { Message } from '@/types/dashboard';
+import type { Message, PlatformStatus } from '@/types/dashboard';
 
 /**
  * Lightweight inline markdown renderer.
@@ -42,6 +42,8 @@ function renderMarkdown(text: string): string {
   return '<p style="margin: 0;">' + result.join('\n').replace(/\n\n/g, '</p><p style="margin: 8px 0;">').replace(/\n/g, '<br />') + '</p>';
 }
 
+type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'history' | 'action-queue';
+
 interface SynthesisViewProps {
   query: string;
   setQuery: (q: string) => void;
@@ -49,9 +51,9 @@ interface SynthesisViewProps {
   isStreaming: boolean;
   onSubmit: (text: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  setView: (v: any) => void;
+  setView: (v: ViewMode) => void;
   totalMemories: number;
-  platforms?: any[];
+  platforms?: PlatformStatus[];
 }
 
 export function SynthesisView({
@@ -66,7 +68,7 @@ export function SynthesisView({
   platforms = []
 }: SynthesisViewProps) {
   const router = useRouter();
-  const connected = platforms.filter(p => p.isConnected);
+  const connected = platforms.filter(p => p.connected);
   const [digest, setDigest] = React.useState<string[] | null>(null);
   const [loadingDigest, setLoadingDigest] = React.useState(true);
 
@@ -135,12 +137,12 @@ export function SynthesisView({
             <div className={styles.connectedPills}>
               {connected.map(p => {
                 const config = ALL_POSSIBLE_PLATFORMS.find(ap => ap.id === p.id);
-                const isHealthy = p.sync_progress === 100;
+                const isHealthy = p.status === 'connected';
                 
                 return (
                   <div key={p.id} className={styles.miniConnectionPill} onClick={() => setView('readiness')} style={{ cursor: 'pointer' }} title={isHealthy ? 'Connection Healthy' : 'Action Required / Syncing'}>
                     <div className={`${styles.statusDot} ${isHealthy ? styles.statusDotHealthy : styles.statusDotDegraded}`} />
-                    {config?.icon ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 14 }) : null}
+                    {config?.icon ? React.cloneElement(config.icon, { size: 14 } as React.HTMLAttributes<SVGElement>) : null}
                   </div>
                 );
               })}

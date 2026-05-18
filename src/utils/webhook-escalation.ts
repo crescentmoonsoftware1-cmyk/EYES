@@ -63,19 +63,20 @@ export function optimizeWebhookPayload(payload: WebhookPayload): OptimizedWebhoo
   let hasMetrics = false;
 
   if (typeof metrics === 'object' && metrics !== null) {
-    const pendingRetries = (metrics as any).pendingRetries;
+    const metricsRecord = metrics as Record<string, unknown>;
+    const pendingRetries = metricsRecord['pendingRetries'];
     if (typeof pendingRetries === 'number' && pendingRetries > 0) {
       compactMetrics.pr = pendingRetries;
       hasMetrics = true;
     }
 
-    const deadLetters = (metrics as any).deadLetters24h;
+    const deadLetters = metricsRecord['deadLetters24h'];
     if (typeof deadLetters === 'number' && deadLetters > 0) {
       compactMetrics.dl = deadLetters;
       hasMetrics = true;
     }
 
-    const failureRate = (metrics as any).failureRate24h;
+    const failureRate = metricsRecord['failureRate24h'];
     if (typeof failureRate === 'number' && failureRate > 0) {
       // Convert to percentage (0-100)
       compactMetrics.fr = Math.round(failureRate * 100);
@@ -161,7 +162,7 @@ export function calculateWebhookRetryDelay(
  * Check if webhook error is retriable
  * Work Item #6: Distinguishes transient from permanent failures
  */
-export function isRetriableWebhookError(status: number | null, error: string | null): boolean {
+export function isRetriableWebhookError(status: number | null, _error: string | null): boolean {
   if (status === null) {
     // Network error - retriable
     return true;

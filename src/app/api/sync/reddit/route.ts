@@ -69,7 +69,22 @@ export async function POST(request: Request) {
     const depth = url.searchParams.get('depth') || 'shallow';
     const maxTotalRequests = depth === 'deep' ? 1000 : 25;
     
-    let allChildren: any[] = [];
+    interface RedditChild {
+      data: {
+        id: string;
+        name: string;
+        body?: string;
+        subreddit?: string;
+        permalink?: string;
+        score?: number;
+        created_utc?: number;
+      };
+    }
+    interface RedditCommentPage {
+      data?: { children?: RedditChild[]; after?: string | null };
+    }
+
+    let allChildren: RedditChild[] = [];
     let afterToken: string | undefined = currentStatus?.cursor || undefined;
     let hasMore = true;
 
@@ -92,7 +107,7 @@ export async function POST(request: Request) {
         break;
       }
 
-      const body = (await commentsResponse.json()) as { data?: { children?: any[], after?: string | null } };
+      const body = (await commentsResponse.json()) as RedditCommentPage;
       const children = body.data?.children ?? [];
       allChildren = [...allChildren, ...children];
       

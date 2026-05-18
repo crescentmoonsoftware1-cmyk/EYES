@@ -71,7 +71,18 @@ function handleListTools() {
   });
 }
 
-async function handleCallTool(name: string, args: any, userId: string, supabase: any) {
+interface MemoryRow {
+  platform: string;
+  event_type?: string;
+  title?: string;
+  content?: string;
+  author?: string;
+  timestamp: string;
+}
+
+type SupabaseClient = Awaited<ReturnType<typeof import('@/utils/supabase/server').createClient>>;
+
+async function handleCallTool(name: string, args: Record<string, unknown>, userId: string, supabase: SupabaseClient) {
 
   // Tool 1: Semantic search over memories (in-process, no HTTP loop-back)
   if (name === 'query_my_history') {
@@ -94,7 +105,7 @@ async function handleCallTool(name: string, args: any, userId: string, supabase:
 
     const text = (data ?? []).length === 0
       ? 'No matching records found in your synced archive.'
-      : (data ?? []).map((m: any, i: number) =>
+      : (data as MemoryRow[] ?? []).map((m, i: number) =>
           `${i + 1}. [${m.platform}] ${new Date(m.timestamp).toLocaleDateString()} — ${m.title ?? ''}: ${m.content?.slice(0, 200)}`
         ).join('\n');
 
@@ -119,7 +130,7 @@ async function handleCallTool(name: string, args: any, userId: string, supabase:
 
     const text = (data ?? []).length === 0
       ? 'No flagged commitments found.'
-      : (data ?? []).map((c: any) =>
+      : (data as MemoryRow[] ?? []).map((c) =>
           `- [${c.platform}] ${c.title ?? 'Untitled'} (${new Date(c.timestamp).toLocaleDateString()}): ${c.content?.slice(0, 150)}`
         ).join('\n');
 
@@ -148,7 +159,7 @@ async function handleCallTool(name: string, args: any, userId: string, supabase:
 
     const text = (data ?? []).length === 0
       ? 'No memories found.'
-      : (data ?? []).map((m: any) =>
+      : (data as MemoryRow[] ?? []).map((m) =>
           `[${m.platform}] ${new Date(m.timestamp).toLocaleDateString()} — ${m.title ?? m.event_type ?? 'Event'}: ${m.content?.slice(0, 200)}`
         ).join('\n');
 

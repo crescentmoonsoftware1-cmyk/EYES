@@ -317,11 +317,6 @@ export async function POST(request: Request) {
     }
 
     // 7. Update Sync Status & Profile
-    const { count: totalMemories } = await supabase
-      .from('memories')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
     const now = new Date().toISOString();
     await Promise.all([
       upsertSyncStatusSafely(supabase, {
@@ -336,16 +331,15 @@ export async function POST(request: Request) {
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        memories_indexed: totalMemories ?? events.length,
+        memories_indexed: events.length,
         updated_at: now,
       }).eq('user_id', userId),
     ]);
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       count: events.length,
       hasMore: hasMoreOverall,
-      totalMemories
     });
   } catch (err) {
     console.error('Discord Sync Error:', err);
