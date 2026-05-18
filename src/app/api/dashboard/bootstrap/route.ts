@@ -194,11 +194,16 @@ export async function GET() {
     const rawRows = (rawEventsResult.data ?? []) as RawEventRow[];
     const flaggedRows = rawRows.filter((row) => Boolean(row.is_flagged));
 
+    const isSyncing = syncRows.some(r => r.status === 'syncing');
+    const activeSyncs = syncRows.filter(r => r.status === 'syncing').map(r => r.platform);
+    const memoriesIndexed = syncRows.reduce((sum, r) => sum + (r.total_items ?? 0), 0);
+
     const response = NextResponse.json(
       {
         summary: mapSummary(syncRows, flaggedRows),
         platforms: mapPlatforms(syncRows),
         feedEvents: mapFeed(rawRows),
+        syncStatus: { isSyncing, activeSyncs, memoriesIndexed },
       },
       { status: 200 }
     );

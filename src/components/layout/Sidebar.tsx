@@ -34,7 +34,7 @@ export default function Sidebar() {
       } catch (e) {}
     };
     loadReadiness();
-    const interval = setInterval(loadReadiness, 20000);
+    const interval = setInterval(loadReadiness, 120000); // Every 2 min — connections rarely change
     return () => clearInterval(interval);
   }, []);
 

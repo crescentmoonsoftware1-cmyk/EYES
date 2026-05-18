@@ -41,6 +41,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   });
   const [platforms, setPlatforms] = useState<PlatformStatus[]>([]);
   const [feedEvents, setFeedEvents] = useState<FeedItem[]>([]);
+  const [syncStatus, setSyncStatus] = useState<{ memoriesIndexed: number; isSyncing: boolean; activeSyncs: string[] } | null>(null);
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,6 +66,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         if (payload?.summary) setSummary(payload.summary);
         if (payload?.platforms) setPlatforms(payload.platforms);
         if (payload?.feedEvents) setFeedEvents(payload.feedEvents);
+        if (payload?.syncStatus) setSyncStatus(payload.syncStatus);
       } catch (err) { 
         console.error('Core Dashboard Load Failure:', err); 
       } finally { 
@@ -245,12 +247,10 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
           setQuery={setQuery}
           messages={messages}
           isStreaming={isStreaming}
-
           onSubmit={handleSubmit}
           messagesEndRef={messagesEndRef}
           setView={setView}
           totalMemories={summary.totalMemories}
-          platforms={platforms}
         />
       )}
 
@@ -288,7 +288,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       )}
 
       {activeView === 'connectors' && (
-        <DashboardHomeView platforms={platforms} />
+      <DashboardHomeView platforms={platforms} syncStatus={syncStatus} />
       )}
       {activeView === 'action-queue' && (
         <ActionQueueView 

@@ -9,21 +9,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const router = useRouter();
   const { user, logout, theme, setGlobalTheme } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const checkSyncStatus = async () => {
-      try {
-        const res = await fetch('/api/sync/status');
-        const data = await res.json();
-        setIsSyncing(data.isSyncing || false);
-      } catch (e) {}
-    };
-    checkSyncStatus();
-    const interval = setInterval(checkSyncStatus, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   const toggleTheme = () => {
     setGlobalTheme(theme === 'dark' ? 'light' : 'dark');

@@ -16,33 +16,12 @@ interface PlatformConfig {
 
 interface DashboardHomeViewProps {
   platforms: PlatformStatus[];
+  syncStatus?: { memoriesIndexed: number; isSyncing: boolean; activeSyncs: string[] } | null;
 }
 
-export function DashboardHomeView({ platforms }: DashboardHomeViewProps) {
+export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewProps) {
   const [activeCategory, setActiveCategory] = React.useState<string>('All');
-  const [liveStatus, setLiveStatus] = React.useState<{ memoriesIndexed: number; isSyncing: boolean; activeSyncs: string[] } | null>(null);
-
-  React.useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch('/api/sync/status');
-        if (res.ok) {
-          const data = await res.json();
-          setLiveStatus({
-            memoriesIndexed: data.memoriesIndexed || 0,
-            isSyncing: data.isSyncing,
-            activeSyncs: data.activeSyncs || [],
-          });
-        }
-      } catch (e) {
-        console.error('Failed to fetch live sync status', e);
-      }
-    };
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 8000); // Poll every 8s
-    return () => clearInterval(interval);
-  }, []);
+  const liveStatus = syncStatus ?? null;
   
   const remainingPlatforms = ALL_POSSIBLE_PLATFORMS.filter(p => !platforms.find(ap => ap.id === p.id)?.connected);
   const categories = ['All', 'Productivity', 'Development', 'Social', 'Creative', 'Health'];
