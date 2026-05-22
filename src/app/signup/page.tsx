@@ -114,7 +114,10 @@ export default function SignupPage() {
                 <div className={styles.inputStack}>
                   <div className={styles.fieldGroup}>
                     <input
+                      id="name"
+                      name="name"
                       type="text"
+                      autoComplete="name"
                       className={styles.elegantInput}
                       placeholder="Full name"
                       value={name}
@@ -124,7 +127,10 @@ export default function SignupPage() {
                   </div>
                   <div className={styles.fieldGroup}>
                     <input
+                      id="signup-email"
+                      name="email"
                       type="email"
+                      autoComplete="email"
                       className={styles.elegantInput}
                       placeholder="Email address"
                       value={email}
@@ -134,7 +140,10 @@ export default function SignupPage() {
                   </div>
                   <div className={styles.fieldGroup}>
                     <input
+                      id="signup-password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
                       className={styles.elegantInput}
                       placeholder="Password (min. 8 characters)"
                       value={password}

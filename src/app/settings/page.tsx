@@ -165,7 +165,10 @@ export default function SettingsPage() {
                   <div className={styles.fieldGroup}>
                     <label>DISPLAY NAME</label>
                     <input 
-                      type="text" 
+                      id="display-name"
+                      name="displayName"
+                      type="text"
+                      autoComplete="name"
                       value={displayName} 
                       onChange={(e) => setDisplayName(e.target.value)}
                       className={styles.input} 
@@ -173,7 +176,7 @@ export default function SettingsPage() {
                   </div>
                   <div className={styles.fieldGroup}>
                     <label>EMAIL ADDRESS</label>
-                    <input type="email" value={user?.email || ''} className={styles.input} disabled />
+                    <input id="email-display" name="email" type="email" autoComplete="email" value={user?.email || ''} className={styles.input} disabled />
                   </div>
                   
                   {saveStatus && <p className={saveStatus.includes('success') ? styles.successText : styles.errorText}>{saveStatus}</p>}
@@ -264,7 +267,10 @@ export default function SettingsPage() {
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                       <input
+                        id="exclude-sender"
+                        name="excludeSender"
                         type="text"
+                        autoComplete="off"
                         placeholder="Add email or domain..."
                         value={newSender}
                         onChange={(e) => setNewSender(e.target.value)}
