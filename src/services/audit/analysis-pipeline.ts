@@ -306,8 +306,9 @@ Return JSON ONLY (no markdown, no explanation):
         preference: 'auto'
       });
 
-      const summaryMatch = summaryRaw?.match(/\{[\s\S]*\}/);
-      let summaryResult: { narrative?: string; trajectory?: string; dominantPattern?: string; reputationProjection?: string; opportunities?: string[]; topEntities?: string[] } = { narrative: summaryRaw ?? undefined, opportunities: [], topEntities: [] };
+      const summaryRawStr = typeof summaryRaw === 'string' ? summaryRaw : null;
+      const summaryMatch = summaryRawStr?.match(/\{[\s\S]*\}/);
+      let summaryResult: { narrative?: string; trajectory?: string; dominantPattern?: string; reputationProjection?: string; opportunities?: string[]; topEntities?: string[] } = { narrative: summaryRawStr ?? undefined, opportunities: [], topEntities: [] };
       if (summaryMatch) {
         try {
           summaryResult = JSON.parse(summaryMatch[0]);
