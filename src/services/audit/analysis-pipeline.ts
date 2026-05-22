@@ -42,15 +42,79 @@ export class AuditAnalysisService {
       }
 
       const connectorsCovered = Array.from(new Set(events.map(e => e.platform)));
-      
-      // 2. Real AI Analysis — use up to 100 records for better coverage
-      const significantRecords = events.slice(0, 100);
-      const analysisInput = significantRecords.map(e => ({
+
+      // ── 2. Smart Record Selection (Keyword Pre-filter + Smart Sampling) ──────
+      //
+      // Strategy: Don't send ALL records to AI (token limit). Instead, build a
+      // high-signal subset using two passes:
+      //
+      // Pass A — Keyword pre-filter: scan ALL records for commitment/risk signals.
+      //          These are the most valuable records for the audit regardless of recency.
+      //
+      // Pass B — Smart sampling: add recent records + per-platform diversity + 
+      //          historical samples to give AI full behavioral context.
+      //
+      // Result: ~80-120 high-value records sent to AI, covering the whole dataset.
+
+      const COMMITMENT_KEYWORDS = /\b(will|i'll|we'll|i will|we will|i'll|going to|plan to|planning to|need to|have to|should|must|shall|promised|commit|deadline|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|eod|eow|next week|tomorrow)|follow.?up|send|review|check|handle|take care|responsible for|assigned|action item|todo|to.do)\b/i;
+
+      const SENSITIVE_KEYWORDS = /\b(salary|budget|invoice|payment|debt|legal|lawsuit|confidential|private|conflict|fired|quit|resign|burnout|stressed|anxiety|urgent|critical|emergency|overdue|missed|failed|broke|broken|issue|problem|complaint|dispute|disagree)\b/i;
+
+      // Pass A: keyword-matched records from ALL events
+      const commitmentCandidates = events.filter(e => {
+        const text = `${e.title ?? ''} ${e.content ?? ''}`;
+        return COMMITMENT_KEYWORDS.test(text) || SENSITIVE_KEYWORDS.test(text);
+      });
+
+      // Pass B: smart sampling for context
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Recent records (last 30 days) — highest weight in scoring
+      const recentRecords = events
+        .filter(e => new Date(e.timestamp) >= thirtyDaysAgo)
+        .slice(0, 30);
+
+      // Per-platform diversity — up to 10 records per platform
+      const seenIds = new Set([
+        ...commitmentCandidates.map(e => e.id),
+        ...recentRecords.map(e => e.id),
+      ]);
+      const platformSamples: typeof events = [];
+      const platformCounts: Record<string, number> = {};
+      for (const e of events) {
+        if (seenIds.has(e.id)) continue;
+        const count = platformCounts[e.platform] ?? 0;
+        if (count < 10) {
+          platformSamples.push(e);
+          platformCounts[e.platform] = count + 1;
+          seenIds.add(e.id);
+        }
+      }
+
+      // Historical sample — 20 evenly-spaced older records for longitudinal context
+      const olderEvents = events.filter(e => !seenIds.has(e.id));
+      const step = Math.max(1, Math.floor(olderEvents.length / 20));
+      const historicalSample = olderEvents.filter((_, i) => i % step === 0).slice(0, 20);
+
+      // Merge and cap at 120 to stay within token budget
+      const selectedRecords = [
+        ...commitmentCandidates,
+        ...recentRecords,
+        ...platformSamples,
+        ...historicalSample,
+      ].filter((e, idx, arr) => arr.findIndex(x => x.id === e.id) === idx)
+       .slice(0, 120);
+
+      console.log(`[Audit] Smart selection: ${commitmentCandidates.length} keyword matches + ${recentRecords.length} recent + ${platformSamples.length} platform samples + ${historicalSample.length} historical = ${selectedRecords.length} records sent to AI (from ${events.length} total)`);
+
+      const analysisInput = selectedRecords.map(e => ({
         id: e.id,
         platform: e.platform,
         date: e.timestamp,
-        text: `${e.title ?? ''}: ${e.content}`.slice(0, 400)
+        text: `${e.title ?? ''}: ${e.content ?? ''}`.slice(0, 400)
       }));
+
 
       const extractionPrompt = `
 You are a forensic digital analyst extracting structured intelligence from a person's raw digital archive.
