@@ -61,6 +61,25 @@ export async function GET(
     const opportunities: string[] = meta.opportunities || [];
     const connectors: string[] = audit.connectors_covered || [];
 
+    // ── Fetch real memory records per platform for Significant Records section ──
+    // Done BEFORE the PDF Promise since it's async
+    const platformMemories: Record<string, { title: string; content: string; timestamp: string }[]> = {};
+    for (const platform of connectors.slice(0, 3)) {
+      const { data: mems } = await supabase
+        .from('memories')
+        .select('title, content, timestamp')
+        .eq('user_id', user.id)
+        .eq('platform', platform)
+        .not('content', 'is', null)
+        .order('timestamp', { ascending: false })
+        .limit(3);
+      platformMemories[platform] = (mems ?? []).map(m => ({
+        title: m.title ?? '',
+        content: m.content ?? '',
+        timestamp: m.timestamp ?? '',
+      }));
+    }
+
     // ── Generate PDF in-memory ────────────────────────────────────────────
     const chunks: Buffer[] = [];
 
@@ -201,17 +220,38 @@ export async function GET(
            .text(`Positive: ${pos}%  |  Negative: ${neg}%  |  Neutral: ${100 - pos - neg < 0 ? 0 : 100 - pos - neg}%`, 50, 227);
 
         doc.font(FONT_BOLD).fontSize(11).text('Significant Records', 50, 265);
-        const recordsToShow = platformCommitments.length > 0 ? platformCommitments : commitments.slice(i * 2, i * 2 + 2);
-        recordsToShow.slice(0, 3).forEach((c, ci: number) => {
-          const ry = 285 + ci * 95;
-          doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
-          doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-             .text(`"${(c.text ?? '').slice(0, 220)}…"`, 62, ry + 14, { width: W - 124 });
-          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-             .text(`Source: ${(c.platform ?? platform).toUpperCase()} | ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'} | CID: ${(c.citation ?? '').slice(0, 8)}`, 62, ry + 60);
-        });
-        if (recordsToShow.length === 0) {
-          doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No specific records extracted for this connector.', 62, 290);
+
+        // Show real memories if available, fall back to commitments
+        const realMems = platformMemories[platform] ?? [];
+        const platformCommitments = commitments.filter(c => c.platform === platform);
+
+        if (realMems.length > 0) {
+          // Real memory records from Supabase
+          realMems.slice(0, 3).forEach((mem, ci: number) => {
+            const ry = 285 + ci * 95;
+            doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
+            const snippet = (mem.content || mem.title || '').slice(0, 240);
+            doc.font(FONT_BODY).fontSize(9).fillColor(INK)
+               .text(`"${snippet}${snippet.length >= 240 ? '…' : ''}"`, 62, ry + 14, { width: W - 124 });
+            doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
+               .text(
+                 `Source: ${platform.toUpperCase()} | ${mem.timestamp ? new Date(mem.timestamp).toLocaleDateString() : 'N/A'}`,
+                 62, ry + 60
+               );
+          });
+        } else if (platformCommitments.length > 0) {
+          // Commitments fallback
+          platformCommitments.slice(0, 3).forEach((c, ci: number) => {
+            const ry = 285 + ci * 95;
+            doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
+            doc.font(FONT_BODY).fontSize(9).fillColor(INK)
+               .text(`"${(c.text ?? '').slice(0, 220)}…"`, 62, ry + 14, { width: W - 124 });
+            doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
+               .text(`Source: ${(c.platform ?? platform).toUpperCase()} | ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'} | CID: ${(c.citation ?? '').slice(0, 8)}`, 62, ry + 60);
+          });
+        } else {
+          doc.font(FONT_BODY).fontSize(10).fillColor(GRAY)
+             .text('No specific records extracted for this connector.', 62, 290);
         }
         footer(3 + i);
       }
