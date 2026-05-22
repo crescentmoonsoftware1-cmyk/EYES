@@ -227,7 +227,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const supabase = useMemo(() => createClient(), []);
 
-  const syncInProgressRef = useRef(false);
+  const syncInProgressRef    = useRef(false);
+  const lastSyncedUserIdRef  = useRef<string | null>(null);
 
   const syncProfile = useCallback(async (authUser: { id: string; email?: string; metadata?: AuthMetadata }): Promise<User> => {
     if (syncInProgressRef.current) {
@@ -458,6 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (session?.user && mounted) {
+          lastSyncedUserIdRef.current = session.user.id; // mark synced BEFORE await
           const profile = await syncProfile({
             id: session.user.id,
             email: session.user.email,
@@ -486,16 +488,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Sub to future changes — skip if user already loaded (token refresh fires SIGNED_IN repeatedly)
+    // Sub to future changes — skip if same user already synced (initialize() runs concurrently)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       console.log('[Auth] State Event:', event);
 
-      // TOKEN_REFRESHED and repeated SIGNED_IN events must not re-sync if already authenticated
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && user) {
-        return;
-      }
+      // Skip non-actionable events
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
 
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        // Use ref (not state) to check — state is async and not reliable here
+        if (lastSyncedUserIdRef.current === session.user.id) {
+          console.log('[Auth] Already synced this user, skipping duplicate event.');
+          return;
+        }
+        lastSyncedUserIdRef.current = session.user.id;
         const profile = await syncProfile({
           id: session.user.id,
           email: session.user.email,
@@ -503,6 +509,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (mounted) setUser(profile);
       } else if (event === 'SIGNED_OUT') {
+        lastSyncedUserIdRef.current = null;
         clearCachedProfile();
         if (mounted) setUser(null);
       }
