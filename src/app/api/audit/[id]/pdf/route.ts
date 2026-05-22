@@ -202,7 +202,6 @@ export async function GET(
         doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text(`Platform Breakdown: ${platform.toUpperCase()}`, 50, 80);
         hRule(110);
 
-        const platformCommitments = commitments.filter(c => c.platform === platform);
         const perPlatformCount = Math.round((audit.mentions_count ?? 0) / Math.max(connectors.length, 1));
 
         doc.font(FONT_MONO).fontSize(8).fillColor(GRAY)
