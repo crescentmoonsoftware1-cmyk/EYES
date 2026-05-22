@@ -34,14 +34,7 @@ const OPENROUTER_FREE_MODELS = [
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''; 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// Cohere — PRIMARY embedding provider (free trial, 2000 RPM, 1024 dims, no card)
-const COHERE_API_KEY = process.env.COHERE_API_KEY || '';
-const COHERE_EMBED_MODEL = 'embed-english-v3.0'; // 1024 dims
-
-// Voyage AI — FALLBACK 1 (200M free tokens, 3 RPM without card)
-const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY || '';
-const VOYAGE_EMBED_MODEL = 'voyage-context-3';   // 1024 dims — 200M free tokens
-const VOYAGE_EMBED_URL = 'https://api.voyageai.com/v1/embeddings';
+// Gemini — sole embedding provider (gemini-embedding-001, free tier, 1024 dims)
 
 const CLAUDE_MODEL = "claude-3-5-sonnet-20240620";
 const GEMINI_CHAT_MODEL = "gemini-2.0-flash"; // Stable Gemini 2.0 Flash model
@@ -115,94 +108,26 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
 
 /**
  * Internal: Handle 1024d Embeddings
- * Priority: 1) Cohere (primary, 2000 RPM free)  2) Voyage AI (fallback, 200M free)  3) Gemini (last resort)
+ * Uses Gemini embedding-001 exclusively (free tier, 1024 dims).
+ * Cohere and Voyage removed — Gemini alone is sufficient for this workload.
  */
 async function handleEmbedding(text: string) {
   const input = text.slice(0, 8000);
 
-  // ── 1. Cohere (PRIMARY — 2000 RPM free, no card needed) ──────────────────
-  if (COHERE_API_KEY) {
-    try {
-      const res = await fetch('https://api.cohere.com/v2/embed', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${COHERE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: COHERE_EMBED_MODEL,
-          texts: [input],
-          input_type: 'search_document',
-          embedding_types: ['float'],
-        }),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        const embedding = body?.embeddings?.float?.[0];
-        if (Array.isArray(embedding) && embedding.length === EMBED_DIMS) {
-          console.log('[AI] Cohere embedding OK');
-          return { embedding };
-        }
-        console.warn('[AI] Cohere embedding: unexpected response shape', body);
-      } else if (res.status === 429) {
-        console.warn('[AI] Cohere rate-limited, falling back to Voyage...');
-      } else {
-        const errText = await res.text();
-        console.warn(`[AI] Cohere embedding non-OK (${res.status}):`, errText);
-      }
-    } catch (err: unknown) {
-      console.warn('[AI] Cohere embedding failed:', err instanceof Error ? err.message : err);
-    }
-  }
-
-  // ── 2. Voyage AI (FALLBACK 1) ─────────────────────────────────────────────
-  if (VOYAGE_API_KEY) {
-    try {
-      const res = await fetch(VOYAGE_EMBED_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${VOYAGE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          input: [input],
-          model: VOYAGE_EMBED_MODEL,
-        }),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        const embedding = body?.data?.[0]?.embedding;
-        if (Array.isArray(embedding) && embedding.length === EMBED_DIMS) {
-          console.log('[AI] Voyage embedding OK');
-          return { embedding };
-        }
-        console.warn('[AI] Voyage embedding: unexpected response shape', body);
-      } else if (res.status === 429) {
-        console.warn('[AI] Voyage embedding rate-limited, falling back to Gemini...');
-      } else {
-        const errText = await res.text();
-        console.warn(`[AI] Voyage embedding non-OK (${res.status}):`, errText);
-      }
-    } catch (err: unknown) {
-      console.warn('[AI] Voyage embedding failed:', err instanceof Error ? err.message : err);
-    }
-  }
-
-  // ── 3. Gemini (LAST RESORT) ──────────────────────────────────────────────
   if (!GEMINI_API_KEY) {
-    console.error('[AI] No embedding providers available (VOYAGE_API_KEY and GEMINI_API_KEY both unset)');
+    console.error('[AI] GEMINI_API_KEY is not set — cannot generate embeddings.');
     return null;
   }
+
   try {
     const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
-    // outputDimensionality is an extension not yet in the SDK type but supported at runtime
     const result = await model.embedContent({
       content: { role: 'user', parts: [{ text: input }] },
       taskType: TaskType.RETRIEVAL_QUERY,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       outputDimensionality: EMBED_DIMS,
     } as Parameters<typeof model.embedContent>[0]);
-    console.log('[AI] Gemini embedding OK (fallback)');
+    console.log('[AI] Gemini embedding OK');
     return { embedding: Array.from(result.embedding.values) };
   } catch (err: unknown) {
     console.error('[AI] Gemini embedding failed:', err instanceof Error ? err.message : err);

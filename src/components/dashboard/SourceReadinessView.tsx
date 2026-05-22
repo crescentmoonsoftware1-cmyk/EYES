@@ -167,29 +167,7 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
         )}
       </div>
 
-      <div className={styles.readinessSection} style={{ marginTop: '40px', opacity: 0.7 }}>
-        <h3 className={styles.subHeader}>○ NEURAL ROADMAP (COMING SOON)</h3>
-        <div className={styles.readinessGrid}>
-          {ALL_POSSIBLE_PLATFORMS.filter(ap => ap.comingSoon).map(p => (
-            <div key={p.id} className={styles.readinessCard} style={{ background: 'var(--bg-secondary)', borderStyle: 'dashed', cursor: 'default' }}>
-              <div className={styles.cardHeader}>
-                <div className={styles.readinessIcon} style={{ filter: 'grayscale(1)' }}>
-                  {p.icon ? React.cloneElement(p.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
-                </div>
-                <div className={styles.readinessInfo}>
-                  <strong>{p.name}</strong>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>NEURAL LINK PENDING</span>
-                </div>
-                <div className={styles.roadmapBadge}>ROADMAP</div>
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '12px' }}>{p.description}</p>
-              <div className={styles.cardActions} style={{ marginTop: 'auto' }}>
-                 <button className={styles.miniSyncBtn} disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>Sync Disabled</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+
     </div>
   );
 }

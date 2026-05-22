@@ -1,0 +1,4 @@
+# Local developer debug/utility scripts — not part of the production build
+check-db.js
+run-live-audit.js
+scripts/embed-memories.mjs
