@@ -43,29 +43,59 @@ export class AuditAnalysisService {
 
       const connectorsCovered = Array.from(new Set(events.map(e => e.platform)));
       
-      // 2. Real Claude Analysis (Optimized chunking)
-      const significantRecords = events.slice(0, 40);
+      // 2. Real AI Analysis — use up to 100 records for better coverage
+      const significantRecords = events.slice(0, 100);
       const analysisInput = significantRecords.map(e => ({
         id: e.id,
+        platform: e.platform,
         date: e.timestamp,
-        text: `${e.title ?? ''}: ${e.content}`.slice(0, 300)
+        text: `${e.title ?? ''}: ${e.content}`.slice(0, 400)
       }));
 
       const extractionPrompt = `
-You are analyzing a person's complete digital archive to build a Reputation Projection — not a one-time snapshot, but a pattern-level read across time.
+You are a forensic digital analyst extracting structured intelligence from a person's raw digital archive.
+Be EXHAUSTIVE and AGGRESSIVE — err on the side of extracting MORE, not less.
 
-Records (${analysisInput.length} total, spanning up to 2 years):
+Records (${analysisInput.length} items across platforms: ${connectorsCovered.join(', ')}):
 ${JSON.stringify(analysisInput)}
 
-For EACH record, extract:
-- sentiment: -1 (negative), 0 (neutral), +1 (positive)
-- isCommitment: true if this is a promise, task, or stated intention
-- commitmentText: the specific commitment if isCommitment is true
-- isSensitive: true if this could be a reputational risk
-- behaviorType: one of ["output", "communication", "planning", "social", "reflection", "other"]
+For EVERY record, classify ALL of the following:
 
-Return JSON ONLY:
-{ "analysis": [ { "id": "uuid", "sentiment": -1|0|1, "isCommitment": true|false, "commitmentText": "...", "isSensitive": true|false, "behaviorType": "output|communication|planning|social|reflection|other" } ] }
+1. sentiment: -1 (negative/frustrated/stressed), 0 (neutral/factual), +1 (positive/excited/proud)
+
+2. isCommitment: true for ANY of these patterns:
+   - Explicit promises: "I will", "I'll", "We will", "I promise", "I commit"
+   - Tasks/to-dos: "need to", "have to", "should", "must", "going to", "plan to"
+   - Scheduled intentions: "I'll send", "will review", "will follow up", "will check"
+   - Assignments from others accepted: "sure", "ok I'll", "I can handle", "I'll take care of"
+   - Calendar events the person created or accepted
+   - Deadlines mentioned: "by Friday", "before the meeting", "EOD", "by next week"
+   - ANY stated future action, even implicit ("looking into X" = commitment to investigate)
+
+3. commitmentText: Extract the EXACT commitment text verbatim. If isCommitment=true this MUST be non-empty.
+
+4. isSensitive: true for ANY of:
+   - Financial discussions (money, budget, salary, invoice, debt, payment)
+   - Legal or compliance references
+   - Conflict, disagreement, or tension with another person
+   - Missed deadlines or broken promises
+   - Negative sentiment about a person, company, or situation
+   - Confidential or private information
+   - Stress, burnout, or emotional distress signals
+   - Health issues mentioned
+
+5. entities: Array of ALL people, companies, projects, products, or organizations mentioned (proper nouns only). Empty array [] if none.
+
+6. behaviorType: "output" | "communication" | "planning" | "social" | "reflection" | "other"
+
+Rules:
+- If a record could POSSIBLY be a commitment, mark it as one. Do NOT be conservative.
+- Every email thread, calendar event, GitHub issue, or task LIKELY contains commitments.
+- Extract entities from ALL records — every name, project, org mentioned counts.
+- Return EVERY record from the input — do not skip any.
+
+Return JSON ONLY (no markdown, no explanation):
+{ "analysis": [ { "id": "uuid", "sentiment": -1|0|1, "isCommitment": true|false, "commitmentText": "exact text or empty string", "isSensitive": true|false, "entities": ["Name1", "Org2"], "behaviorType": "output|communication|planning|social|reflection|other" } ] }
       `;
 
       const analysisRaw = await invokeModel({
@@ -103,6 +133,7 @@ Return JSON ONLY:
         isCommitment: boolean;
         commitmentText?: string;
         isSensitive: boolean;
+        entities: string[];
         behaviorType: string;
       }
       
@@ -163,27 +194,45 @@ Return JSON ONLY:
       const complianceRate = 100 - failureRate;
 
       // 4. Reputation Projection: pattern-level narrative across time
+      // Collect all entities extracted per-record for the summary prompt
+      const allExtractedEntities = analysisResult.analysis
+        .flatMap((a: AnalysisItem) => a.entities || [])
+        .filter(Boolean);
+      const entityFrequency: Record<string, number> = {};
+      allExtractedEntities.forEach((e: string) => { entityFrequency[e] = (entityFrequency[e] || 0) + 1; });
+      const topExtractedEntities = Object.entries(entityFrequency)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([name]) => name);
+
       const summaryPrompt = `
 You are building a Reputation Projection for someone based on ${events.length} records spanning up to 2 years.
+Be SPECIFIC and DATA-DRIVEN — reference actual numbers and patterns, not generic statements.
 
 Data summary:
-- Total records: ${events.length}
-- Negative signals: ${negativeMentions}
-- Unfulfilled commitments: ${unfulfilledCommitmentsCount}
+- Total records analysed: ${events.length}
+- Platforms: ${connectorsCovered.join(', ')}
+- Negative signals detected: ${negativeMentions}
+- Commitments extracted: ${unfulfilledCommitmentsCount}
 - Risk Score: ${riskScore}/10
-- Platforms covered: ${connectorsCovered.join(', ')}
+- Most mentioned entities: ${topExtractedEntities.join(', ') || 'none detected'}
+- Failure rate: ${failureRate.toFixed(1)}%
+- Compliance rate: ${complianceRate.toFixed(1)}%
 
-Your job is to answer 4 questions about this person's pattern across time:
-1. TRAJECTORY: Is the pattern improving, declining, or stable over the period?
-2. DOMINANT PATTERN: What behavioral archetype consistently emerges (e.g., "high-output executor", "ideas-first builder", "relationship-driven collaborator")?
-3. REPUTATION PROJECTION: If this person were scrutinized by an investor, employer, or partner — what pattern would they find in the data?
-4. OPPORTUNITIES: What 3 specific positive patterns or strengths appear consistently that could be leveraged?
+Your job:
+1. TRAJECTORY: Is the behavioral pattern improving, declining, or stable? Base this on chronological signal distribution.
+2. DOMINANT PATTERN: What specific behavioral archetype emerges? (e.g., "high-output executor with low follow-through", "relationship-first collaborator", "async-heavy deep worker")
+3. REPUTATION PROJECTION: In 2-3 sentences, what would an investor, employer, or partner conclude from this data?
+4. OPPORTUNITIES: List exactly 3 specific, actionable strengths visible in the data that could be leveraged professionally.
+5. topEntities: List the top 5 most frequently mentioned people, projects, companies, or tools from the data. If the most mentioned entities list above is non-empty, use those. Otherwise infer from context.
 
-Also extract:
-- topEntities: top 5 most mentioned people, projects, or organizations
+Rules:
+- narrative must be 3-4 sentences minimum, referencing the actual data (mention platforms, record counts, or patterns).
+- opportunities must be specific to THIS person's data, not generic career advice.
+- Do NOT say "based on the data" or "the records show" — just state the finding directly.
 
-Return JSON ONLY:
-{ "narrative": "2-3 sentence pattern-level summary", "trajectory": "improving|stable|declining", "dominantPattern": "...", "reputationProjection": "...", "opportunities": ["...", "...", "..."], "topEntities": ["..."] }
+Return JSON ONLY (no markdown, no explanation):
+{ "narrative": "3-4 sentence projection", "trajectory": "improving|stable|declining", "dominantPattern": "specific archetype", "reputationProjection": "what others would conclude", "opportunities": ["specific strength 1", "specific strength 2", "specific strength 3"], "topEntities": ["entity1", "entity2", "entity3", "entity4", "entity5"] }
       `;
 
       const summaryRaw = await invokeModel({
