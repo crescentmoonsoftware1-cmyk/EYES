@@ -101,7 +101,11 @@ export async function GET(
       // 3. Per-platform entities — frequency of capitalised words from content
       const SKIP = new Set(['The','This','That','With','From','Have','When','Will','Your',
                             'More','Some','They','Been','Also','Into','Over','Such','Then',
-                            'State','Branch','Commit','Source','Indexing','Records']);
+                            'State','Branch','Commit','Source','Indexing','Records',
+                            // GitHub/Vercel metadata field names (not real entities)
+                            'Language','Stars','Forks','Repo','Description','TypeScript',
+                            'Python','JavaScript','None','Provided','Ready','Error',
+                            'Main','Branch','Build','Deploy','Production','Preview']);
       const freq: Record<string, number> = {};
       for (const m of contentMems.slice(0, 10)) {
         const words = `${m.title ?? ''} ${m.content ?? ''}`.match(/\b[A-Z][a-zA-Z]{2,}\b/g) ?? [];

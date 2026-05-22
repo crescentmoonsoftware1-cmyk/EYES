@@ -317,6 +317,15 @@ Return JSON ONLY (no markdown, no explanation):
         }
       }
 
+      // Build data-driven fallback narrative (used when AI returns empty/short text)
+      const fallbackNarrative = `Across ${events.length} records spanning ${connectorsCovered.join(', ')}, the subject maintained a ${complianceRate.toFixed(0)}% compliance rate with ${negativeMentions} negative signal${negativeMentions !== 1 ? 's' : ''} detected over the 24-month window. ${unfulfilledCommitmentsCount > 0 ? `${unfulfilledCommitmentsCount} open commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} were identified, indicating follow-through risk.` : 'No open commitments were flagged, reflecting a delivery-first behavioral pattern.'} The computed risk profile of ${riskScore}/10 reflects ${riskScore <= 2 ? 'minimal' : riskScore <= 5 ? 'moderate' : 'elevated'} reputational exposure.${topExtractedEntities.length > 0 ? ` Frequently referenced entities include ${topExtractedEntities.slice(0, 3).join(', ')}.` : ''}`;
+
+      const fallbackOpportunities = [
+        `Leverage the ${complianceRate.toFixed(0)}% compliance track record to qualify for high-accountability, high-trust engagements.`,
+        `Expand the async communication footprint across ${connectorsCovered.slice(0, 3).join(', ')} into collaborative leadership roles.`,
+        `Use consistent activity across ${connectorsCovered.length} platforms as evidence of organised, multi-channel execution capability.`,
+      ];
+
       // 6. Persist analysis results to DB
       console.log(`[Audit] Finalizing database record for ${auditId}...`);
       const { error: updateError } = await supabase.from('reputation_audits').update({
@@ -324,14 +333,18 @@ Return JSON ONLY (no markdown, no explanation):
         risk_score: riskScore,
         mentions_count: events.length,
         commitments_count: unfulfilledCommitmentsCount,
-        summary_narrative: summaryResult.narrative || 'Pattern projection complete.',
+        summary_narrative: (summaryResult.narrative && summaryResult.narrative.length > 100)
+          ? summaryResult.narrative
+          : fallbackNarrative,
         connectors_covered: connectorsCovered,
         report_url: null,
         metadata: {
           commitments: extractedCommitments,
           riskFindings: extractedFindings,
           topEntities: summaryResult.topEntities || [],
-          opportunities: summaryResult.opportunities || [],
+          opportunities: (summaryResult.opportunities && summaryResult.opportunities.length > 0)
+            ? summaryResult.opportunities
+            : fallbackOpportunities,
           trajectory: summaryResult.trajectory || 'stable',
           dominantPattern: summaryResult.dominantPattern || null,
           reputationProjection: summaryResult.reputationProjection || null,
