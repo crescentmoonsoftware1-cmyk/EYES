@@ -86,7 +86,7 @@ async function handleCallTool(name: string, args: Record<string, unknown>, userI
 
   // Tool 1: Semantic search over memories (in-process, no HTTP loop-back)
   if (name === 'query_my_history') {
-    const query = args?.query || '';
+    const query = String(args?.query || '');
     if (!query) return NextResponse.json({ error: 'query is required' }, { status: 400 });
 
     // Full-text search directly on memories table

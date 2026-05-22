@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     for (const event of events) {
       try {
         const result = await generateEmbedding(event.content);
-        if (result && result.embedding) {
+        if (result && typeof result !== 'string' && 'embedding' in result && result.embedding) {
           const { error: updateError } = await supabase
             .from('memories')
             .update({ embedding: result.embedding })

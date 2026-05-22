@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidGoogleToken } from '@/services/auth/oauth';
 import { scoreGmailEvent } from '@/utils/risk/scorer';
-import { resolveSyncActor } from '@/utils/sync/actor';
+import { resolveSyncActor, type SyncActor, type SyncActorError } from '@/utils/sync/actor';
 
 type GmailListResponse = {
   messages?: Array<{ id: string }>;
@@ -66,7 +66,7 @@ function extractTextFromPart(part: GmailMessagePart | undefined): string {
 }
 
 export async function POST(request: Request) {
-  let actor: { supabase: ReturnType<typeof Object.create>; userId: string } | null = null;
+  let actor: SyncActor | SyncActorError | null = null;
   try {
     actor = await resolveSyncActor(request);
     if ('status' in actor) {

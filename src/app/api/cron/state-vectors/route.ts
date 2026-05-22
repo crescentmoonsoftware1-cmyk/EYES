@@ -67,7 +67,7 @@ export async function GET(request: Request) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 async function computeStateVector(
   supabase: SupabaseClient,
@@ -156,7 +156,7 @@ ${sample}`,
     // Defaults already set
   }
 
-  // Upsert the state vector
+  // Upsert the state vector (cast needed: untyped supabase client infers 'never' for custom tables)
   const { error: upsertErr } = await supabase
     .from('state_vectors')
     .upsert({
@@ -173,7 +173,7 @@ ${sample}`,
       dominant_platform: dominantPlatform,
       dominant_topic:    dominantTopic,
       computed_at:       new Date().toISOString(),
-    }, { onConflict: 'user_id,date' });
+    } as Record<string, unknown>, { onConflict: 'user_id,date' });
 
   if (upsertErr) throw new Error(`state_vectors upsert: ${upsertErr.message}`);
 

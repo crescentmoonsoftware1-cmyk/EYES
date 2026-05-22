@@ -111,7 +111,8 @@ export async function POST(request: Request) {
         // generateEmbedding uses: Gemini gemini-embedding-001 (sole provider, 1024d)
         const result = await generateEmbedding(textToEmbed);
 
-        if (!result || !Array.isArray(result.embedding)) {
+        // Narrow: generateEmbedding returns EmbedResult | string | null
+        if (!result || typeof result === 'string' || !('embedding' in result) || !Array.isArray(result.embedding)) {
           console.warn(
             `[Cron Embeddings] All embedding providers exhausted for memory ${memory.id} ` +
             `(user ${memory.user_id}, platform ${memory.platform}).`

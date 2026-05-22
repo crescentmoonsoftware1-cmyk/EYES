@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "src/mcp-server.ts"]
+  "exclude": ["node_modules", "src/mcp-server.ts", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "vitest.config.ts"]
 }

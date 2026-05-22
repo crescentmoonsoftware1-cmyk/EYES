@@ -90,8 +90,8 @@ Return JSON ONLY. No markdown, no explanation. Exact structure:
   });
 
   if (!raw) return [];
-
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  const rawStr = typeof raw === 'string' ? raw : JSON.stringify(raw);
+  const jsonMatch = rawStr.match(/\{[\s\S]*\}/);
   if (!jsonMatch) return [];
 
   const parsed = JSON.parse(jsonMatch[0]) as { patterns?: Array<{

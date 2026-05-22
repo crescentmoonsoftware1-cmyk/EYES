@@ -10,6 +10,9 @@ const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const CRON_SECRET = process.env.CRON_SECRET;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseAdminClient = any;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type StateVector = {
   id: string;
@@ -44,7 +47,6 @@ export async function GET(request: Request) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient(SERVICE_URL, SERVICE_KEY, { auth: { persistSession: false } }) as any;
-  type SupabaseAdminClient = typeof supabase;
 
   // Get all users with ≥21 state vectors (minimum for meaningful clustering)
   const { data: vectorCounts, error: countErr } = await supabase
@@ -159,7 +161,7 @@ async function runClusteringForUser(supabase: SupabaseAdminClient, userId: strin
     // DBSCAN: cluster on full-dimensional vectors (not UMAP reduced)
     // epsilon = neighborhood radius, minPts = min points to form cluster
     const dbscan = new DBSCAN();
-    const minClusterSize = Math.max(3, data.get('min_cluster_size') ?? 5);
+    const minClusterSize = 5; // minimum points to form a cluster
     const epsilon = 2.5; // tuned for normalized 11-dim state vectors
     const clusters = dbscan.run(numericalVectors, epsilon, minClusterSize);
 

@@ -78,7 +78,9 @@ export async function upsertMemoriesSafely(
 
           // Generate embedding via Gemini gemini-embedding-001 (1024 dims)
           const embeddingResult = await generateEmbedding(textToEmbed);
-          const embedding = embeddingResult?.embedding ?? null;
+          const embedding = (embeddingResult && typeof embeddingResult !== 'string' && 'embedding' in embeddingResult)
+            ? embeddingResult.embedding
+            : null;
 
           // Build the upsert payload — only include embedding when non-null.
           // If embedding failed (429/null), the existing embedded value is preserved.
