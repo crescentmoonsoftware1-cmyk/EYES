@@ -85,11 +85,12 @@ export async function GET(
 
       const all = rawMems ?? [];
 
-      // 1. Filter out profile/account records
+      // 1. Filter out profile/account records AND GitHub metadata-only records
       const contentMems = all.filter(m =>
         !PROFILE_PATTERN.test(m.content ?? '') &&
         !PROFILE_PATTERN.test(m.title ?? '') &&
-        (m.content ?? '').length > 20
+        (m.content ?? '').length > 20 &&
+        !/^No description provided/i.test(m.content ?? '')
       );
 
       // 2. Per-platform sentiment from is_flagged ratio
@@ -102,10 +103,13 @@ export async function GET(
       const SKIP = new Set(['The','This','That','With','From','Have','When','Will','Your',
                             'More','Some','They','Been','Also','Into','Over','Such','Then',
                             'State','Branch','Commit','Source','Indexing','Records',
-                            // GitHub/Vercel metadata field names (not real entities)
+                            // GitHub/Vercel metadata field names
                             'Language','Stars','Forks','Repo','Description','TypeScript',
                             'Python','JavaScript','None','Provided','Ready','Error',
-                            'Main','Branch','Build','Deploy','Production','Preview']);
+                            'Main','Build','Deploy','Production','Preview',
+                            // Calendar noise words
+                            'Reminder','Sync','Plan','Update','Notification','Sent',
+                            'Upgrade','Service','Disable','Enable','Free','Team']);
       const freq: Record<string, number> = {};
       for (const m of contentMems.slice(0, 10)) {
         const words = `${m.title ?? ''} ${m.content ?? ''}`.match(/\b[A-Z][a-zA-Z]{2,}\b/g) ?? [];
@@ -299,37 +303,42 @@ export async function GET(
       // ══════════════════════════════════════════════════════════════════
       // PAGE 6 — COMMITMENTS & OPPORTUNITIES
       // ══════════════════════════════════════════════════════════════════
+      // Page 6: Adaptive layout — full width for opportunities when no commitments
       doc.addPage(); bg();
       doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text('Commitments & Opportunities', 50, 80);
       hRule(110);
 
       const mid = W / 2;
+      const hasCommitments = commitments.length > 0;
+      const oppX     = hasCommitments ? mid + 10 : 50;
+      const oppWidth = hasCommitments ? mid - 70  : W - 100;
+      const oppCols  = hasCommitments ? 5          : 7; // items to show
 
       // Left column — Commitments
       doc.fontSize(12).font(FONT_BOLD).fillColor(INK).text('Detected Commitments', 50, 130);
-      if (commitments.length === 0) {
+      if (!hasCommitments) {
         doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No commitments detected.', 50, 155);
       } else {
         commitments.slice(0, 7).forEach((c, i: number) => {
-          const cy = 155 + i * 55;
+          const cy = 155 + i * 60;
           doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-             .text(`${i + 1}. ${(c.text ?? '').slice(0, 100)}`, 50, cy, { width: mid - 70 });
+             .text(`${i + 1}. ${(c.text ?? '').slice(0, 120)}`, 50, cy, { width: mid - 70 });
           doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-             .text(`${c.platform ?? ''} | Status: ${(c.status ?? 'pending').toUpperCase()}`, 50, cy + 22);
+             .text(`${c.platform ?? ''} | Status: ${(c.status ?? 'pending').toUpperCase()}`, 50, cy + 26);
         });
       }
 
-      // Right column — Opportunities
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(12).text('Detected Opportunities', mid + 10, 130);
+      // Opportunities column (full-width when no commitments)
+      doc.fillColor(INK).font(FONT_BOLD).fontSize(12).text('Detected Opportunities', oppX, 130);
       if (opportunities.length === 0) {
-        doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No opportunities detected.', mid + 10, 155);
+        doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No opportunities detected.', oppX, 155);
       } else {
-        opportunities.slice(0, 7).forEach((o: string, i: number) => {
-          const oy = 155 + i * 55;
+        opportunities.slice(0, oppCols).forEach((o: string, i: number) => {
+          const oy = 155 + i * (hasCommitments ? 60 : 80);
           doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-             .text(`${i + 1}. ${o.slice(0, 100)}`, mid + 10, oy, { width: mid - 70 });
+             .text(`${i + 1}. ${o}`, oppX, oy, { width: oppWidth });
           doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-             .text('Strategy focus: High Priority', mid + 10, oy + 22);
+             .text('Strategy focus: High Priority', oppX, oy + (hasCommitments ? 34 : 54));
         });
       }
       footer(6);
