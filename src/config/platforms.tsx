@@ -65,7 +65,4 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'devin',           name: 'Devin',           icon: <DevinIconOfficial />,    category: 'Development',  description: 'Monitor autonomous AI engineering agents.',               color: '#1A1A1A', comingSoon: true },
   { id: 'cursor',          name: 'Cursor',          icon: <CursorIconOfficial />,   category: 'Development',  description: 'Sync your AI-assisted code evolution history.',            color: 'var(--text-primary)', comingSoon: true },
   { id: 'linkedin',        name: 'LinkedIn',        icon: <LinkedInIconOfficial />, category: 'Social',       description: 'Index professional networking and careers communications.', color: '#0077b5', comingSoon: true },
-  { id: 'dropbox',         name: 'Dropbox',         icon: <DropboxIconOfficial />,  category: 'Productivity', description: 'Search and index your cloud files and metadata.',            color: '#0061ff', comingSoon: true },
-  { id: 'asana',           name: 'Asana',           icon: <AsanaIconOfficial />,    category: 'Productivity', description: 'Track project tasks, goals, and team progress.',             color: '#F95D5C', comingSoon: true },
-  { id: 'clickup',         name: 'ClickUp',         icon: <ClickUpIconOfficial />,  category: 'Productivity', description: 'Connect your all-in-one productivity workspace.',            color: '#7B68EE', comingSoon: true },
 ];
