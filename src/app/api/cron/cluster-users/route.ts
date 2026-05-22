@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { invokeModel } from '@/services/ai/ai';
 import { getPrompt } from '@/services/prompts/getPrompt';
 import { sendClusterReadyEmail } from '@/services/email/resend';
+import { UMAP } from 'umap-js';
+import { DBSCAN } from 'density-clustering';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -103,9 +105,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ eligible: eligibleUsers.length, results });
 }
 
-// ─── Task #7: Clustering (Modal UMAP + HDBSCAN) ──────────────────────────────
-const MODAL_CLUSTERING_URL = process.env.MODAL_CLUSTERING_URL ?? '';
-const CLUSTERING_SECRET    = process.env.CLUSTERING_SECRET ?? '';
+// Native JS clustering — no external service required
 
 // Converts a StateVector into a fixed-length numerical array for UMAP
 function vectorToArray(v: StateVector): number[] {
@@ -136,34 +136,46 @@ async function runClusteringForUser(supabase: SupabaseAdminClient, userId: strin
 
   const typedVectors = vectors as StateVector[];
 
-  // ── Step 1: Get cluster assignments from Modal UMAP + HDBSCAN ─────────────
+  // ── Step 1: UMAP reduce + DBSCAN cluster (pure JS, no external service) ───
   let labels: number[] | null = null;
   let umapCoords: number[][] | null = null;
 
-  if (MODAL_CLUSTERING_URL) {
-    try {
-      const numericalVectors = typedVectors.map(vectorToArray);
-      const res = await fetch(MODAL_CLUSTERING_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vectors: numericalVectors,
-          min_cluster_size: 5,
-          secret: CLUSTERING_SECRET,
-        }),
-      });
+  try {
+    const numericalVectors = typedVectors.map(vectorToArray);
 
-      if (res.ok) {
-        const data = await res.json();
-        labels      = data.labels ?? null;
-        umapCoords  = data.umap_reduced ?? null;
-        console.log(`[Clustering] Modal OK — ${data.n_clusters} clusters, noise=${data.noise_ratio}`);
-      } else {
-        console.warn('[Clustering] Modal returned non-OK:', res.status, await res.text());
-      }
-    } catch (err) {
-      console.warn('[Clustering] Modal call failed, falling back to Claude:', err);
-    }
+    // UMAP: reduce 11-dim state vectors → 2D for mind map visualization
+    const nNeighbors = Math.min(10, numericalVectors.length - 1);
+    const umap = new UMAP({
+      nComponents: 2,
+      nNeighbors: nNeighbors,
+      minDist: 0.1,
+      spread: 1.0,
+    });
+    const embedding = umap.fit(numericalVectors); // number[][] shape: (n, 2)
+    umapCoords = embedding as number[][];
+
+    // DBSCAN: cluster on full-dimensional vectors (not UMAP reduced)
+    // epsilon = neighborhood radius, minPts = min points to form cluster
+    const dbscan = new DBSCAN();
+    const minClusterSize = Math.max(3, data.get('min_cluster_size') ?? 5);
+    const epsilon = 2.5; // tuned for normalized 11-dim state vectors
+    const clusters = dbscan.run(numericalVectors, epsilon, minClusterSize);
+
+    // Convert cluster array-of-arrays → flat label array (-1 = noise)
+    const rawLabels = new Array(numericalVectors.length).fill(-1);
+    clusters.forEach((clusterIndices: number[], clusterIdx: number) => {
+      clusterIndices.forEach((pointIdx: number) => {
+        rawLabels[pointIdx] = clusterIdx;
+      });
+    });
+    labels = rawLabels;
+
+    const nClusters = clusters.length;
+    const noiseCount = rawLabels.filter((l: number) => l === -1).length;
+    const noiseRatio = noiseCount / rawLabels.length;
+    console.log(`[Clustering] JS UMAP+DBSCAN OK — ${nClusters} clusters, noise=${(noiseRatio * 100).toFixed(1)}%`);
+  } catch (err) {
+    console.warn('[Clustering] JS clustering failed, falling back to week-grouping:', err);
   }
 
   // ── Step 2: Group vectors by label ────────────────────────────────────────
