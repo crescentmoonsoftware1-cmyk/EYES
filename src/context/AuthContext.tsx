@@ -486,13 +486,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Sub to future changes — skip INITIAL_SESSION if user already loaded
+    // Sub to future changes — skip if user already loaded (token refresh fires SIGNED_IN repeatedly)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       console.log('[Auth] State Event:', event);
-      if (event === 'INITIAL_SESSION' && user) {
-        // Already have user from cache/init — skip redundant re-sync
+
+      // TOKEN_REFRESHED and repeated SIGNED_IN events must not re-sync if already authenticated
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && user) {
         return;
       }
+
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         const profile = await syncProfile({
           id: session.user.id,
