@@ -61,23 +61,66 @@ export async function GET(
     const opportunities: string[] = meta.opportunities || [];
     const connectors: string[] = audit.connectors_covered || [];
 
-    // ── Fetch real memory records per platform for Significant Records section ──
-    // Done BEFORE the PDF Promise since it's async
-    const platformMemories: Record<string, { title: string; content: string; timestamp: string }[]> = {};
+    // ── Per-platform data: fetch 20 records each, compute sentiment + entities ──
+    // Patterns that identify profile/account records (not real content)
+    const PROFILE_PATTERN = /email:\s|user id:|discord user|account id:|phone:|address:|\bemail\b.*@|#\d{4}\b/i;
+
+    type PlatformData = {
+      memories:  { title: string; content: string; timestamp: string }[];
+      sentiment: { pos: number; neg: number; neutral: number };
+      entities:  string[];
+      count:     number;
+    };
+    const platformData: Record<string, PlatformData> = {};
+
     for (const platform of connectors.slice(0, 3)) {
-      const { data: mems } = await supabase
+      const { data: rawMems } = await supabase
         .from('memories')
-        .select('title, content, timestamp')
+        .select('title, content, timestamp, is_flagged')
         .eq('user_id', user.id)
         .eq('platform', platform)
         .not('content', 'is', null)
         .order('timestamp', { ascending: false })
-        .limit(3);
-      platformMemories[platform] = (mems ?? []).map(m => ({
-        title: m.title ?? '',
-        content: m.content ?? '',
-        timestamp: m.timestamp ?? '',
-      }));
+        .limit(20);
+
+      const all = rawMems ?? [];
+
+      // 1. Filter out profile/account records
+      const contentMems = all.filter(m =>
+        !PROFILE_PATTERN.test(m.content ?? '') &&
+        !PROFILE_PATTERN.test(m.title ?? '') &&
+        (m.content ?? '').length > 20
+      );
+
+      // 2. Per-platform sentiment from is_flagged ratio
+      const total   = all.length || 1;
+      const flagged = all.filter(m => m.is_flagged).length;
+      const posP    = Math.round(((total - flagged) / total) * 100);
+      const negP    = Math.round((flagged / total) * 100);
+
+      // 3. Per-platform entities — frequency of capitalised words from content
+      const SKIP = new Set(['The','This','That','With','From','Have','When','Will','Your',
+                            'More','Some','They','Been','Also','Into','Over','Such','Then',
+                            'State','Branch','Commit','Source','Indexing','Records']);
+      const freq: Record<string, number> = {};
+      for (const m of contentMems.slice(0, 10)) {
+        const words = `${m.title ?? ''} ${m.content ?? ''}`.match(/\b[A-Z][a-zA-Z]{2,}\b/g) ?? [];
+        for (const w of words) {
+          if (SKIP.has(w)) continue;
+          freq[w] = (freq[w] ?? 0) + 1;
+        }
+      }
+      const entities = Object.entries(freq)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([w]) => w);
+
+      platformData[platform] = {
+        memories:  contentMems.slice(0, 3).map(m => ({ title: m.title ?? '', content: m.content ?? '', timestamp: m.timestamp ?? '' })),
+        sentiment: { pos: posP, neg: negP, neutral: Math.max(0, 100 - posP - negP) },
+        entities:  entities.length >= 2 ? entities : topEntities.slice(0, 5),
+        count:     all.length,
+      };
     }
 
     // ── Generate PDF in-memory ────────────────────────────────────────────
@@ -202,55 +245,49 @@ export async function GET(
         doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text(`Platform Breakdown: ${platform.toUpperCase()}`, 50, 80);
         hRule(110);
 
-        const perPlatformCount = Math.round((audit.mentions_count ?? 0) / Math.max(connectors.length, 1));
+        const pd = platformData[platform] ?? { memories: [], sentiment: { pos: 100, neg: 0, neutral: 0 }, entities: topEntities.slice(0, 5), count: 0 };
+        const perPlatformCount = pd.count || Math.round((audit.mentions_count ?? 0) / Math.max(connectors.length, 1));
 
         doc.font(FONT_MONO).fontSize(8).fillColor(GRAY)
            .text(`Indexing window: 24 months | Records analysed: ~${perPlatformCount}`, 50, 120);
 
+        // Per-platform entities
         doc.fillColor(INK).font(FONT_BOLD).fontSize(11).text('Top Mentioned Entities', 50, 155);
         doc.font(FONT_BODY).fontSize(10)
-           .text(topEntities.slice(0, 5).join(' · ') || 'None detected', 50, 172, { width: W - 100 });
+           .text(pd.entities.join(' · ') || 'None detected', 50, 172, { width: W - 100 });
 
+        // Per-platform sentiment
         doc.font(FONT_BOLD).fontSize(11).text('Sentiment Distribution', 50, 210);
-        const sb = meta.sentimentBalance ?? 1;
-        const pos = Math.round(sb * 100);
-        const neg = Math.round((1 - sb) * 100);
         doc.font(FONT_MONO).fontSize(9)
-           .text(`Positive: ${pos}%  |  Negative: ${neg}%  |  Neutral: ${100 - pos - neg < 0 ? 0 : 100 - pos - neg}%`, 50, 227);
+           .text(`Positive: ${pd.sentiment.pos}%  |  Negative: ${pd.sentiment.neg}%  |  Neutral: ${pd.sentiment.neutral}%`, 50, 227);
 
         doc.font(FONT_BOLD).fontSize(11).text('Significant Records', 50, 265);
 
-        // Show real memories if available, fall back to commitments
-        const realMems = platformMemories[platform] ?? [];
+        const realMems = pd.memories;
         const platformCommitments = commitments.filter(c => c.platform === platform);
 
         if (realMems.length > 0) {
-          // Real memory records from Supabase
-          realMems.slice(0, 3).forEach((mem, ci: number) => {
+          realMems.forEach((mem, ci: number) => {
             const ry = 285 + ci * 95;
             doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
             const snippet = (mem.content || mem.title || '').slice(0, 240);
             doc.font(FONT_BODY).fontSize(9).fillColor(INK)
                .text(`"${snippet}${snippet.length >= 240 ? '…' : ''}"`, 62, ry + 14, { width: W - 124 });
             doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-               .text(
-                 `Source: ${platform.toUpperCase()} | ${mem.timestamp ? new Date(mem.timestamp).toLocaleDateString() : 'N/A'}`,
-                 62, ry + 60
-               );
+               .text(`Source: ${platform.toUpperCase()} | ${mem.timestamp ? new Date(mem.timestamp).toLocaleDateString() : 'N/A'}`, 62, ry + 60);
           });
         } else if (platformCommitments.length > 0) {
-          // Commitments fallback
           platformCommitments.slice(0, 3).forEach((c, ci: number) => {
             const ry = 285 + ci * 95;
             doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
             doc.font(FONT_BODY).fontSize(9).fillColor(INK)
                .text(`"${(c.text ?? '').slice(0, 220)}…"`, 62, ry + 14, { width: W - 124 });
             doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-               .text(`Source: ${(c.platform ?? platform).toUpperCase()} | ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'} | CID: ${(c.citation ?? '').slice(0, 8)}`, 62, ry + 60);
+               .text(`Source: ${(c.platform ?? platform).toUpperCase()} | ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'}`, 62, ry + 60);
           });
         } else {
           doc.font(FONT_BODY).fontSize(10).fillColor(GRAY)
-             .text('No specific records extracted for this connector.', 62, 290);
+             .text('No significant content records found for this connector.', 62, 290);
         }
         footer(3 + i);
       }
