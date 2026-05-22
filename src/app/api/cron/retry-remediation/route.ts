@@ -139,7 +139,8 @@ async function runRetryRemediation(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
-  const action = parseAction(params.get('action')?.trim() ?? null);
+  // Default to 'requeue' so Vercel cron (which cannot pass query params) works correctly.
+  const action = parseAction(params.get('action')?.trim() ?? 'requeue');
   if (!action) {
     return NextResponse.json({ error: 'Invalid action. Use action=requeue or action=purge.' }, { status: 400 });
   }

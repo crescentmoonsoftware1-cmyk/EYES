@@ -185,7 +185,8 @@ export async function POST(request: Request) {
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        memories_indexed: rawEvents.length,
+        // Cumulative total — not just current batch (H3 fix)
+        memories_indexed: (currentStatus?.total_items || 0) + rawEvents.length,
         updated_at: now,
       }).eq('user_id', userId),
     ]);

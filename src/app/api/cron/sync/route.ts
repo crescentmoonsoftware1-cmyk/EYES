@@ -11,6 +11,7 @@ import { POST as syncSlack } from '@/app/api/sync/slack/route';
 import { POST as syncDiscord } from '@/app/api/sync/discord/route';
 import { POST as syncEmbeddings } from '@/app/api/sync/embeddings/route';
 import { logCronMetrics, logAsyncJobFailure } from '@/utils/monitoring';
+import type { EmbeddingOutcome } from '@/services/sync/embeddings-sync';
 
 type TokenRow = {
   user_id: string;
@@ -20,14 +21,6 @@ type TokenRow = {
 type PlatformOutcome = {
   platform: string;
   routePlatform: string;
-  success: boolean;
-  status: number | null;
-  durationMs: number;
-  error?: string;
-};
-
-type EmbeddingOutcome = {
-  attempted: boolean;
   success: boolean;
   status: number | null;
   durationMs: number;
@@ -206,6 +199,7 @@ const RETRY_DUE_LIMIT = Number(process.env.CRON_RETRY_DUE_LIMIT || 100);
 const RETRY_JITTER_RATIO = Number(process.env.CRON_RETRY_JITTER_RATIO || 0.2);
 
 const ALERT_PENDING_RETRY_THRESHOLD = Math.max(
+  1,
   Math.floor(toFiniteNumber(process.env.SYNC_ALERT_PENDING_RETRY_THRESHOLD, 8))
 );
 const ALERT_DEAD_LETTER_24H_THRESHOLD = Math.max(

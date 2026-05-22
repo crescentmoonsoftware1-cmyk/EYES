@@ -1,9 +1,9 @@
 /**
  * Cron endpoint: background embedding worker for ALL users.
  *
- * Triggered by Vercel scheduler every 5 minutes.
+ * Triggered by Vercel scheduler every 5 minutes (see vercel.json).
  * Scans the `memories` table for rows with embedding IS NULL,
- * generates 1024-dim vectors via Cohere → Voyage → Gemini fallback chain,
+ * generates 1024-dim vectors via Gemini gemini-embedding-001,
  * and writes them back inline to memories.embedding.
  *
  * Replaces the broken OpenAI/raw_events implementation.
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
           continue;
         }
 
-        // generateEmbedding uses: Cohere (primary) → Voyage (fallback) → Gemini (last resort)
+        // generateEmbedding uses: Gemini gemini-embedding-001 (sole provider, 1024d)
         const result = await generateEmbedding(textToEmbed);
 
         if (!result || !Array.isArray(result.embedding)) {

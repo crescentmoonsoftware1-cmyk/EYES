@@ -95,64 +95,9 @@ export async function runEmbeddingsSyncViaHttp(
 }
 
 /**
- * Run embeddings sync directly — bypasses the HTTP layer.
- * Used by the cron/sync worker to avoid an unnecessary HTTP round-trip.
- * Calls the POST handler from /api/sync/embeddings directly in-process.
+ * Embeddings sync service — HTTP variant used by browser-triggered flows (sync/all)
+ * where auth is cookie-based and the request must pass through Next.js middleware.
  *
- * Priority 3: Previously a stub that fell back to HTTP. Now calls the handler directly.
+ * NOTE: runEmbeddingsSyncDirect was removed (M2) — cron/sync calls the handler
+ * inline directly. This file is kept for the HTTP variant only.
  */
-export async function runEmbeddingsSyncDirect(
-  baseUrl: string,
-  userId: string,
-  secret: string
-): Promise<EmbeddingOutcome> {
-  const startedAt = Date.now();
-
-  try {
-    // Lazy import to avoid circular dependency at module load time
-    const { POST: syncEmbeddingsHandler } = await import('@/app/api/sync/embeddings/route');
-
-    const requestUrl = new URL(`${baseUrl}/api/sync/embeddings`);
-    const response = await syncEmbeddingsHandler(
-      new Request(requestUrl.toString(), {
-        method: 'POST',
-        headers: {
-          'x-cron-secret': secret,
-          'x-cron-user-id': userId,
-        },
-      })
-    );
-
-    const rawBody = await response.text();
-    const body = parseResponsePayload(rawBody);
-
-    if (!response.ok) {
-      return {
-        attempted: true,
-        success: false,
-        status: response.status,
-        durationMs: Date.now() - startedAt,
-        error:
-          typeof body === 'object' && body && 'error' in body
-            ? String(body.error)
-            : `Embeddings sync failed (${response.status})`,
-      };
-    }
-
-    return {
-      attempted: true,
-      success: true,
-      status: response.status,
-      durationMs: Date.now() - startedAt,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      attempted: true,
-      success: false,
-      status: null,
-      durationMs: Date.now() - startedAt,
-      error: message,
-    };
-  }
-}

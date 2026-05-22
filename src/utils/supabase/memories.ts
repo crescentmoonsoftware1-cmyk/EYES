@@ -61,7 +61,8 @@ export async function upsertMemoriesSafely(
   });
 
   let inserted = 0;
-  const skipped = 0;
+  // Track in-batch duplicates removed by deduplication
+  let skipped = rows.length - deduped.length;
   let errors = 0;
 
   // Process in batches of 10 to avoid overwhelming the embedding API
@@ -75,7 +76,7 @@ export async function upsertMemoriesSafely(
           // Build the text to embed: header + content (same as chunking logic)
           const textToEmbed = buildEmbedText(row);
 
-          // Generate embedding via Gemini embedding-001 (768 dims)
+          // Generate embedding via Gemini gemini-embedding-001 (1024 dims)
           const embeddingResult = await generateEmbedding(textToEmbed);
           const embedding = embeddingResult?.embedding ?? null;
 

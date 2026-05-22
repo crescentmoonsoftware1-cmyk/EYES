@@ -107,7 +107,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('memories')
-      .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity')
+      .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity, metadata')
       .eq('user_id', user.id)
       .not('content', 'is', null)
       .order('timestamp', { ascending: false })

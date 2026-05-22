@@ -72,7 +72,9 @@ export async function GET(request: Request) {
       const clusterCount = await runClusteringForUser(supabase, userId);
       const loopCount    = await runLoopDetectionForUser(supabase, userId);
       const driftResult  = await runDriftDetectionForUser(supabase, userId);
-      results[userId] = { clusters: clusterCount, loops: loopCount, drift: driftResult };
+      // Wire entity correlations — runs after clustering so cluster_id refs are fresh
+      const corrCount    = await runEntityCorrelationsForUser(supabase, userId);
+      results[userId] = { clusters: clusterCount, loops: loopCount, drift: driftResult, entityCorrelations: corrCount };
 
       // Send cluster-ready email on the FIRST ever clustering run (version 1 only)
       if (clusterCount > 0) {
@@ -526,4 +528,91 @@ function std(arr: number[]): number {
   if (arr.length < 2) return 0;
   const m = mean(arr);
   return Math.sqrt(arr.reduce((sum, x) => sum + (x - m) ** 2, 0) / arr.length);
+}
+
+// ─── Entity Correlation Computation ───────────────────────────────────────────
+/**
+ * Computes entity ↔ cognitive cluster lift scores for a single user.
+ * Mirrors /api/cognitive/entity-correlations but runs inline (no HTTP self-call).
+ * Called automatically from the weekly cluster-users cron after clustering.
+ */
+async function runEntityCorrelationsForUser(supabase: SupabaseAdminClient, userId: string): Promise<number> {
+  // Need state vectors with cluster assignments
+  const { data: vectors, error: vecErr } = await supabase
+    .from('state_vectors')
+    .select('id, date, cluster_id')
+    .eq('user_id', userId)
+    .not('cluster_id', 'is', null);
+
+  if (vecErr || !vectors?.length) return 0;
+
+  const totalDays = vectors.length;
+  const clusterFreq: Record<string, number> = {};
+  const dateToCluster: Record<string, string> = {};
+
+  for (const v of vectors) {
+    if (v.cluster_id) {
+      clusterFreq[v.cluster_id] = (clusterFreq[v.cluster_id] ?? 0) + 1;
+      dateToCluster[v.date] = v.cluster_id;
+    }
+  }
+
+  const { data: entities, error: entErr } = await supabase
+    .from('entities')
+    .select('id, canonical_id, name, entity_type')
+    .eq('user_id', userId)
+    .limit(200);
+
+  if (entErr || !entities?.length) return 0;
+
+  let correlationsWritten = 0;
+
+  for (const entity of entities) {
+    const { data: mentions } = await supabase
+      .from('memories')
+      .select('date_bucket')
+      .eq('user_id', userId)
+      .contains('entities_extracted', [{ canonical_id: entity.canonical_id }])
+      .not('date_bucket', 'is', null)
+      .limit(100);
+
+    if (!mentions?.length) continue;
+
+    const clusterCoOccurrence: Record<string, number> = {};
+    let matched = 0;
+    for (const m of mentions) {
+      const clusterId = dateToCluster[m.date_bucket];
+      if (clusterId) {
+        clusterCoOccurrence[clusterId] = (clusterCoOccurrence[clusterId] ?? 0) + 1;
+        matched++;
+      }
+    }
+
+    if (matched < 2) continue;
+
+    for (const [clusterId, coCount] of Object.entries(clusterCoOccurrence)) {
+      const pClusterGivenEntity = coCount / matched;
+      const pCluster = (clusterFreq[clusterId] ?? 0) / totalDays;
+      if (pCluster === 0) continue;
+
+      const lift = Math.round((pClusterGivenEntity / pCluster) * 100) / 100;
+      if (lift <= 1.2 || coCount < 2) continue;
+
+      await supabase
+        .from('entity_correlations')
+        .upsert({
+          user_id:     userId,
+          entity_id:   entity.id,
+          cluster_id:  clusterId,
+          lift_score:  lift,
+          sample_size: matched,
+          computed_at: new Date().toISOString(),
+        }, { onConflict: 'entity_id,cluster_id' });
+
+      correlationsWritten++;
+    }
+  }
+
+  console.log(`[EntityCorr] ✓ user=${userId.slice(0, 8)} correlations=${correlationsWritten}`);
+  return correlationsWritten;
 }

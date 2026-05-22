@@ -217,7 +217,8 @@ export async function POST(request: Request) {
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        memories_indexed: events.length,
+        // Use cumulative total — not just current batch
+        memories_indexed: (currentStatus?.total_items || 0) + events.length,
         updated_at: new Date().toISOString(),
       }).eq('user_id', userId),
     ]);

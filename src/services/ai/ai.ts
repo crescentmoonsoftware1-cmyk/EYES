@@ -76,7 +76,8 @@ interface OpenRouterPart {
  * Unified Model Invocation Interface - REAL WORLD ONLY (NO DEMO)
  */
 export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResult> {
-  const { capability, messages = [], system = "", preference = 'auto', capture = true } = options;
+  // Default capture=true only for 'chat' — skip behavioral logging for classify/embed (cron/pipeline calls) (M4)
+  const { capability, messages = [], system = "", preference = 'auto', capture = capability === 'chat' } = options;
 
   if (capability === 'embed') {
     return handleEmbedding(messages[0]?.content || "");
@@ -92,7 +93,7 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
         captureBehavioralData({
           queryText: messages[messages.length - 1]?.content || "",
           queryType: capability,
-          modelUsed: preference === 'auto' ? 'claude' : (preference || 'claude'),
+          modelUsed: preference === 'auto' ? 'openrouter/auto' : (preference || 'openrouter/auto'),  // M3: was always 'claude'
           latencyMs: Date.now() - startedAt,
           resultCount: messages.length,
           responseLength: result?.length || 0
@@ -140,7 +141,8 @@ async function handleEmbedding(text: string) {
  * Priority: 1) OpenRouter (primary, free)  2) Claude (when credits available)  3) Gemini Flash (last resort)
  */
 async function handleChat(messages: AIHistoryMessage[], system: string, preference: AIPreference) {
-  const isClassification = system.includes('commitment') || system.includes('classify') || system.includes('extract') || system.includes('json');
+  // L6: 'json' alone was too broad — any chat about JSON would cap tokens at 500
+  const isClassification = system.includes('commitment') || system.includes('classify') || system.includes('extract') || /return.*json|json only|valid json/i.test(system);
   
   const history = messages
     .filter(m => m.role !== 'system')
@@ -432,8 +434,11 @@ export async function generateEmbedding(text: string) {
   return invokeModel({ capability: 'embed', messages: [{ role: 'user', content: text }] });
 }
 
-export async function chatCompletion(messages: AIHistoryMessage[]) {
-  return invokeModel({ capability: 'chat', messages });
+export async function chatCompletion(messages: AIHistoryMessage[]): Promise<string | null> {
+  const result = await invokeModel({ capability: 'chat', messages });
+  // invokeModel returns InvokeResult (EmbedResult | string | null).
+  // For 'chat' capability, EmbedResult is never returned — safe to cast.
+  return typeof result === 'string' ? result : null;
 }
 
 export async function chatCompletionStream(messages: AIHistoryMessage[]) {
@@ -484,3 +489,4 @@ function getTimeBucket(): string {
   if (hour >= 17 && hour < 21) return 'evening';
   return 'night';
 }
+

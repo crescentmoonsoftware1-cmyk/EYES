@@ -222,39 +222,6 @@ export async function POST(request: Request) {
       })
     );
 
-    // 4. LAUNCH BACKGROUND EMBEDDING QUEUE
-    waitUntil((async () => {
-      try {
-        // Queue any newly synced memories that don't have an embedding yet.
-        const { data: unembedded } = await supabase
-          .from('memories')
-          .select('id')
-          .eq('user_id', userId)
-          .is('embedding', null)
-          .not('content', 'is', null)
-          .limit(200);
-
-        if (unembedded && unembedded.length > 0) {
-          const queueItems = unembedded.map((memory) => ({
-            user_id: userId,
-            memory_id: memory.id,
-            status: 'pending',
-          }));
-
-          const { error: insertError } = await supabase
-            .from('embedding_queue')
-            .insert(queueItems, { onConflict: 'memory_id' } as Record<string, unknown>);
-
-          if (insertError) {
-            console.warn('[Sync All] Failed to insert embedding queue items:', insertError.message);
-          } else {
-            console.log(`[Sync All] Queued ${queueItems.length} memories for embedding.`);
-          }
-        }
-      } catch (err) {
-        console.warn('[Sync All] Failed to queue embeddings:', err);
-      }
-    })());
 
     return NextResponse.json(
       {

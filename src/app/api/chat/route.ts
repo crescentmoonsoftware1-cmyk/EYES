@@ -93,7 +93,9 @@ type HybridSearchRow = {
   content: string;
   author: string | null;
   source_url: string | null;
-  timestamp: string | null;
+  // NOTE: hybrid_search RPC returns this column as 'event_timestamp' (not 'timestamp')
+  // because 'timestamp' is a reserved word in PostgreSQL.
+  event_timestamp: string | null;
   metadata: Record<string, unknown>;
   is_flagged: boolean;
   similarity: number;
@@ -238,7 +240,7 @@ export async function POST(request: Request) {
           title: match.title ?? null,
           eventType: match.event_type ?? null,
           author: match.author ?? null,
-          timestamp: match.timestamp ?? null,
+          timestamp: match.event_timestamp ?? null,  // RPC returns event_timestamp (not timestamp)
           similarity: Number((match.similarity ?? 0).toFixed(4)),
           rerankScore: Number((match.combined_score ?? 0).toFixed(4)),
           snippet: maskPII((match.content || '').slice(0, 420)),

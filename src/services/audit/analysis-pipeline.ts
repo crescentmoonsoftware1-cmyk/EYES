@@ -5,6 +5,48 @@ import { Commitment } from '@/types/dashboard';
 /**
  * Reputation Audit: Core Analysis Pipeline (REAL WORLD ONLY)
  */
+
+/**
+ * Cross-references extracted commitments against Google Calendar events
+ * to determine if a commitment was actually fulfilled.
+ * A commitment is considered 'completed' if a calendar event was created
+ * within 7 days of the commitment date with overlapping keywords.
+ */
+async function resolveCommitmentStatuses(
+  commitments: Commitment[],
+  calendarEvents: Array<{ title: string | null; timestamp: string | null }>
+): Promise<Commitment[]> {
+  if (calendarEvents.length === 0) return commitments;
+
+  return commitments.map(commitment => {
+    const commitmentDate = new Date(commitment.date).getTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    // Extract key words from the commitment text (3+ char words)
+    const commitmentWords = commitment.text
+      .toLowerCase()
+      .split(/\W+/)
+      .filter(w => w.length >= 3);
+
+    // Look for a calendar event created within 7 days of the commitment
+    // that shares at least 1 keyword with the commitment text
+    const hasFulfillingEvent = calendarEvents.some(evt => {
+      if (!evt.timestamp || !evt.title) return false;
+      const evtDate = new Date(evt.timestamp).getTime();
+      const withinWindow = Math.abs(evtDate - commitmentDate) <= sevenDaysMs;
+      if (!withinWindow) return false;
+
+      const evtWords = evt.title.toLowerCase().split(/\W+/).filter(w => w.length >= 3);
+      return commitmentWords.some(w => evtWords.includes(w));
+    });
+
+    return {
+      ...commitment,
+      status: hasFulfillingEvent ? 'completed' : 'pending',
+    };
+  });
+}
+
 export class AuditAnalysisService {
   static async runAnalysis(auditId: string, userId: string) {
     const supabase = await createAdminClient();
@@ -250,6 +292,13 @@ Return JSON ONLY (no markdown, no explanation):
         }
       });
 
+      // Cross-reference commitments with calendar events to resolve statuses
+      // (marks commitments as 'completed' if a matching calendar event exists nearby)
+      const calendarEvents = events
+        .filter(e => e.platform === 'google_calendar' || e.platform === 'google-calendar')
+        .map(e => ({ title: e.title, timestamp: e.timestamp }));
+      const resolvedCommitments = await resolveCommitmentStatuses(extractedCommitments, calendarEvents);
+
       // Suppress unused variable: weightedNeutralMentions is retained for future scoring expansion
       void weightedNeutralMentions;
 
@@ -327,19 +376,22 @@ Return JSON ONLY (no markdown, no explanation):
       ];
 
       // 6. Persist analysis results to DB
+      // Use resolvedCommitments (calendar-verified) — count only truly pending ones
+      const pendingCommitmentsCount = resolvedCommitments.filter(c => c.status === 'pending').length;
+      console.log(`[Audit] Commitment resolution: ${resolvedCommitments.length} total, ${pendingCommitmentsCount} pending, ${resolvedCommitments.length - pendingCommitmentsCount} completed via calendar match.`);
       console.log(`[Audit] Finalizing database record for ${auditId}...`);
       const { error: updateError } = await supabase.from('reputation_audits').update({
         status: 'completed',
         risk_score: riskScore,
         mentions_count: events.length,
-        commitments_count: unfulfilledCommitmentsCount,
+        commitments_count: pendingCommitmentsCount,
         summary_narrative: (summaryResult.narrative && summaryResult.narrative.length > 100)
           ? summaryResult.narrative
           : fallbackNarrative,
         connectors_covered: connectorsCovered,
         report_url: null,
         metadata: {
-          commitments: extractedCommitments,
+          commitments: resolvedCommitments,  // ← calendar-verified statuses (pending/completed)
           riskFindings: extractedFindings,
           topEntities: summaryResult.topEntities || [],
           opportunities: (summaryResult.opportunities && summaryResult.opportunities.length > 0)

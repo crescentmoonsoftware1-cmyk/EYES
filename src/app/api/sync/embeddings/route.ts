@@ -4,8 +4,8 @@ import { resolveSyncActor } from '@/utils/sync/actor';
 
 /**
  * Background worker — generates embeddings for memories that have NULL embedding.
- * Targets the unified `memories` table (not the old raw_events/embeddings split).
- * Uses Voyage AI (primary) with Gemini fallback. Processes 200 items per call.
+ * Targets the unified `memories` table.
+ * Uses Gemini gemini-embedding-001 (1024 dims). Processes 200 items per call.
  */
 export async function POST(request: Request) {
   try {
@@ -65,6 +65,13 @@ export async function POST(request: Request) {
           console.warn(`[AI-Brain] Both embedding providers exhausted on memory ${memory.id}. Stopping batch.`);
           quotaExhausted = true;
           break;
+        }
+
+        // Narrow: generateEmbedding returns EmbedResult | string | null.
+        // A string result means the model returned text instead of a vector — treat as failure.
+        if (typeof result === 'string' || !('embedding' in result)) {
+          console.warn(`[AI-Brain] Unexpected non-vector result for memory ${memory.id}. Skipping.`);
+          continue;
         }
 
         // Update the embedding column directly on the memories row

@@ -8,6 +8,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 import * as dotenv from "dotenv";
 
 
@@ -16,6 +17,7 @@ dotenv.config();
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Supabase credentials in .env file.");
@@ -23,6 +25,34 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Gemini embedding client — must match main app (gemini-embedding-001, 1024d)
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const EMBED_MODEL = 'gemini-embedding-001';
+const EMBED_DIMS = 1024; // Must match vector(1024) column in memories table
+
+/**
+ * Generates a 1024-dimensional embedding using Gemini — matches the main app's vector store.
+ */
+async function generateGeminiEmbedding(text: string): Promise<number[] | null> {
+  if (!genAI) {
+    console.error('[MCP] GEMINI_API_KEY not set — cannot generate embeddings.');
+    return null;
+  }
+  try {
+    const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
+    const result = await model.embedContent({
+      content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
+      taskType: TaskType.RETRIEVAL_QUERY,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      outputDimensionality: EMBED_DIMS,
+    } as Parameters<typeof model.embedContent>[0]);
+    return Array.from(result.embedding.values);
+  } catch (err) {
+    console.error('[MCP] Gemini embedding failed:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
 
 /**
  * Fetches a stored Google OAuth access token for the given user and service.
@@ -103,37 +133,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { query, limit = 5 } = request.params.arguments as { query: string; limit?: number };
 
     try {
-      // 1. In a real implementation, we would call the embedding API here.
-      // For the V1 MCP, we'll assume the client might provide context or we'll fetch via a helper.
-      // For simplicity in this bridge, we hit the EYES API or the DB directly if we have the key.
-      
-      // Note: Generating embeddings requires an API call to OpenAI.
-      const embRes = await fetch("https://api.openai.com/v1/embeddings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({ input: query, model: "text-embedding-3-small" }),
-      });
+      // 1. Generate embedding using Gemini (1024d) — matches the main app's vector store.
+      // DO NOT use OpenAI here: the memories table uses vector(1024) from Gemini gemini-embedding-001.
+      const embedding = await generateGeminiEmbedding(query);
+      if (!embedding) throw new Error('Gemini embedding failed. Check GEMINI_API_KEY in .env.');
 
-      if (!embRes.ok) throw new Error("Failed to generate embedding for search.");
-      const { data } = await embRes.json();
-      const embedding = data[0].embedding;
-
-      // 2. Search Supabase
-      const { data: matches, error } = await supabase.rpc("match_embeddings", {
+      // 2. Search Supabase via match_memories RPC (match_embeddings was dropped in migration 030)
+      // match_memories: vector(1024), threshold, count, user_id_arg
+      const { data: matches, error } = await supabase.rpc("match_memories", {
         query_embedding: embedding,
         match_threshold: 0.4,
         match_count: limit,
-        user_id_arg: process.env.MCP_DEFAULT_USER_ID, // Local MCP often runs for a single owner
+        user_id_arg: process.env.MCP_DEFAULT_USER_ID, // Local MCP runs for a single owner
       });
 
       if (error) throw error;
 
-      interface MemoryMatch { content: string; similarity: number; }
+      interface MemoryMatch { content: string; title: string | null; platform: string; similarity: number; event_timestamp: string | null; }
       const formattedResults = (matches as MemoryMatch[] || []).map((m) =>
-        `[Memory] ${m.content}\n(Similarity: ${Math.round(m.similarity * 100)}%)`
+        `[${m.platform?.toUpperCase() ?? 'MEMORY'}] ${m.title ? m.title + '\n' : ''}${m.content}\n(Similarity: ${Math.round(m.similarity * 100)}%)`
       ).join("\n---\n");
 
       return {
@@ -219,24 +237,26 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   if (request.params.uri === "eyes://recent-memories") {
+    // Use 'memories' table (the canonical store) — 'raw_events' table does not exist.
     const { data, error } = await supabase
-      .from("raw_events")
-      .select("platform, title, content, timestamp")
+      .from("memories")
+      .select("platform, title, content, timestamp, event_type")
       .eq("user_id", process.env.MCP_DEFAULT_USER_ID)
+      .not("content", "is", null)
       .order("timestamp", { ascending: false })
       .limit(10);
 
     if (error) throw error;
 
     const text = (data || []).map(d => 
-      `[${d.platform}] ${d.title}\n${d.content}\nDate: ${d.timestamp}`
+      `[${d.platform?.toUpperCase()}] ${d.title ?? '(no title)'}\n${d.content}\nDate: ${d.timestamp}`
     ).join("\n\n");
 
     return {
       contents: [{
         uri: request.params.uri,
         mimeType: "text/plain",
-        text,
+        text: text || 'No memories indexed yet.',
       }],
     };
   }

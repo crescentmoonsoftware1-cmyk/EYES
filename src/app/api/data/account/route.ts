@@ -94,7 +94,7 @@ export async function DELETE(request: Request) {
       { count: topicsBefore },
       { count: syncStatusBefore },
       { count: tokenBefore },
-      { count: embeddingsBefore },
+      { count: chatThreadsBefore },
       { data: tokenRows },
     ] = await Promise.all([
       supabase.from('memories').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -132,60 +132,69 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { error: topicsDeleteError } = await supabase
-      .from('topics')
-      .delete()
-      .eq('user_id', user.id);
-
+    // ── Critical deletes: hard errors if they fail ────────────────────────────
+    const { error: topicsDeleteError } = await supabase.from('topics').delete().eq('user_id', user.id);
     if (topicsDeleteError) {
-      return NextResponse.json(
-        { error: withPolicyHint(topicsDeleteError.message || 'Failed to delete topics.') },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: withPolicyHint(topicsDeleteError.message || 'Failed to delete topics.') }, { status: 500 });
     }
 
-    const { error: memoriesDeleteError } = await supabase
-      .from('memories')
-      .delete()
-      .eq('user_id', user.id);
-
+    const { error: memoriesDeleteError } = await supabase.from('memories').delete().eq('user_id', user.id);
     if (memoriesDeleteError) {
-      return NextResponse.json(
-        { error: withPolicyHint(memoriesDeleteError.message || 'Failed to delete memories.') },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: withPolicyHint(memoriesDeleteError.message || 'Failed to delete memories.') }, { status: 500 });
     }
 
-    const { error: syncDeleteError } = await supabase
-      .from('sync_status')
-      .delete()
-      .eq('user_id', user.id);
-
+    const { error: syncDeleteError } = await supabase.from('sync_status').delete().eq('user_id', user.id);
     if (syncDeleteError) {
-      return NextResponse.json(
-        { error: withPolicyHint(syncDeleteError.message || 'Failed to delete sync state.') },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: withPolicyHint(syncDeleteError.message || 'Failed to delete sync state.') }, { status: 500 });
     }
 
-    const { error: tokenDeleteError } = await supabase
-      .from('oauth_tokens')
-      .delete()
-      .eq('user_id', user.id);
+    const { error: chatThreadsDeleteError } = await supabase.from('chat_threads').delete().eq('user_id', user.id);
+    if (chatThreadsDeleteError) {
+      return NextResponse.json({ error: withPolicyHint(chatThreadsDeleteError.message || 'Failed to delete chat history.') }, { status: 500 });
+    }
 
+    const { error: chatMessagesDeleteError } = await supabase.from('chat_messages').delete().eq('user_id', user.id);
+    if (chatMessagesDeleteError) {
+      return NextResponse.json({ error: withPolicyHint(chatMessagesDeleteError.message || 'Failed to delete chat messages.') }, { status: 500 });
+    }
+
+    const { error: tokenDeleteError } = await supabase.from('oauth_tokens').delete().eq('user_id', user.id);
     if (tokenDeleteError) {
-      return NextResponse.json(
-        { error: withPolicyHint(tokenDeleteError.message || 'Failed to delete OAuth tokens.') },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: withPolicyHint(tokenDeleteError.message || 'Failed to delete OAuth tokens.') }, { status: 500 });
     }
+
+    // ── Cognitive / derived data: GDPR right-to-erasure covers derived data ──
+    // Best-effort: log failures but don't abort — raw data already gone above.
+    const cognitiveTableErrors: string[] = [];
+    const cognitiveTables = [
+      'cognitive_clusters',
+      'detected_loops',
+      'drift_snapshots',
+      'state_vectors',
+      'entities',
+      'entity_correlations',
+      'query_behavior',
+      'reputation_audits',
+      'alerts',
+      'connector_settings',
+      'sync_run_logs',
+      'sync_retry_queue',
+      'sync_retry_dead_letters',
+    ] as const;
+
+    await Promise.all(
+      cognitiveTables.map(async (table) => {
+        const { error } = await supabase.from(table).delete().eq('user_id', user.id);
+        if (error) {
+          console.warn(`[GDPR Purge] Failed to delete from ${table}:`, error.message);
+          cognitiveTableErrors.push(table);
+        }
+      })
+    );
 
     const { error: profileUpdateError } = await supabase
       .from('user_profiles')
-      .update({
-        memories_indexed: 0,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ memories_indexed: 0, updated_at: new Date().toISOString() })
       .eq('user_id', user.id);
 
     if (profileUpdateError) {
@@ -216,18 +225,20 @@ export async function DELETE(request: Request) {
       ok: true,
       deleted: {
         rawEvents: rawEventsBefore ?? 0,
-        embeddings: embeddingsBefore ?? 0,
+        chatThreads: chatThreadsBefore ?? 0,
         topics: topicsBefore ?? 0,
         syncStatusRows: syncStatusBefore ?? 0,
         oauthTokens: tokenBefore ?? 0,
       },
+      cognitiveTablesErased: cognitiveTables.filter(t => !cognitiveTableErrors.includes(t)),
+      ...(cognitiveTableErrors.length > 0 && { cognitiveTableWarnings: cognitiveTableErrors }),
       revocations,
       guardrails: {
         confirmed: true,
         recentReauthVerified: true,
         reauthWindowMinutes: ACCOUNT_PURGE_REAUTH_WINDOW_MINUTES,
       },
-      message: 'All indexed data and connection state have been deleted for this account.',
+      message: 'All indexed, cognitive, and derived data has been erased for this account.',
     });
   } catch (error) {
     console.error('account data purge error:', error);

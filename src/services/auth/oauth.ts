@@ -69,11 +69,10 @@ export function isRetryableGoogleRefreshFailure(status: number | null, body: unk
   if (status >= 400 && status < 500) {
     const payload = body as { error?: string; error_description?: string } | null;
     const errorText = `${payload?.error || ''} ${payload?.error_description || ''}`.toLowerCase();
-
+    // invalid_grant / invalid_client are permanent — not retryable
     if (errorText.includes('invalid_grant') || errorText.includes('invalid_client')) {
       return false;
     }
-
     return false;
   }
 
@@ -387,7 +386,8 @@ export async function getValidRedditToken(
   }
 
   try {
-    const authHeader = btoa(`${clientId}:${clientSecret}`);
+    // Buffer.from is the correct Node.js equivalent of btoa() — handles all ASCII safely
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const response = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: { 

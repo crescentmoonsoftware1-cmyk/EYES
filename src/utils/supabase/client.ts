@@ -129,8 +129,10 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        // Avoid aggressive background refresh loops in development.
-        autoRefreshToken: false,
+        // autoRefreshToken: true (default) — tokens refresh automatically before expiry.
+        // withInTabAuthLock serializes concurrent refresh calls within the same tab,
+        // preventing the race condition that originally motivated disabling this.
+        autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
         storageKey,

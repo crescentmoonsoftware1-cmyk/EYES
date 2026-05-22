@@ -236,8 +236,6 @@ export async function GET(
       // ══════════════════════════════════════════════════════════════════
       // PAGES 3–5 — PER-CONNECTOR BREAKDOWN
       // ══════════════════════════════════════════════════════════════════
-      const connectorPages = connectors.length;
-      void connectorPages; // retained for future page-count display
       for (let i = 0; i < 3; i++) {
         doc.addPage(); bg();
         const platform = connectors[i];

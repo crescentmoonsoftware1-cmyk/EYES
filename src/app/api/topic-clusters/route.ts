@@ -30,6 +30,7 @@ type CachedTopic = {
   event_ids: string[];
   sentiment: string;
   connection_count: number;
+  platforms: string[];  // L5: now persisted via migration 041
   updated_at: string;
 };
 
@@ -197,7 +198,7 @@ export async function GET() {
         // Return all cached clusters
         const { data: allCached } = await supabase
           .from('topics')
-          .select('title,description,event_ids,sentiment,connection_count')
+          .select('title,description,event_ids,sentiment,connection_count,platforms')
           .eq('user_id', userId)
           .order('connection_count', { ascending: false });
 
@@ -210,7 +211,7 @@ export async function GET() {
             sentiment: (t.sentiment as TopicCluster['sentiment']) || 'neutral',
             connectionCount: t.connection_count || 1,
             totalEvents: (t.event_ids || []).length,
-            platforms: [],
+            platforms: (t.platforms as string[]) || [],  // L5: now populated from DB
           }));
           return NextResponse.json({ clusters, generatedAt: (allCached[0] as CachedTopic & { updated_at: string }).updated_at || new Date().toISOString(), source: 'cache' });
         }
@@ -256,6 +257,7 @@ export async function GET() {
           event_ids: c.eventIds,
           sentiment: c.sentiment,
           connection_count: c.connectionCount,
+          platforms: c.platforms,             // L5: persist platforms array (migration 041)
           created_at: nowIso,
           updated_at: nowIso,
         }))

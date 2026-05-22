@@ -1,10 +1,16 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import styles from './AuthContext.module.css';
+import {
+  useAuthSession,
+  resetPulseTimer,
+  getErrorMessage,
+  purgeSupabaseLocalAuthArtifacts,
+  isRefreshTokenFailure,
+} from './hooks/useAuthSession';
 
 export interface User {
   id: string;
@@ -47,25 +53,52 @@ type UserProfileRow = {
   memories_indexed: number | null;
 };
 
-type QueryResult<T> = {
+type DBResult<T> = {
   data: T | null;
   error: { message?: string } | null;
 };
 
-type SessionResult = {
-  data: { session: Session | null };
-  error: { message?: string } | null;
-};
+// Legacy aliases kept for backward compat with existing call sites
+type QueryResult<T> = DBResult<T>;
+type SupabaseQueryLike<T> = DBResult<T>;
 
-type SupabaseQueryLike<T> = {
-  data: T | null;
-  error: { message?: string } | null;
-};
-
-const REALTIME_REFRESH_EVENT = 'eyes-realtime-refresh';
-const PULSE_THROTTLE_MS = 10000; // Hard 10s throttle for global stability
-const AUTO_BACKGROUND_SYNC_ENABLED = process.env.NEXT_PUBLIC_AUTO_BACKGROUND_SYNC === 'true';
 const PROFILE_CACHE_KEY = 'eyes-user-profile-v1';
+const AUTO_BACKGROUND_SYNC_ENABLED = process.env.NEXT_PUBLIC_AUTO_BACKGROUND_SYNC === 'true';
+const REALTIME_PULSE_THROTTLE_MS = 10000;
+
+let _lastPulseTime = 0;
+function emitRealtimeRefreshEvent() {
+  if (typeof window === 'undefined') return;
+  const now = Date.now();
+  if (now - _lastPulseTime < REALTIME_PULSE_THROTTLE_MS) return;
+  _lastPulseTime = now;
+  window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+// Timeout wrapper for supabase calls — prevents infinite hangs
+async function quickFetch<T>(
+  promise: PromiseLike<T> | Promise<T>,
+  timeoutMs: number,
+  fallback: T
+): Promise<T> {
+  type S = { state: 'resolved'; value: T } | { state: 'rejected'; error: unknown } | { state: 'timed_out' };
+  let tid: ReturnType<typeof setTimeout> | undefined;
+  const wrapped = Promise.resolve(promise)
+    .then<S>(value => ({ state: 'resolved', value }))
+    .catch<S>((error: unknown) => ({ state: 'rejected', error }));
+  const timeout = new Promise<S>(resolve => {
+    tid = setTimeout(() => resolve({ state: 'timed_out' }), timeoutMs);
+  });
+  const result = await Promise.race([wrapped, timeout]);
+  if (tid !== undefined) clearTimeout(tid);
+  if (result.state === 'timed_out') return fallback;
+  if (result.state === 'rejected') throw result.error;
+  return result.value;
+}
 
 function loadCachedProfile(): User | null {
   if (typeof window === 'undefined') return null;
@@ -89,90 +122,6 @@ function clearCachedProfile(): void {
   localStorage.removeItem(PROFILE_CACHE_KEY);
 }
 
-let lastPulseTime = 0;
-function emitRealtimeRefreshEvent() {
-  if (typeof window === 'undefined') return;
-  
-  const now = Date.now();
-  if (now - lastPulseTime < PULSE_THROTTLE_MS) {
-    return;
-  }
-  
-  lastPulseTime = now;
-  console.log('[Auth] Global Neural Pulse emitted. Throttling active (10s).');
-  window.dispatchEvent(new CustomEvent(REALTIME_REFRESH_EVENT));
-}
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function isRefreshTokenFailure(message?: string) {
-  const text = (message || '').toLowerCase();
-  return (
-    text.includes('invalid refresh token') ||
-    text.includes('refresh token not found') ||
-    (text.includes('refresh token') && text.includes('invalid'))
-  );
-}
-
-function getErrorMessage(error: unknown) {
-  if (typeof error === 'string') {
-    return error;
-  }
-
-  if (error && typeof error === 'object') {
-    const detail = error as {
-      message?: string;
-      error_description?: string;
-      error?: string;
-      name?: string;
-    };
-
-    const candidates = [detail.message, detail.error_description, detail.error, detail.name]
-      .filter((value): value is string => Boolean(value && value.trim()));
-
-    if (candidates.length > 0) {
-      return candidates.join(' ');
-    }
-  }
-
-  return String(error ?? '');
-}
-
-function isSupabaseLockStealFailure(message?: string) {
-  const text = (message || '').toLowerCase();
-  return (
-    text.includes('was released because another request stole it') ||
-    (text.includes('lock "lock:sb-') && text.includes('stole it'))
-  );
-}
-
-function purgeSupabaseLocalAuthArtifacts() {
-  if (typeof window === 'undefined') return;
-
-  const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')?.[0];
-  const preferredKey = supabaseRef ? `sb-${supabaseRef}-auth-token` : null;
-
-  const localKeys = Object.keys(window.localStorage);
-  localKeys.forEach((key) => {
-    const isPreferred = preferredKey ? key === preferredKey : false;
-    const isLegacySupabaseKey = key.startsWith('sb-') && key.endsWith('-auth-token');
-    if (isPreferred || isLegacySupabaseKey) {
-      window.localStorage.removeItem(key);
-    }
-  });
-
-  const sessionKeys = Object.keys(window.sessionStorage);
-  sessionKeys.forEach((key) => {
-    const isPreferred = preferredKey ? key === preferredKey : false;
-    const isLegacySupabaseKey = key.startsWith('sb-') && key.endsWith('-auth-token');
-    if (isPreferred || isLegacySupabaseKey) {
-      window.sessionStorage.removeItem(key);
-    }
-  });
-}
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth() {
@@ -181,40 +130,6 @@ export function useAuth() {
   return ctx;
 }
 
-// Helper to avoid infinite hanging on external calls
-async function quickFetch<T>(promise: PromiseLike<T> | Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
-  type SettledResult =
-    | { state: 'resolved'; value: T }
-    | { state: 'rejected'; error: unknown }
-    | { state: 'timed_out' };
-
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const wrappedPromise = Promise.resolve(promise)
-    .then<SettledResult>((value) => ({ state: 'resolved', value }))
-    .catch<SettledResult>((error: unknown) => ({ state: 'rejected', error }));
-
-  const timeoutPromise = new Promise<SettledResult>((resolve) => {
-    timeoutId = setTimeout(() => {
-      console.warn(`[Auth] Async operation exceeded ${timeoutMs}ms. Using fallback.`);
-      resolve({ state: 'timed_out' });
-    }, timeoutMs);
-  });
-
-  const result = await Promise.race([wrappedPromise, timeoutPromise]);
-  if (timeoutId !== undefined) {
-    clearTimeout(timeoutId);
-  }
-
-  if (result.state === 'timed_out') {
-    return fallback;
-  }
-
-  if (result.state === 'rejected') {
-    throw result.error;
-  }
-
-  return result.value;
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -223,12 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showAuthFallback, setShowAuthFallback] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const authInitStartedRef = useRef(false);
 
   const supabase = useMemo(() => createClient(), []);
 
-  const syncInProgressRef    = useRef(false);
-  const lastSyncedUserIdRef  = useRef<string | null>(null);
+  const syncInProgressRef = useRef(false);
 
   const syncProfile = useCallback(async (authUser: { id: string; email?: string; metadata?: AuthMetadata }): Promise<User> => {
     if (syncInProgressRef.current) {
@@ -239,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: authUser.metadata?.name || authUser.email?.split('@')[0] || 'User',
         email: authUser.email || '',
         avatar: (authUser.metadata?.name || authUser.email?.split('@')[0] || 'U').charAt(0).toUpperCase(),
-        plan: 'Private Beta',
+        plan: loadCachedProfile()?.plan || 'Private Beta',   // M1: use cached plan while sync completes
         joinedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
         memoriesIndexed: 0,
       };
@@ -279,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               memoriesIndexed: fetchResult.data.memories_indexed || 0,
             };
             saveCachedProfile(fresh);
+            setUser(fresh); // M2: update live UI with fresh data (was only updating cache)
           }
         } catch { /* background refresh failed — cache still valid */ }
       })();
@@ -286,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Increase timeout to 15s to handle DB load during syncs.
+      // Increase timeout to 8s to handle DB load during syncs.
       const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
@@ -294,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_id', authUser.id)
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
-        5000,
+        8000,  // L2: comment said 15s but was actually 5s — now 8s
         { data: null, error: { message: 'Timed out' } }
       );
 
@@ -308,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: profile.name,
           email: authUser.email || '',
           avatar: profile.avatar || initials,
-          plan: profile.plan || 'Private Beta',
+          plan: profile.plan || 'Private Beta',   // ← read from DB, fallback only if null
           joinedDate: profile.joined_date || joinedDate,
           memoriesIndexed: profile.memories_indexed || 0,
         };
@@ -320,14 +234,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isTimeout) {
         console.warn('[Auth] Profile fetch timed out. Using fallback user to avoid loop.');
         syncInProgressRef.current = false;
+        // Use cached plan if available, otherwise default
+        const cached = loadCachedProfile();
         return {
           id: authUser.id,
           name: fallbackName,
           email: authUser.email || '',
           avatar: initials,
-          plan: 'Private Beta',
+          plan: cached?.plan || 'Private Beta',
           joinedDate: joinedDate,
-          memoriesIndexed: 0,
+          memoriesIndexed: cached?.memoriesIndexed || 0,
         };
       }
 
@@ -360,7 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: final.name,
         email: authUser.email || '',
         avatar: final.avatar || initials,
-        plan: 'Private Beta',
+        plan: final.plan || 'Private Beta',   // ← read from DB even on new profile creation
         joinedDate: joinedDate,
         memoriesIndexed: 0,
       };
@@ -380,152 +296,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase]);
 
-  // Initial Hydration Logic
+  // ── useAuthSession handles session init + rejection guard ───────────────────
+  useAuthSession(supabase, syncProfile, setUser, setIsLoading);
+  // NOTE: useRealtimeSync + useBackgroundSync are NOT called here.
+  // The inline useEffects below (lines ~392-526) are the active implementation
+  // and include additional guards (isUuid check, isPublicRoute, OAuth route).
+
+  // Theme init — sole purpose of this effect after hook extraction
   useEffect(() => {
-    if (authInitStartedRef.current) {
-      return;
-    }
-    authInitStartedRef.current = true;
-
     let mounted = true;
-    console.log('[Auth] Initializing Secure Session...');
-
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const message = getErrorMessage(event.reason);
-
-      if (isSupabaseLockStealFailure(message)) {
-        event.preventDefault();
-        console.warn('[Auth] Suppressing transient Supabase lock contention rejection.');
-        return;
-      }
-
-      if (!isRefreshTokenFailure(message)) {
-        return;
-      }
-
-      event.preventDefault();
-      console.warn('[Auth] Unhandled invalid refresh token rejection detected. Purging local auth state.');
-      void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      purgeSupabaseLocalAuthArtifacts();
-      if (mounted) {
-        setUser(null);
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    }
-
-    // HARD COLD SAFETY: Never hang the app forever during initialization.
-    const safetyTimer = setTimeout(() => {
-      if (!mounted) {
-        return;
-      }
-
-      setIsLoading((prev) => {
-        if (prev) {
-          console.warn('[Auth] Initialization safety timer tripped. Forcing transition.');
-        }
-        return false;
-      });
-    }, 12000);
-
-    // Initialize theme from storage
     const savedTheme = localStorage.getItem('eyes-theme') as 'dark' | 'light';
-    if (savedTheme) {
+    if (savedTheme && mounted) {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
     }
-
-    const initialize = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await quickFetch<SessionResult>(
-          supabase.auth.getSession(),
-          9000,
-          { data: { session: null }, error: null }
-        );
-
-        if (sessionError) {
-          if (isRefreshTokenFailure(sessionError.message)) {
-            console.warn('[Auth] Invalid refresh token detected. Purging local Supabase auth artifacts.');
-            await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-            purgeSupabaseLocalAuthArtifacts();
-            if (mounted) {
-              setUser(null);
-            }
-            return;
-          }
-          throw sessionError;
-        }
-
-        if (session?.user && mounted) {
-          lastSyncedUserIdRef.current = session.user.id; // mark synced BEFORE await
-          const profile = await syncProfile({
-            id: session.user.id,
-            email: session.user.email,
-            metadata: session.user.user_metadata
-          });
-          if (mounted) setUser(profile);
-        }
-      } catch (err) {
-        const message = getErrorMessage(err);
-        if (isRefreshTokenFailure(message)) {
-          console.warn('[Auth] Refresh token failure during session bootstrap. Purging local Supabase auth artifacts.');
-          await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-          purgeSupabaseLocalAuthArtifacts();
-        } else {
-          console.error('[Auth] Initial session sync failed (purging stale state):', err);
-        }
-        if (mounted) {
-          setUser(null);
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-          clearTimeout(safetyTimer);
-          console.log('[Auth] System Ready.');
-        }
-      }
-    };
-
-    // Sub to future changes — skip if same user already synced (initialize() runs concurrently)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      console.log('[Auth] State Event:', event);
-
-      // Skip non-actionable events
-      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
-
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        // Use ref (not state) to check — state is async and not reliable here
-        if (lastSyncedUserIdRef.current === session.user.id) {
-          console.log('[Auth] Already synced this user, skipping duplicate event.');
-          return;
-        }
-        lastSyncedUserIdRef.current = session.user.id;
-        const profile = await syncProfile({
-          id: session.user.id,
-          email: session.user.email,
-          metadata: session.user.user_metadata
-        });
-        if (mounted) setUser(profile);
-      } else if (event === 'SIGNED_OUT') {
-        lastSyncedUserIdRef.current = null;
-        clearCachedProfile();
-        if (mounted) setUser(null);
-      }
-    });
-
-    initialize();
-
-    return () => {
-      mounted = false;
-      clearTimeout(safetyTimer);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      }
-      subscription.unsubscribe();
-    };
-  }, [supabase, syncProfile]);
+    return () => { mounted = false; };
+  }, []);
 
   // Avoid flashing a full-screen loader for fast auth checks.
   useEffect(() => {
@@ -546,7 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isLoading) return;
 
     const isPublic = ['/login', '/signup'].includes(pathname);
-    const isOAuthCallback = pathname.includes('/connect');
+    const isOAuthCallback = pathname.includes('/connect') || pathname.startsWith('/auth'); // M8: /auth/callback was missing
     const justSuccess =
       typeof window !== 'undefined' &&
       new URLSearchParams(window.location.search).get('oauth') === 'success';
@@ -681,7 +467,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       syncInFlight = true;
-      let syncTriggered = false;
       try {
         const {
           data: { session },
@@ -695,9 +480,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: 'POST',
           cache: 'no-store',
           keepalive: true,
+          credentials: 'include',  // L10: ensure session cookie is sent
         });
-
-        syncTriggered = true;
 
         if (!response.ok && response.status !== 202) {
           console.warn(`[Auth] Background sync fan-out returned ${response.status}.`);
@@ -758,6 +542,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, syncProfile]);
 
   const logout = useCallback(async () => {
+    clearCachedProfile();         // L7: clear cache so next login doesn't flash stale data
+    resetPulseTimer();            // L8: reset pulse throttle (via hook export)
     await supabase.auth.signOut();
     setUser(null);
     router.replace('/login');
@@ -776,13 +562,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = useCallback(async (email: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined,  // M6: SSR guard
     });
     if (error) return { success: false, message: error.message };
     return { success: true };
   }, [supabase]);
 
+  /**
+   * Updates mutable user profile fields.
+   * L4 note: Only `name` (and avatar initial if it's a single char) are writable here.
+   * Fields `plan`, `joinedDate`, `memoriesIndexed` are read-only — managed server-side.
+   */
   const updateUser = useCallback(async (updates: Partial<User>): Promise<AuthResult> => {
+
     if (!user) return { success: false, message: 'Not authenticated' };
 
     try {
@@ -835,7 +627,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setGlobalTheme = useCallback((newTheme: 'dark' | 'light') => {
     setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    if (typeof document !== 'undefined') document.documentElement.setAttribute('data-theme', newTheme); // L9: SSR guard
     localStorage.setItem('eyes-theme', newTheme);
   }, []);
 
