@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { upsertSyncStatusSafely } from '@/utils/supabase/upsert';
+import { upsertSyncStatusSafely, batchUpsertSyncStatus } from '@/utils/supabase/upsert';
 import { resolveSyncActor } from '@/utils/sync/actor';
 import { waitUntil } from '@vercel/functions';
 
@@ -133,14 +133,6 @@ export async function POST(request: Request) {
       const routePlatform = toSyncRoutePlatform(platform);
       const startedAt = Date.now();
 
-      await upsertSyncStatusSafely(supabase, {
-        user_id: userId,
-        platform,
-        status: 'syncing',
-        sync_progress: 1,
-        error_message: null,
-      });
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
 
@@ -209,6 +201,15 @@ export async function POST(request: Request) {
         clearTimeout(timeoutId);
       }
     };
+
+    // Pre-mark all platforms as 'syncing' in a single batch write
+    await batchUpsertSyncStatus(supabase, allPlatforms.map((token) => ({
+      user_id: userId,
+      platform: token.platform,
+      status: 'syncing',
+      sync_progress: 1,
+      error_message: null,
+    })));
 
     // 3. LAUNCH BACKGROUND SYNC (Use waitUntil for Vercel persistence)
     waitUntil(

@@ -90,7 +90,7 @@ export async function getValidGoogleToken(
 ): Promise<string | null> {
   const { data: tokenRow } = await supabase
     .from('oauth_tokens')
-    .select('*')
+    .select('access_token,refresh_token,expires_at')
     .eq('user_id', userId)
     .eq('platform', platform)
     .maybeSingle();

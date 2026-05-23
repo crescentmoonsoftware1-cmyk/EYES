@@ -203,8 +203,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch cognitive context in parallel with embedding generation
+    // Fetch cognitive context AND (conditionally) audit commitments in parallel
+    const isTaskQuery = /work|task|pending|commitment|promise|deadline/i.test(message);
     const cognitiveContextPromise = fetchCognitiveContext(supabase as unknown as import('@supabase/supabase-js').SupabaseClient, user.id);
+    const auditCommitmentsPromise = isTaskQuery
+      ? supabase
+          .from('reputation_audits')
+          .select('metadata')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+      : Promise.resolve({ data: null });
 
     // 1. Generate real-world embedding (via abstraction)
     const retrievalStartedAt = Date.now();
@@ -255,17 +266,9 @@ export async function POST(request: Request) {
           .join('\n\n---\n\n');
       }
 
-      // 2.5: Intent-Based commitment retrieval (If asking about tasks/work)
-      const isTaskQuery = /work|task|pending|commitment|promise|deadline/i.test(message);
+      // 2.5: Intent-Based commitment retrieval — resolved from parallel promise
       if (isTaskQuery) {
-        const { data: latestAudit } = await supabase
-          .from('reputation_audits')
-          .select('metadata')
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+        const { data: latestAudit } = await auditCommitmentsPromise;
 
         if (latestAudit?.metadata?.commitments) {
           const commitments = (latestAudit.metadata.commitments as Array<{ platform: string, date: string, text: string }>)

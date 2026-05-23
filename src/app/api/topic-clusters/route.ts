@@ -184,37 +184,27 @@ export async function GET() {
 
     const userId = authData.user.id;
 
-    // 1. Check cache (topics table, < 6 hours old)
+    // 1. Check cache (topics table, < 6 hours old) — single query, all columns
     const { data: cached } = await supabase
       .from('topics')
-      .select('title,description,event_ids,sentiment,connection_count,updated_at')
+      .select('title,description,event_ids,sentiment,connection_count,platforms,updated_at')
       .eq('user_id', userId)
-      .order('updated_at', { ascending: false })
-      .limit(1);
+      .order('connection_count', { ascending: false });
 
     if (cached && cached.length > 0) {
       const age = Date.now() - new Date((cached[0] as CachedTopic).updated_at).getTime();
       if (age < CACHE_TTL_MS) {
-        // Return all cached clusters
-        const { data: allCached } = await supabase
-          .from('topics')
-          .select('title,description,event_ids,sentiment,connection_count,platforms')
-          .eq('user_id', userId)
-          .order('connection_count', { ascending: false });
-
-        if (allCached && allCached.length > 0) {
-          const clusters: TopicCluster[] = (allCached as CachedTopic[]).map((t, i) => ({
-            id: `cached-${i}`,
-            title: t.title,
-            description: t.description,
-            eventIds: t.event_ids || [],
-            sentiment: (t.sentiment as TopicCluster['sentiment']) || 'neutral',
-            connectionCount: t.connection_count || 1,
-            totalEvents: (t.event_ids || []).length,
-            platforms: (t.platforms as string[]) || [],  // L5: now populated from DB
-          }));
-          return NextResponse.json({ clusters, generatedAt: (allCached[0] as CachedTopic & { updated_at: string }).updated_at || new Date().toISOString(), source: 'cache' });
-        }
+        const clusters: TopicCluster[] = (cached as CachedTopic[]).map((t, i) => ({
+          id: `cached-${i}`,
+          title: t.title,
+          description: t.description,
+          eventIds: t.event_ids || [],
+          sentiment: (t.sentiment as TopicCluster['sentiment']) || 'neutral',
+          connectionCount: t.connection_count || 1,
+          totalEvents: (t.event_ids || []).length,
+          platforms: (t.platforms as string[]) || [],
+        }));
+        return NextResponse.json({ clusters, generatedAt: (cached[0] as CachedTopic).updated_at || new Date().toISOString(), source: 'cache' });
       }
     }
 
