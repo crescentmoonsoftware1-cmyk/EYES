@@ -1,9 +1,16 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 // Using Resend shared domain until the-eyes.app is purchased.
 // Switch to 'EYES <hello@the-eyes.app>' after buying the domain + adding DNS records.
 const FROM = 'EYES <onboarding@resend.dev>';
+
+// Lazy-init: new Resend() throws at module load if API key is missing,
+// which crashes Next.js build during page-data collection.
+function getResendClient(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not set.');
+  return new Resend(key);
+}
 
 // ── Email templates ────────────────────────────────────────────────────────────
 
@@ -94,7 +101,7 @@ function connectorErrorHtml(name: string, platform: string) {
 export async function sendWelcomeEmail(to: string, name: string) {
   if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResendClient().emails.send({
       from: FROM,
       to,
       subject: 'EYES is now watching.',
@@ -109,7 +116,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
 export async function sendClusterReadyEmail(to: string, name: string, clusterCount: number) {
   if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResendClient().emails.send({
       from: FROM,
       to,
       subject: `EYES detected ${clusterCount} behavioral patterns in your data`,
@@ -117,14 +124,14 @@ export async function sendClusterReadyEmail(to: string, name: string, clusterCou
     });
     console.log(`[Email] Cluster ready sent → ${to}`);
   } catch (err) {
-    console.error('[Email] Cluster ready failed:', err);
+    console.error('[Email] Cluster ready failed:', err)
   }
 }
 
 export async function sendConnectorErrorEmail(to: string, name: string, platform: string) {
   if (!process.env.RESEND_API_KEY) return;
   try {
-    await resend.emails.send({
+    await getResendClient().emails.send({
       from: FROM,
       to,
       subject: `Action needed: Your ${platform} connection expired`,
