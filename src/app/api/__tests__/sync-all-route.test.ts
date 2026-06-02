@@ -16,6 +16,7 @@ vi.mock('@/utils/supabase/server', () => ({
 
 vi.mock('@/utils/supabase/upsert', () => ({
   upsertSyncStatusSafely: vi.fn(async () => ({ error: null })),
+  batchUpsertSyncStatus: vi.fn(async () => ({ error: null })),
 }));
 
 vi.mock('@/utils/sync/actor', () => ({
@@ -81,7 +82,7 @@ describe('POST /api/sync/all', () => {
     };
 
     resolveSyncActorMock.mockResolvedValue({
-      supabase,
+      supabase: supabase as any,
       userId: '11111111-1111-4111-8111-111111111111',
       userEmail: 'test@example.com',
       userName: 'Test User',

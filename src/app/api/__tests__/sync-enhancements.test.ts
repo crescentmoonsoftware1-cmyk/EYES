@@ -96,6 +96,18 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
 
   return {
     from: vi.fn((table: string) => {
+      if (table === 'connector_settings') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+              })),
+            })),
+          })),
+        };
+      }
+
       if (table === 'reputation_audits') {
         return {
           select: vi.fn(() => ({
@@ -135,7 +147,7 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
         };
       }
 
-      if (table === 'raw_events') {
+      if (table === 'raw_events' || table === 'memories') {
         return {
           select: vi.fn(() => ({
             eq: vi.fn(async () => ({ count: totalMemories, error: null })),
@@ -143,8 +155,23 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
         };
       }
 
+      if (table === 'action_queue') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(async () => ({ data: [], error: null })),
+            })),
+          })),
+        };
+      }
+
       if (table === 'user_profiles') {
         return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(async () => ({ data: { email: 'user@example.com', name: 'User' }, error: null })),
+            })),
+          })),
           update: vi.fn(() => ({
             eq: vi.fn(async () => ({ error: null })),
           })),

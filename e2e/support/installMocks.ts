@@ -103,7 +103,7 @@ export async function installSupabaseClientMock(page: Page) {
       return channel;
     };
 
-    (window as Window & { __THE_MONITOR_SUPABASE_CLIENT__?: unknown }).__THE_MONITOR_SUPABASE_CLIENT__ = {
+    const mockClient = {
       auth: {
         getSession: async () => ({
           data: {
@@ -141,6 +141,9 @@ export async function installSupabaseClientMock(page: Page) {
       channel: () => createChannel(),
       removeChannel: async () => ({ error: null }),
     };
+
+    (window as any).__THE_MONITOR_SUPABASE_CLIENT__ = mockClient;
+    (window as any).__THE_EYES_SUPABASE_CLIENT__ = mockClient;
   }, MOCK_USER);
 }
 
@@ -476,6 +479,236 @@ export async function installApiRouteMocks(page: Page, tracker: ApiCallTracker) 
         },
         body: 'GitHub sync and embeddings look healthy. The latest memory highlights retry resiliency work in your PR discussions. [source:1]',
       });
+      return;
+    }
+
+    if (path === '/api/dashboard/bootstrap') {
+      await route.fulfill(
+        jsonResponse({
+          summary: {
+            totalMemories: 321,
+            overallRisk: 'LOW',
+            riskCounts: { heavy: 0, direct: 0, light: 2 },
+            flaggedItems: [],
+            comparisonData: [
+              {
+                eyes: 'Memory recall is healthy',
+                recruiter: 'Public profile appears stable',
+              },
+            ],
+          },
+          platforms: [
+            {
+              id: 'github',
+              name: 'GitHub',
+              connected: true,
+              status: 'connected',
+              items: 321,
+              errorMessage: null,
+            },
+          ],
+          feedEvents: [
+            {
+              id: 'evt-1',
+              platform: 'github',
+              title: 'Retry queue hardening merged',
+              content: 'Added retry backoff and escalation metadata.',
+              timestamp: nowIso,
+              eventType: 'pull_request',
+              author: 'playwright',
+              is_flagged: false,
+              flag_severity: null,
+              tags: ['resilience', 'scheduler'],
+              metadata: { repository: 'the-monitor' },
+            },
+          ],
+          syncStatus: { isSyncing: false, activeSyncs: [], memoriesIndexed: 321 },
+        })
+      );
+      return;
+    }
+
+    if (path === '/api/actions/queue') {
+      if (method === 'GET') {
+        await route.fulfill(
+          jsonResponse({
+            actions: [
+              {
+                id: 'action-1',
+                memory_id: 'mem-1',
+                platform: 'gmail',
+                title: 'Send RSVP to Sarah\'s invitation',
+                description: 'Sarah asked: Would you like to attend the dinner tomorrow at 7 PM?',
+                suggested_action: 'Sure, I\'d love to attend! Let me know if I should bring anything.',
+                action_type: 'EMAIL_REPLY',
+                confidence: 0.95,
+                status: 'pending',
+                extracted_at: nowIso,
+              },
+            ],
+            meta: {
+              lastRunAt: nowIso,
+              scanStats: {
+                analyzed: 10,
+                extracted: 1,
+              },
+              isStale: false,
+            },
+            recentlyHandled: [],
+          })
+        );
+      } else if (method === 'PATCH') {
+        await route.fulfill(jsonResponse({ success: true }));
+      }
+      return;
+    }
+
+    if (path === '/api/actions/extract' && method === 'POST') {
+      await route.fulfill(jsonResponse({ success: true, extracted: 1 }));
+      return;
+    }
+
+    if (path === '/api/actions/execute' && method === 'POST') {
+      await route.fulfill(jsonResponse({ success: true, result: 'Executed successfully' }));
+      return;
+    }
+
+    if (path === '/api/platform-readiness') {
+      await route.fulfill(
+        jsonResponse({
+          platforms: [
+            { id: 'github', connected: true, status: 'connected' }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (path === '/api/chat/threads') {
+      if (method === 'GET') {
+        await route.fulfill(
+          jsonResponse({
+            threads: [
+              {
+                id: 'thread-1',
+                title: 'Mocked PR discussion thread',
+                created_at: nowIso,
+                updated_at: nowIso,
+                chat_messages: [
+                  { role: 'user', content: 'What changed in my GitHub activity this week?' },
+                  { role: 'assistant', content: 'GitHub sync looks healthy. The latest memory highlights retry resiliency work.' },
+                ],
+              },
+            ],
+          })
+        );
+      } else if (method === 'DELETE') {
+        await route.fulfill(jsonResponse({ success: true }));
+      }
+      return;
+    }
+
+    if (path === '/api/audit/latest') {
+      await route.fulfill(
+        jsonResponse({
+          id: 'audit-latest-id',
+          status: 'completed',
+          riskScore: 2,
+          mentionsCount: 154,
+          commitmentsCount: 5,
+          summaryNarrative: 'Neural footprint safe and optimal.',
+          createdAt: nowIso,
+          reportUrl: '/mock-pdf-url',
+          metadata: {
+            sentimentBalance: 0.8,
+            unfulfilledCommitments: 0,
+            commitments: [],
+            opportunities: [],
+            topEntities: [],
+            riskFindings: [],
+          },
+        })
+      );
+      return;
+    }
+
+    if (path === '/api/audit/history') {
+      await route.fulfill(
+        jsonResponse({
+          audits: [
+            {
+              id: 'audit-latest-id',
+              status: 'completed',
+              riskScore: 2,
+              mentionsCount: 154,
+              commitmentsCount: 5,
+              summaryNarrative: 'Neural footprint safe.',
+              createdAt: nowIso,
+            },
+          ],
+        })
+      );
+      return;
+    }
+
+    if (path === '/api/audit/create' && method === 'POST') {
+      await route.fulfill(jsonResponse({ success: true, auditId: 'new-audit-id' }));
+      return;
+    }
+
+    if (path.startsWith('/api/audit/') && path.endsWith('/pdf')) {
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'application/pdf' },
+        body: 'mock-pdf-content',
+      });
+      return;
+    }
+
+    if (
+      path.startsWith('/api/audit/') &&
+      !path.endsWith('/history') &&
+      !path.endsWith('/latest') &&
+      !path.endsWith('/create')
+    ) {
+      await route.fulfill(
+        jsonResponse({
+          id: 'new-audit-id',
+          status: 'completed',
+          riskScore: 1,
+          mentionsCount: 321,
+          commitmentsCount: 1,
+          summaryNarrative: 'Brand new audit executed perfectly.',
+          createdAt: nowIso,
+          reportUrl: '/mock-pdf-url',
+          metadata: {
+            sentimentBalance: 0.9,
+            unfulfilledCommitments: 0,
+            commitments: [],
+            opportunities: [],
+            topEntities: [],
+            riskFindings: [],
+          },
+        })
+      );
+      return;
+    }
+
+    if (path === '/api/sync/history') {
+      await route.fulfill(
+        jsonResponse({
+          runs: [
+            {
+              runId: 'run-1',
+              createdAt: nowIso,
+              status: 'success',
+              platformCount: 1,
+              failedPlatforms: [],
+              durationMs: 1200,
+            },
+          ],
+        })
+      );
       return;
     }
 

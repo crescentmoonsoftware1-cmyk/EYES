@@ -268,7 +268,7 @@ const hoisted = vi.hoisted(() => {
     }
   );
 
-  const invokeModelMock = vi.fn(async (options: { capability: string }) => {
+  const invokeModelMock = vi.fn(async (options: { capability: string; system?: string }) => {
     if (options.capability === 'embed') {
       return { embedding: [0.12, 0.44], tokens: 5 };
     }
