@@ -1,10 +1,10 @@
 .header {
   height: 64px;
-  background: var(--bg-secondary);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-
-  border-bottom: 1px solid var(--border-primary);
+  background: rgba(255, 255, 255, 0.02);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;

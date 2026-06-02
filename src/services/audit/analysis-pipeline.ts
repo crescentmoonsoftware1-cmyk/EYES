@@ -50,8 +50,78 @@ async function resolveCommitmentStatuses(
 export class AuditAnalysisService {
   static async runAnalysis(auditId: string, userId: string) {
     const supabase = await createAdminClient();
+    const startedAt = Date.now();
     
     try {
+      // Get the audit record metadata to see if a specialized lens type is requested
+      const { data: auditRecord } = await supabase
+        .from('reputation_audits')
+        .select('metadata')
+        .eq('id', auditId)
+        .single();
+      const auditType = (auditRecord?.metadata as Record<string, any>)?.audit_type || 'full';
+
+      // Get User Settings for Risk Sensitivity
+      const { data: settingsData } = await supabase
+        .from('connector_settings')
+        .select('data_types')
+        .eq('user_id', userId)
+        .eq('platform', 'user_global')
+        .maybeSingle();
+        
+      let riskSensitivity = 'MEDIUM';
+      if (settingsData?.data_types?.[0]) {
+        try {
+          const parsedSettings = JSON.parse(settingsData.data_types[0]);
+          if (parsedSettings.riskSensitivity) riskSensitivity = parsedSettings.riskSensitivity;
+        } catch {}
+      }
+
+      let riskInstruction = '- Flag standard reputational risks, unmet commitments, and moderate negative sentiment.';
+      if (riskSensitivity === 'LOW') {
+        riskInstruction = '- Risk Sensitivity is LOW. Only flag massive, undeniable risks (e.g. lawsuits, explicit failure). Ignore minor complaints or subtle issues.';
+      } else if (riskSensitivity === 'HIGH') {
+        riskInstruction = '- Risk Sensitivity is HIGH. Be hyper-vigilant. Flag even subtle negative sentiment, passive-aggression, minor delays, and implied commitments.';
+      }
+
+      // Define keywords and instructions based on the selected lens
+      let commitmentKeywords = /\b(will|i'll|we'll|i will|we will|i'll|going to|plan to|planning to|need to|have to|should|must|shall|promised|commit|deadline|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|eod|eow|next week|tomorrow)|follow.?up|send|review|check|handle|take care|responsible for|assigned|action item|todo|to.do)\b/i;
+      let sensitiveKeywords = /\b(salary|budget|invoice|payment|debt|legal|lawsuit|confidential|private|conflict|fired|quit|resign|burnout|stressed|anxiety|urgent|critical|emergency|overdue|missed|failed|broke|broken|issue|problem|complaint|dispute|disagree)\b/i;
+      let lensInstruction = '';
+      let lensSummaryInstruction = '';
+
+      if (auditType === 'privacy') {
+        commitmentKeywords = /\b(private|confidential|auth|secret|pii|id)\b/i;
+        sensitiveKeywords = /email:\s|user id:|discord user|account id:|phone:|address:|\bemail\b.*@|password|credential|ssn|passport|dob|token|key|leak|unauthorized/i;
+        lensInstruction = '\n- Lens is PRIVACY: Pay special attention to personal data, phone numbers, email addresses, confidential project details, credentials, or PII. Mark isSensitive=true for any potentially exposed private info.';
+        lensSummaryInstruction = `
+- Focus the narrative and findings heavily on Privacy, Data Exposure, and PII hygiene.
+- Analyze if sensitive information is leaking across platforms.
+- Frame the opportunities around improving privacy settings and secure communication practices.`;
+      } else if (auditType === 'commitment') {
+        commitmentKeywords = /\b(will|i'll|we'll|i will|we will|i'll|going to|plan to|planning to|need to|have to|should|must|shall|promised|commit|deadline|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|eod|eow|next week|tomorrow)|follow.?up|send|review|check|handle|take care|responsible for|assigned|action item|todo|to.do)\b/i;
+        sensitiveKeywords = /\b(overdue|missed|failed|delay|late|incomplete|broken|pending|cancel|deadline)\b/i;
+        lensInstruction = '\n- Lens is OPERATIONAL/COMMITMENTS: Pay special attention to agreements, promises, deadlines, and action items. Make sure to capture any stated obligation as a commitment.';
+        lensSummaryInstruction = `
+- Focus the narrative and findings heavily on operational commitments, tasks, and follow-through reliability.
+- Analyze the ratio of completed vs pending commitments.
+- Frame the opportunities around improving organization, meeting deadlines, and task tracking.`;
+      } else if (auditType === 'sentiment') {
+        commitmentKeywords = /\b(feel|think|opinion|feedback)\b/i;
+        sensitiveKeywords = /\b(burnout|stressed|anxiety|angry|happy|sad|depressed|excited|furious|love|hate|dislike|upset|mad|frustrated|annoyed|disappoint|glad|awesome|terrible|bad|good|worst|best|conflict|disagree)\b/i;
+        lensInstruction = '\n- Lens is SENTIMENT: Pay special attention to the emotional tone of the communication. Accurately flag negative sentiment (-1) or positive sentiment (1).';
+        lensSummaryInstruction = `
+- Focus the narrative and findings heavily on emotional valence, sentiment stability, and relational tone.
+- Analyze key triggers for negative or stressed communications.
+- Frame the opportunities around tone management, stress reduction, and positive engagement.`;
+      } else {
+        lensInstruction = '\n- Lens is FULL: Perform a balanced analysis of sentiment, commitments, operational follow-through, and privacy leaks.';
+        lensSummaryInstruction = `
+- Provide a balanced 360° overview of privacy, commitments, and sentiment across all channels.`;
+      }
+
+      const finalRiskInstruction = riskInstruction + lensInstruction;
+
       // 1. Data Retrieval (Real data only)
       const twoYearsAgo = new Date();
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
@@ -63,7 +133,7 @@ export class AuditAnalysisService {
         .not('content', 'is', null)
         .gte('timestamp', twoYearsAgo.toISOString())
         .order('timestamp', { ascending: false })
-        .limit(500);
+        .limit(5000);
 
       if (fetchError || !events) {
         throw new Error(`Data retrieval failed: ${fetchError?.message}`);
@@ -78,7 +148,7 @@ export class AuditAnalysisService {
           commitments_count: 0,
           summary_narrative: 'No data available yet. Please run a Global Sync first to import your digital archive, then re-run the audit.',
           connectors_covered: [],
-          metadata: { riskFindings: [], commitments: [], topEntities: [], opportunities: [], trajectory: 'stable', failureRate: '0.00', complianceRate: '100.00', sentimentBalance: 1.0 }
+          metadata: { riskFindings: [], commitments: [], topEntities: [], opportunities: [], trajectory: 'stable', failureRate: '0.00', complianceRate: '100.00', sentimentBalance: 1.0, audit_type: auditType }
         }).eq('id', auditId);
         return { success: true, auditId, noData: true };
       }
@@ -96,16 +166,10 @@ export class AuditAnalysisService {
       // Pass B — Smart sampling: add recent records + per-platform diversity + 
       //          historical samples to give AI full behavioral context.
       //
-      // Result: ~80-120 high-value records sent to AI, covering the whole dataset.
-
-      const COMMITMENT_KEYWORDS = /\b(will|i'll|we'll|i will|we will|i'll|going to|plan to|planning to|need to|have to|should|must|shall|promised|commit|deadline|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|eod|eow|next week|tomorrow)|follow.?up|send|review|check|handle|take care|responsible for|assigned|action item|todo|to.do)\b/i;
-
-      const SENSITIVE_KEYWORDS = /\b(salary|budget|invoice|payment|debt|legal|lawsuit|confidential|private|conflict|fired|quit|resign|burnout|stressed|anxiety|urgent|critical|emergency|overdue|missed|failed|broke|broken|issue|problem|complaint|dispute|disagree)\b/i;
-
-      // Pass A: keyword-matched records from ALL events
+      // Result: ~80-120 high-value records sent to AI, covering      // Pass A: keyword-matched records from ALL events
       const commitmentCandidates = events.filter(e => {
         const text = `${e.title ?? ''} ${e.content ?? ''}`;
-        return COMMITMENT_KEYWORDS.test(text) || SENSITIVE_KEYWORDS.test(text);
+        return commitmentKeywords.test(text) || sensitiveKeywords.test(text);
       });
 
       // Pass B: smart sampling for context
@@ -139,87 +203,99 @@ export class AuditAnalysisService {
       const step = Math.max(1, Math.floor(olderEvents.length / 20));
       const historicalSample = olderEvents.filter((_, i) => i % step === 0).slice(0, 20);
 
-      // Merge and cap at 120 to stay within token budget
+      // Merge and cap at 60 — 120 records × 400 chars = ~48k chars which hits token limits
+      // and causes slow responses or truncated JSON. 60 records is sufficient for a quality audit.
       const selectedRecords = [
         ...commitmentCandidates,
         ...recentRecords,
         ...platformSamples,
         ...historicalSample,
       ].filter((e, idx, arr) => arr.findIndex(x => x.id === e.id) === idx)
-       .slice(0, 120);
+       .slice(0, 60);
 
       console.log(`[Audit] Smart selection: ${commitmentCandidates.length} keyword matches + ${recentRecords.length} recent + ${platformSamples.length} platform samples + ${historicalSample.length} historical = ${selectedRecords.length} records sent to AI (from ${events.length} total)`);
 
       const analysisInput = selectedRecords.map(e => ({
         id: e.id,
         platform: e.platform,
+        author: e.author || 'unknown',
         date: e.timestamp,
         text: `${e.title ?? ''}: ${e.content ?? ''}`.slice(0, 400)
       }));
 
+      // ── Batched parallel extraction ───────────────────────────────────────────
+      // Sending 60 records as one prompt causes Groq 413 (payload too large),
+      // forcing a slow fallback chain (90-260s). Split into 3×20 parallel batches
+      // so each call stays within Groq's limit and responds in ~1s.
+      const BATCH_SIZE = 20;
+      const batches: typeof analysisInput[] = [];
+      for (let i = 0; i < analysisInput.length; i += BATCH_SIZE) {
+        batches.push(analysisInput.slice(i, i + BATCH_SIZE));
+      }
 
-      const extractionPrompt = `
-You are a forensic digital analyst extracting structured intelligence from a person's raw digital archive.
-Be EXHAUSTIVE and AGGRESSIVE — err on the side of extracting MORE, not less.
+      const subjectName = (auditRecord?.metadata as Record<string, any>)?.subjectName || 'unknown user';
+      const buildExtractionPrompt = (batch: typeof analysisInput) => `
+You are a forensic digital analyst. Classify each record below. Return JSON only.
+The subject of this audit is: "${subjectName}".
 
-Records (${analysisInput.length} items across platforms: ${connectorsCovered.join(', ')}):
-${JSON.stringify(analysisInput)}
+Records (${batch.length} items):
+${JSON.stringify(batch)}
 
-For EVERY record, classify ALL of the following:
-
-1. sentiment: -1 (negative/frustrated/stressed), 0 (neutral/factual), +1 (positive/excited/proud)
-
-2. isCommitment: true for ANY of these patterns:
-   - Explicit promises: "I will", "I'll", "We will", "I promise", "I commit"
-   - Tasks/to-dos: "need to", "have to", "should", "must", "going to", "plan to"
-   - Scheduled intentions: "I'll send", "will review", "will follow up", "will check"
-   - Assignments from others accepted: "sure", "ok I'll", "I can handle", "I'll take care of"
-   - Calendar events the person created or accepted
-   - Deadlines mentioned: "by Friday", "before the meeting", "EOD", "by next week"
-   - ANY stated future action, even implicit ("looking into X" = commitment to investigate)
-
-3. commitmentText: Extract the EXACT commitment text verbatim. If isCommitment=true this MUST be non-empty.
-
-4. isSensitive: true for ANY of:
-   - Financial discussions (money, budget, salary, invoice, debt, payment)
-   - Legal or compliance references
-   - Conflict, disagreement, or tension with another person
-   - Missed deadlines or broken promises
-   - Negative sentiment about a person, company, or situation
-   - Confidential or private information
-   - Stress, burnout, or emotional distress signals
-   - Health issues mentioned
-
-5. entities: Array of ALL people, companies, projects, products, or organizations mentioned (proper nouns only). Empty array [] if none.
-
-6. behaviorType: "output" | "communication" | "planning" | "social" | "reflection" | "other"
+For EVERY record output:
+- id: same uuid as input
+- sentiment: -1 (negative), 0 (neutral), 1 (positive) — integer only, no + prefix
+- isCommitment: true ONLY if the record contains a first-person active commitment, promise, task, or scheduled intention made BY the subject of this audit ("${subjectName}"). It must be a personal commitment from the subject, NOT a received notification, system message, automated email, or statement from another person (e.g. "we will notify you" is NOT a commitment by the subject). If the message is automated, passive, or received from someone else, set isCommitment to false.
+- commitmentText: exact verbatim text if isCommitment=true, else ""
+- isSensitive: true for financial, legal, conflict, stress, missed deadlines, or confidential content
+- entities: array of proper nouns (people, companies, projects) — [] if none
+- behaviorType: "output"|"communication"|"planning"|"social"|"reflection"|"other"
+- detectedPII: array of strings. Identify if this record contains PII. Include any matching items from: ["name", "email", "phone", "address", "id", "financial", "health", "biometric"]. Return [] if none.
 
 Rules:
-- If a record could POSSIBLY be a commitment, mark it as one. Do NOT be conservative.
-- Every email thread, calendar event, GitHub issue, or task LIKELY contains commitments.
-- Extract entities from ALL records — every name, project, org mentioned counts.
-- Return EVERY record from the input — do not skip any.
+${finalRiskInstruction}
 
-Return JSON ONLY (no markdown, no explanation):
-{ "analysis": [ { "id": "uuid", "sentiment": -1|0|1, "isCommitment": true|false, "commitmentText": "exact text or empty string", "isSensitive": true|false, "entities": ["Name1", "Org2"], "behaviorType": "output|communication|planning|social|reflection|other" } ] }
-      `;
+Return JSON ONLY:
+{ "analysis": [ { "id": "uuid", "sentiment": -1|0|1, "isCommitment": true|false, "commitmentText": "text or empty", "isSensitive": true|false, "entities": [], "behaviorType": "output", "detectedPII": [] } ] }
+`;
 
-      const analysisRaw = await invokeModel({
-        capability: 'classify',
-        messages: [{ role: 'user', content: extractionPrompt }],
-        system: 'You are a clinical intelligence analyst. Return JSON only.',
-        preference: 'auto'
-      });
+      console.log(`[Audit] Batched extraction: ${batches.length} batches of ~${BATCH_SIZE} records each, running in parallel`);
+
+      const batchResults = await Promise.all(
+        batches.map(batch =>
+          invokeModel({
+            capability: 'chat',
+            messages: [{ role: 'user', content: buildExtractionPrompt(batch) }],
+            system: 'You are a clinical intelligence analyst. Return valid JSON only.',
+            preference: 'auto'
+          })
+        )
+      );
+
+      // Merge all batch results into a single analysisRaw-compatible string
+      const analysisRaw = batchResults.every(r => !r)
+        ? null
+        : JSON.stringify({
+            analysis: batchResults.flatMap(raw => {
+              if (!raw || typeof raw !== 'string') return [];
+              try {
+                const m = raw.match(/\{[\s\S]*\}/);
+                if (!m) return [];
+                const sanitized = m[0].replace(/:\s*\+(\d)/g, ': $1');
+                return JSON.parse(sanitized).analysis ?? [];
+              } catch { return []; }
+            })
+          });
 
       // If AI fails to return data, proceed with empty analysis (avoid crashing the whole audit)
       if (!analysisRaw) {
-        console.warn(`[Audit] AI returned null for ${auditId}. Proceeding with empty analysis.`);
+        console.warn(`[Audit] All batches returned null for ${auditId}. Proceeding with empty analysis.`);
       }
+
 
       // 3. Parse and Aggregate
       let weightedTotalMentions = 0;
       let weightedNegativeMentions = 0;
-      const weightedNeutralMentions = 0; // reserved for future sentiment scoring
+      let weightedNeutralMentions = 0;
       let weightedUnfulfilledCommitments = 0;
       let negativeMentions = 0;
       let unfulfilledCommitmentsCount = 0;
@@ -241,6 +317,7 @@ Return JSON ONLY (no markdown, no explanation):
         isSensitive: boolean;
         entities: string[];
         behaviorType: string;
+        detectedPII?: string[];
       }
       
       const nowTs = Date.now();
@@ -250,10 +327,14 @@ Return JSON ONLY (no markdown, no explanation):
       if (analysisRaw && typeof analysisRaw === 'string') {
         try {
           const jsonMatch = analysisRaw.match(/\{[\s\S]*\}/);
-          if (jsonMatch) analysisResult = JSON.parse(jsonMatch[0]);
+          if (jsonMatch) {
+            // Groq returns +1 for positive sentiment which is invalid JSON.
+            // Sanitize: replace `: +1` → `: 1` and `: +0` → `: 0` etc.
+            const sanitized = jsonMatch[0].replace(/:\s*\+(\d)/g, ': $1');
+            analysisResult = JSON.parse(sanitized);
+          }
         } catch (parseErr) {
           console.warn(`[Audit] Failed to parse AI analysis JSON for ${auditId}:`, parseErr);
-          // analysisResult stays as { analysis: [] } — audit continues with zero findings
         }
       }
       
@@ -262,12 +343,16 @@ Return JSON ONLY (no markdown, no explanation):
         if (!evt) return;
 
         const ageMs = nowTs - new Date(evt.timestamp).getTime();
-        const weight = ageMs < (30 * 24 * 60 * 60 * 1000) ? 1.0 : 0.5;
+        const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        const weight = ageMs < thirtyDaysMs ? 1.0 : ageMs < sixMonthsMs ? 0.5 : 0.2;
 
         weightedTotalMentions += weight;
         if (a.sentiment === -1) {
           negativeMentions++;
           weightedNegativeMentions += weight;
+        } else if (a.sentiment === 0) {
+          weightedNeutralMentions += weight;
         }
         
         if (a.isCommitment) {
@@ -290,6 +375,27 @@ Return JSON ONLY (no markdown, no explanation):
              impact: 'Potential diligence concern.'
            });
         }
+
+        if (a.detectedPII && a.detectedPII.length > 0) {
+          a.detectedPII.forEach((piiType: string) => {
+            let label = piiType;
+            if (piiType === 'name') label = 'Full legal names';
+            else if (piiType === 'email') label = 'Email addresses';
+            else if (piiType === 'phone') label = 'Phone numbers (intl.)';
+            else if (piiType === 'address') label = 'Physical addresses';
+            else if (piiType === 'id') label = 'National ID / SSN';
+            else if (piiType === 'financial') label = 'Financial identifiers';
+            else if (piiType === 'health') label = 'Health / medical data';
+            else if (piiType === 'biometric') label = 'Biometric identifiers';
+
+            extractedFindings.push({
+              severity: 'Medium',
+              finding: `PII exposure: ${label} detected in ${evt.platform}`,
+              evidence: `Source event: ${evt.id}`,
+              impact: 'Potential PII compliance exposure.'
+            });
+          });
+        }
       });
 
       // Cross-reference commitments with calendar events to resolve statuses
@@ -299,10 +405,10 @@ Return JSON ONLY (no markdown, no explanation):
         .map(e => ({ title: e.title, timestamp: e.timestamp }));
       const resolvedCommitments = await resolveCommitmentStatuses(extractedCommitments, calendarEvents);
 
-      // Suppress unused variable: weightedNeutralMentions is retained for future scoring expansion
-      void weightedNeutralMentions;
+      // Suppress unused variable: void is retained for type safety
+      void 0;
 
-      const riskScore = Math.min(10, Number((( (weightedNegativeMentions * 2) + (weightedUnfulfilledCommitments * 3) ) / (weightedTotalMentions || 1) * 10).toFixed(1)));
+      const riskScore = Math.min(10, Number((( (weightedNegativeMentions * 2) + (weightedNeutralMentions * 0.5) + (weightedUnfulfilledCommitments * 3) ) / (weightedTotalMentions || 1) * 10).toFixed(1)));
       const failureRate = events.length > 0 ? (negativeMentions / events.length) * 100 : 0;
       const complianceRate = 100 - failureRate;
 
@@ -319,39 +425,45 @@ Return JSON ONLY (no markdown, no explanation):
         .map(([name]) => name);
 
       const summaryPrompt = `
-You are building a Reputation Projection for someone based on ${events.length} records spanning up to 2 years.
-Be SPECIFIC and DATA-DRIVEN — reference actual numbers and patterns, not generic statements.
+You are a forensic intelligence analyst producing a clinical reputation audit. Your output will be read by the subject themselves — not their investor, not their recruiter. You are a mirror, not a publicist.
 
-Data summary:
+Lens-specific Focus:
+${lensSummaryInstruction}
+
+Tone rules (non-negotiable):
+- Cold, declarative, and direct. State what the data shows. Nothing more.
+- Do NOT compliment, flatter, or soften findings. No "strong foundation", no "high professionalism", no "great track record".
+- Do NOT use advisory language like "consider", "might want to", "could leverage".
+- If negative signals are zero, say so plainly — do not spin it as a positive character trait.
+- If commitments are zero, say so plainly using natural terminology (e.g., "no unresolved commitments were identified" rather than "0 unfulfilled commitments") — do not infer virtue from absence of data.
+- Every sentence must be grounded in a specific number or pattern from the data below.
+
+Data:
 - Total records analysed: ${events.length}
 - Platforms: ${connectorsCovered.join(', ')}
 - Negative signals detected: ${negativeMentions}
-- Commitments extracted: ${unfulfilledCommitmentsCount}
+- Unfulfilled commitments extracted: ${unfulfilledCommitmentsCount}
 - Risk Score: ${riskScore}/10
 - Most mentioned entities: ${topExtractedEntities.join(', ') || 'none detected'}
 - Failure rate: ${failureRate.toFixed(1)}%
 - Compliance rate: ${complianceRate.toFixed(1)}%
 
-Your job:
-1. TRAJECTORY: Is the behavioral pattern improving, declining, or stable? Base this on chronological signal distribution.
-2. DOMINANT PATTERN: What specific behavioral archetype emerges? (e.g., "high-output executor with low follow-through", "relationship-first collaborator", "async-heavy deep worker")
-3. REPUTATION PROJECTION: In 2-3 sentences, what would an investor, employer, or partner conclude from this data?
-4. OPPORTUNITIES: List exactly 3 specific, actionable strengths visible in the data that could be leveraged professionally.
-5. topEntities: List the top 5 most frequently mentioned people, projects, companies, or tools from the data. If the most mentioned entities list above is non-empty, use those. Otherwise infer from context.
-
-Rules:
-- narrative must be 3-4 sentences minimum, referencing the actual data (mention platforms, record counts, or patterns).
-- opportunities must be specific to THIS person's data, not generic career advice.
-- Do NOT say "based on the data" or "the records show" — just state the finding directly.
+Produce the following:
+1. narrative: 3-4 sentences. State what the data volume shows, what the signal distribution shows, what the risk score means, and what the single most notable pattern is. Reference specific numbers. Do not flatter.
+2. trajectory: "improving" | "stable" | "declining" — based on chronological distribution of negative signals.
+3. dominantPattern: One precise behavioral descriptor. Not a compliment. Example: "high-output with sparse follow-through" or "reactive communicator with deadline sensitivity".
+4. reputationProjection: 1-2 sentences. What would a skeptical external observer flag from this data? If nothing is flagged, say that plainly without framing it as praise.
+5. opportunities: Exactly 3 specific gaps or under-leveraged patterns visible in THIS data. These are operational observations, not affirmations.
+6. topEntities: Top 5 most frequently mentioned people, projects, companies, or tools. Use the entity list above if non-empty.
 
 Return JSON ONLY (no markdown, no explanation):
-{ "narrative": "3-4 sentence projection", "trajectory": "improving|stable|declining", "dominantPattern": "specific archetype", "reputationProjection": "what others would conclude", "opportunities": ["specific strength 1", "specific strength 2", "specific strength 3"], "topEntities": ["entity1", "entity2", "entity3", "entity4", "entity5"] }
+{ "narrative": "string", "trajectory": "improving|stable|declining", "dominantPattern": "string", "reputationProjection": "string", "opportunities": ["string", "string", "string"], "topEntities": ["string", "string", "string", "string", "string"] }
       `;
 
       const summaryRaw = await invokeModel({
         capability: 'chat',
         messages: [{ role: 'user', content: summaryPrompt }],
-        system: 'You are a clinical intelligence analyst.',
+        system: 'You are a forensic intelligence analyst. Return valid JSON only.',
         preference: 'auto'
       });
 
@@ -367,12 +479,13 @@ Return JSON ONLY (no markdown, no explanation):
       }
 
       // Build data-driven fallback narrative (used when AI returns empty/short text)
-      const fallbackNarrative = `Across ${events.length} records spanning ${connectorsCovered.join(', ')}, the subject maintained a ${complianceRate.toFixed(0)}% compliance rate with ${negativeMentions} negative signal${negativeMentions !== 1 ? 's' : ''} detected over the 24-month window. ${unfulfilledCommitmentsCount > 0 ? `${unfulfilledCommitmentsCount} open commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} were identified, indicating follow-through risk.` : 'No open commitments were flagged, reflecting a delivery-first behavioral pattern.'} The computed risk profile of ${riskScore}/10 reflects ${riskScore <= 2 ? 'minimal' : riskScore <= 5 ? 'moderate' : 'elevated'} reputational exposure.${topExtractedEntities.length > 0 ? ` Frequently referenced entities include ${topExtractedEntities.slice(0, 3).join(', ')}.` : ''}`;
+      // Tone: cold, declarative, no flattery — matches spec Section 05
+      const fallbackNarrative = `${events.length} records were analysed across ${connectorsCovered.join(', ')} over a 24-month window. ${negativeMentions} negative signal${negativeMentions !== 1 ? 's' : ''} were detected, producing a failure rate of ${failureRate.toFixed(1)}%. ${unfulfilledCommitmentsCount > 0 ? `${unfulfilledCommitmentsCount} open commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} were extracted and remain unresolved.` : 'No commitment records were extracted from the dataset.'} Risk score: ${riskScore}/10 — ${riskScore <= 2 ? 'minimal exposure detected' : riskScore <= 5 ? 'moderate exposure detected' : 'elevated exposure detected'}.${topExtractedEntities.length > 0 ? ` Most referenced entities: ${topExtractedEntities.slice(0, 3).join(', ')}.` : ''}`;
 
       const fallbackOpportunities = [
-        `Leverage the ${complianceRate.toFixed(0)}% compliance track record to qualify for high-accountability, high-trust engagements.`,
-        `Expand the async communication footprint across ${connectorsCovered.slice(0, 3).join(', ')} into collaborative leadership roles.`,
-        `Use consistent activity across ${connectorsCovered.length} platforms as evidence of organised, multi-channel execution capability.`,
+        `${complianceRate.toFixed(0)}% of records carried no negative signal — the pattern of low-risk activity is consistent but untested under high-stakes conditions.`,
+        `Communication volume across ${connectorsCovered.slice(0, 3).join(', ')} is measurable but the depth of follow-through on initiated threads is not fully captured in this dataset.`,
+        `${connectorsCovered.length} platforms are connected — cross-platform commitment consistency has not been independently verified.`,
       ];
 
       // 6. Persist analysis results to DB
@@ -403,13 +516,14 @@ Return JSON ONLY (no markdown, no explanation):
           sentimentBalance: weightedTotalMentions > 0 ? (1 - (weightedNegativeMentions / weightedTotalMentions)) : 1.0,
           failureRate: failureRate.toFixed(2),
           complianceRate: complianceRate.toFixed(2),
+          audit_type: auditType,
         }
       }).eq('id', auditId);
 
       if (updateError) {
         console.error(`[Audit] Database update failed for ${auditId}:`, updateError);
       } else {
-        console.log(`[Audit] Successfully finalized ${auditId}`);
+        console.log(`[Audit] Successfully finalized ${auditId} in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
       }
 
       return { success: true, auditId };

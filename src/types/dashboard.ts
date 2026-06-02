@@ -33,6 +33,7 @@ export interface PlatformStatus {
   status: 'idle' | 'connecting' | 'authenticating' | 'syncing' | 'connected' | 'error';
   items: number;
   errorMessage?: string | null;
+  lastSyncAt?: string | null;
 }
 
 export interface FeedItem {
@@ -63,6 +64,9 @@ export interface Citation {
   platform: string;
   title: string | null;
   snippet: string;
+  timestamp?: string | null;
+  similarity?: number;
+  rerankScore?: number;
 }
 
 export interface Message {
@@ -103,6 +107,7 @@ export interface ReputationAudit {
     topEntities: string[];
     failureRate?: string;
     complianceRate?: string;
+    trajectory?: string;
     riskFindings: Array<{
       severity: 'Low' | 'Medium' | 'High';
       finding: string;

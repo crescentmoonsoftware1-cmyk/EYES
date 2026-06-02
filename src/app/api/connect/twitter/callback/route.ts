@@ -3,10 +3,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { encryptToken } from '@/services/auth/tokens';
 
-function appBaseUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -16,7 +12,7 @@ export async function GET(request: Request) {
   const clientSecret = process.env.TWITTER_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=missing_env', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=missing_env', url.origin));
   }
 
   const cookieStore = await cookies();
@@ -24,7 +20,7 @@ export async function GET(request: Request) {
   const codeVerifier = cookieStore.get('twitter_code_verifier')?.value;
 
   if (!expectedState || expectedState !== state || !codeVerifier) {
-    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=invalid_state', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=invalid_state', url.origin));
   }
 
   cookieStore.delete('twitter_oauth_state');
@@ -33,7 +29,7 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) {
-    return NextResponse.redirect(new URL('/login', appBaseUrl()));
+    return NextResponse.redirect(new URL('/login', url.origin));
   }
 
   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
@@ -47,7 +43,7 @@ export async function GET(request: Request) {
     body: new URLSearchParams({
       code: code!,
       grant_type: 'authorization_code',
-      redirect_uri: new URL('/api/connect/twitter/callback', appBaseUrl()).toString(),
+      redirect_uri: new URL('/api/connect/twitter/callback', url.origin).toString(),
       code_verifier: codeVerifier,
     }),
   });
@@ -55,7 +51,7 @@ export async function GET(request: Request) {
   if (!tokenResponse.ok) {
     const errorBody = await tokenResponse.text();
     console.error('Twitter token exchange failed:', errorBody);
-    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=token_exchange_failed', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=token_exchange_failed', url.origin));
   }
 
   const tokenBody = await tokenResponse.json();
@@ -81,5 +77,5 @@ export async function GET(request: Request) {
     }, { onConflict: 'user_id,platform' })
   ]);
 
-  return NextResponse.redirect(new URL('/connect/twitter?oauth=success', appBaseUrl()));
+  return NextResponse.redirect(new URL('/connect/twitter?oauth=success', url.origin));
 }

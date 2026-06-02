@@ -1,0 +1,1404 @@
+INTERNAL ENGINEERING SPEC
+Confidential. Do not share outside the EYES build team.
+EYES V1 — The Real Spec
+What we are actually building, why, and exactly how — for the Crescent Moon engineering team.
+Author: Abhi (Founder/CEO, EYES)
+For: Crescent Moon engineering team (Chandra Mohan, Saravanan, Saran + 1)
+Date: May 12, 2026
+Ship target: Friday, June 13, 2026 (end of week 5) — live, signups open, real users getting cited answers.
+Document length: Long, by design. Designed to be pasted into Claude in sections during implementation.
+How to use this document
+This document is built to be your single source of truth for the next 5 weeks. It is intentionally exhaustive. You do not need to hold it all in your head at once. Use it like this:
+Read Part 1 in full once. It tells you what changed and what you're really building. Do not skip it.
+Skim Part 2 once. Then come back to each section when you implement that section. Each section is written to be self-contained — paste the section into Claude and implement.
+Open Part 3 weekly. It tells you exactly what's due each week and what "done" looks like.
+Use Appendix A as a constant reference. It's the data model. Every feature reads from / writes to these tables.
+IMPORTANT — This document deliberately replaces the two PDFs you generated on May 10 ("Deep Analysis & Roadmap" and "Requirements Notes"). Most of what was in those documents is correct but premature. We will revisit them in Month 4. For the next 5 weeks, this document is canon.
+Table of contents
+PART 1 — Reset
+1.1  What changed since your last spec	p. 4
+1.2  What you already built, and why it matters	p. 5
+1.3  The dual-layer architecture — the single most important concept	p. 6
+1.4  What V1 actually is (and isn't)	p. 8
+1.5  Why the two PDFs you wrote are being deferred	p. 10
+PART 2 — Product spec
+2.1  User flow — day 1 through first answer	p. 12
+2.2  The ingestion pipeline (already built — small additions)	p. 14
+2.3  The acute layer — real-time event detection	p. 16
+2.4  The chronic layer — state vectors (the new substrate)	p. 19
+2.5  State clustering — the cognitive core	p. 22
+2.6  Loop detection — recurrence analysis	p. 26
+2.7  Drift detection — stated vs lived	p. 29
+2.8  Entity correlations — who shifts you, what shifts you	p. 31
+2.9  Forward inference — probabilistic next-state	p. 33
+2.10  The chat interface — how all this surfaces	p. 35
+2.11  Privacy shields — keep what you built, simplify	p. 38
+PART 3 — Execution
+3.1  Team assignments — who does what	p. 41
+3.2  Week 1 sprint	p. 42
+3.3  Week 2 sprint	p. 44
+3.4  Week 3 sprint	p. 46
+3.5  Week 4 sprint	p. 48
+3.6  Week 5 sprint — ship week	p. 50
+3.7  What is NOT being built (the cut list)	p. 52
+APPENDICES
+A  Data model — all tables, all columns	p. 54
+B  Math reference — UMAP, HDBSCAN, recurrence quantification	p. 59
+C  Prompt library — every Claude call we make	p. 62
+D  Implementation cheatsheet — paste-into-Claude templates	p. 65
+E  Failure modes and how to handle them	p. 68
+Part 1 — Reset
+You have spent the last several weeks building infrastructure. Some of it is excellent. Some of it is premature. This section tells you what changed in the product thinking, what you should keep, what you should pause, and what you are actually building now.
+Read this part in full before touching code.
+1.1 — What changed since your last spec
+The original spec you worked from positioned EYES as a search engine for your own digital history — a tool that lets you query everything you've ever said. That product is real. You built it. It works. Six OAuth connectors live, vector retrieval functional, cited answers shipping.
+That product, as it stands today, is what every other personal AI memory company is also trying to build. Mem0, Supermemory, Vellum, Hark, the abandoned Rewind AI — they are all in the search-and-retrieve category. If we ship only that, we are one of seven companies competing on the same axis, and we lose because they are bigger, better-funded, and earlier.
+The product has evolved. EYES is now a personal intelligence layer — a system that models humans across time and surfaces patterns they cannot see from inside their own life. That is a different category. That category has zero credible entrants today. Building it is what justifies the company existing.
+ONE-LINE DEFINITION — EYES = a system that sees you across time better than you see yourself. Not a search engine. Not a chatbot with memory. A behavioral intelligence layer that reveals patterns, loops, drift, and probable trajectories using your own digital history as evidence.
+Concretely: the substrate you built is the floor of the new product, not the whole product. Six OAuth connectors, pgvector, cited retrieval — those become inputs to a cognitive layer that did not exist in the original spec. The cognitive layer is what you are building in the next 5 weeks.
+Specifically, V1 now contains five new capabilities that did not exist in your previous spec:
+State clustering — the system learns that each user cycles through 6–10 distinct cognitive modes (e.g., "expansion mode," "isolation cluster," "investor-prep") and can tell them which one they're in right now, today.
+Loop detection — recognizes when the user is running a behavioral pattern they've run before ("this is the 4th time you've entered isolation-mode after an investor rejection — last 3 times it lasted 18–22 days").
+Drift detection — compares what the user says they value (Notion docs, voice memos, journal entries) against what they actually do (calendar, message volume, output) and surfaces the gap.
+Entity correlations — maps which people, places, apps, and times shift the user into which cognitive states ("conversations with [name] correlate +0.78 with expansion-mode").
+Forward inference — gives the user probability-weighted estimates of their likely next state, always cited against their own history.
+These five capabilities, layered on top of the substrate you already built, are V1. That is what we are shipping by June 13, 2026.
+1.2 — What you already built, and why it matters
+Verified as of April 27, 2026 — confirmed via screenshots and direct review of your codebase:
+Component
+Status
+OAuth connectors
+6 live and syncing: Gmail, Slack, GitHub, Discord, Notion, Google Calendar. Reddit pending.
+Database
+Supabase production, EU Frankfurt, 13 tables, pgvector with HNSW index, 1536-dim embeddings.
+Retrieval
+Cited query working via Claude RAG. Returns text + source attribution.
+Real-time pipeline
+Webhook armed on Gmail Pub/Sub (seconds), Calendar push, GitHub webhooks. Reddit on polling.
+Web UI
+Working. Privacy Shields panel, Neural Tuning (Risk Sensitivity slider), Sync Depth controls.
+Pending fixes
+3 outstanding: rename "the-monitor" → EYES, swap GPT-4o → Claude in ai.ts, finalize Reddit connector.
+This is not a prototype. This is a production system at roughly 75% of V1. The substrate is solid. What is missing is the cognitive layer that turns this from a search engine into an intelligence layer.
+NOTE — Do not rebuild what already works. The pgvector store, the OAuth connectors, the cited retrieval — these are not being changed. The cognitive layer is built ON TOP of them, not instead of them.
+1.3 — The dual-layer architecture (the single most important concept)
+EYES has always been one product, but underneath the single chat interface there are two simultaneously running systems. They are not features. They are not modes. They are not options the user toggles between. They both run, all the time, on the same data substrate.
+If you understand this section, everything else in this document follows naturally. If you don't, you will build the wrong thing. Read it twice.
+System 1 — The acute layer (directed actions)
+Watches every incoming data point in real time. When something arrives that contains an explicit demand, commitment, deadline, or ask, the acute layer reads it within seconds and acts on it.
+Example: Valentin emails you on Wednesday asking about the deck you said you'd send. While that email is still landing in your inbox, the acute layer has already:
+Read the email and parsed it as an ask.
+Searched the user's history for any commitment matching "deck" + "Valentin".
+Found the original promise from 3 weeks ago: "I'll send you the deck Thursday."
+Surfaced the whole thing as one notification: "Valentin is asking about the deck. You promised it on April 17. Today is May 8."
+This layer is supervised. The label is in the data. The demand is in the words. It is deterministic. When it fires, the user trusts it because the citation chain is bulletproof.
+Most of this layer is already built. You have webhooks, you have retrieval, you have citation. The remaining work is the detection pass — the second Claude call that classifies each incoming event.
+System 2 — The chronic layer (pattern detection)
+Runs in the background, continuously, on the accumulated history. Aggregates each day's behavior into a single high-dimensional state vector. Clusters those vectors over time. Detects recurrence. Surfaces drift. Reveals entity correlations. Estimates probable trajectories.
+This layer is unsupervised. There are no labels. The system has to find structure on its own. To make sure the structure it finds is real and not hallucinated, the chronic layer is gated by three constraints:
+Bounded data. The system is not asking "what patterns exist in human behavior?" — it's asking "what patterns recur in this specific user's data?" That question is finite and computable.
+Statistical gating. Clusters and loops only surface if the math says they are real. HDBSCAN labels low-confidence points as noise. Recurrence analysis only fires if periodicity is statistically significant. Silence is a valid output.
+User validation. Detected clusters are shown to the user as drafts. The user names them. The user confirms or rejects. Only after confirmation does a cluster label become operational.
+This layer is what you are building. It is new. It is the entire purpose of the next 5 weeks.
+How the two layers work together
+They are not parallel products. They feed each other.
+Acute fires → an email lands, the system flags an ask connected to a prior commitment.
+Chronic adds context → the user is currently in their isolation-mode cluster. The system says: "You're being asked about the deck. Note: you're in the cluster where you historically over-promise on deadlines. The last 3 commitments you made in this state were reversed within 2 weeks. Want to draft a reply now or sleep on it?"
+Acute without chronic is a smart notification system. Chronic without acute is an unused analytics dashboard. Together they are the product.
+TIMELINE — Acute carries days 1–30. The user feels the product immediately because the acute layer fires from day one. Chronic comes online progressively — it needs ~30 days of state vectors to find stable clusters. We are building both. They run on the same substrate. They surface through the same chat interface.
+1.4 — What V1 actually is (and isn't)
+V1 IS:
+One product. One web app. One chat interface. One signup flow.
+The substrate you already built (OAuth, pgvector, retrieval, webhooks) + the cognitive layer (state clustering, loop detection, drift detection, entity correlations, forward inference) running on top.
+Built for 100–500 beta users in the first month after launch. We are not trying to scale to a million users in 5 weeks. We are trying to get to 100 users who say "this thing knows me."
+Shippable by June 13, 2026. Signups open, users can connect their accounts, the system produces useful answers, the cognitive layer is generating cluster drafts by day 30 of user use.
+V1 IS NOT:
+A production-grade system serving millions. We are not building auto-scaling, multi-region failover, or 99.99% uptime SLAs. We are building a credible beta.
+A platform with API access. No external API. No developer platform. No B2B Context API. That's V2.
+A finished cognitive system. Forward inference will be primitive in V1. Loop detection will be conservative. We are establishing the architecture, not perfecting the model.
+A full-featured chat product. No multi-modal input. No voice. No mobile app. No browser extension. Just the web UI you already have, with new tabs and capabilities behind it.
+The cut line
+When in doubt about whether to build something, apply this test:
+TEST — Does building this feature make the user say "this thing sees me" within their first 30 days? If yes, build it. If it makes the system more robust, more scalable, or more elegant but doesn't change the user's first-30-days experience, defer it to Month 4.
+1.5 — Why the two PDFs you wrote are being deferred
+On May 10 you generated two documents: "Deep Analysis & Roadmap" (engineering improvements) and "Requirements Notes" (privacy shields, audit rules, key management). Both are well-researched. Both are well-intentioned. Both are premature.
+Here's the specific verdict on what you proposed, item by item:
+Proposed item
+Verdict
+Reasoning
+Client-side E2EE for sensitive content
+DEFER
+Adds 2 weeks of work. Server-side encryption + EU Frankfurt + Supabase RLS is enough for V1. Revisit at Month 6 if a B2B customer requires it.
+Racing requests / streaming adapters / circuit breakers
+DEFER
+Premature for beta scale. Single-provider Claude calls with simple retry logic are enough. Revisit after 1,000 users.
+Two-stage retrieval with cross-encoder reranking
+DEFER
+Current vector search is good enough for 100 beta users. Add time-decay (1 hour of work). Reranking is a Month 4 problem.
+V-Gate pattern / versioned embeddings table
+DEFER
+You are NOT changing embedding models in V1. Stay on 1536-dim. No migration needed. This is a Month 8 problem if you ever fine-tune Mistral.
+Audit rules system (Section 2 of Requirements doc)
+DEFER
+Useful for enterprise / compliance customers. Not needed for consumer beta. Month 6.
+Privacy Shield (Section 1 of Requirements doc)
+KEEP
+Already half-built in your UI. Needed because cognitive layer touches sensitive content. Simplified version in §2.11.
+Key rotation / fresh Claude key (Section 3)
+DO IT NOW
+Quick. Rotate the key in Vercel env vars. Set up one-line env check on startup. Done in 1 hour. No system needed.
+Sync-ID tracing / OpenTelemetry spans
+PARTIAL
+Add structured JSON logs with user_id + connector + timestamp. That's enough debugging visibility for beta. Skip OpenTelemetry.
+Connector health dashboard + reauth flows
+PARTIAL
+Add a simple "Last synced X minutes ago" line in the UI per connector. Email user on 401. Skip the full health card UI.
+Tolerant JSON parsing with repair loops
+PARTIAL
+Wrap JSON parse in try/catch + Zod schema. If parse fails, log + retry once with a repair prompt. That's it.
+TO BE CLEAR — The PDFs you wrote are not wasted work. They are the right thoughts at the wrong time. Save them. We will revisit them in Month 4 when scale and reliability matter. For the next 5 weeks, building the cognitive layer matters more.
+Part 2 — Product specification
+This is the spec for what you are actually building. Each section is self-contained. You can paste any section into Claude during implementation and it will have enough context to produce working code.
+Sections are ordered by build dependency, not by user importance. Build them in this order.
+2.1 — User flow (day 1 through first useful answer)
+Before we get into implementation, here is exactly what a user experiences end-to-end. Build for this flow. If your implementation does not produce this experience, it is wrong regardless of how clean the code is.
+Day 1, minute 0 — Landing page
+User lands on eyes.ai (or whatever domain we have). Single hero: "EYES — the system that sees you across time." Below: "Connect your accounts. Get answers from your own past. Notice patterns you can't see from inside your life."
+One CTA: "Connect with Google" (Gmail + Calendar in one OAuth). Below that: "or sign in with email" for users who want to choose connectors one at a time.
+Day 1, minute 1 — Sign up + first connector
+User clicks Connect with Google. Standard OAuth consent screen. Returns to our app. The system immediately:
+Creates the user account in users table.
+Stores the OAuth tokens encrypted in connector_credentials table.
+Kicks off initial sync — fetches the last 90 days of Gmail by default (with toggle for "full history" available).
+Shows a progress screen: "Syncing your last 90 days of Gmail. This usually takes 2-10 minutes. Feel free to add more connectors while you wait."
+Day 1, minute 2-10 — Other connectors offered
+While the Gmail sync runs in the background, the user sees a 6-tile grid of additional connectors: Slack, GitHub, Discord, Notion, Calendar (already covered if they came in via Google), Reddit. Each shows a Connect button.
+They connect 2-3 more. Each kicks off its own sync. The progress page shows running totals: "245 emails indexed. 18 calendar events indexed. 432 Slack messages indexed."
+Day 1, minute 10 — First query
+A "Start asking" button becomes active once at least 100 items have been indexed (usually within 2-3 minutes of first sync). User clicks it. Lands on the chat interface.
+The chat interface has one input box and a few suggested queries:
+"What did I commit to with [most-recent contact's name] recently?"
+"What was I working on last week?"
+"Summarize my last conversation with [name]."
+User asks one of these. Within 5 seconds, they get a cited answer. They click a citation, see the source email. They are convinced this works.
+Day 1, hour 1 — First acute fire
+An email lands in their inbox. The webhook fires. The system parses it, detects an ask, checks their history for related commitments, finds one, and surfaces an alert in the chat interface: "[Person] is asking about [topic]. You committed to this on [date]. Want help drafting a reply?"
+This is the moment that converts the user from "this is interesting" to "this is going to be part of how I work." Build the acute layer to make this happen on day 1.
+Days 2-14 — Daily use, no chronic surfacing yet
+User uses the chat interface 1-3 times per day. Asks questions, gets cited answers. Acute fires periodically when emails / messages arrive that contain commitments or asks.
+Behind the scenes: a nightly cron is computing the user's daily state vector. By day 14 there are 14 vectors. Not enough to cluster meaningfully yet. The system stays silent on patterns.
+Days 15-30 — First cluster drafts surface
+On day 22 (or whenever the user has at least 21 state vectors and HDBSCAN finds at least 3 stable clusters), the chat interface shows a one-time notification:
+"I've noticed three recurring states in your behavior over the past few weeks. They have distinct signatures. I haven't named them. Want to see them and tell me what they are?"
+User clicks. Sees three cluster cards. Each shows: a description of the signature (message volume, time-of-day patterns, dominant connectors, sample queries from that period). The user reads one and recognizes it: "oh that's when I was prepping for the investor pitch." Names it. Same for the other two.
+KEY MOMENT — This is the validation moment. The system detected the structure mathematically. The user provided the meaning. From now on, the system can use those labels in its responses. This is what makes EYES feel different from anything else.
+Days 30+ — Both layers compounding
+Acute keeps firing. Chronic now knows the user's clusters. The chat interface starts producing categorically different answers:
+"You asked about X. Note: you're currently in your isolation-cluster. The last 2 times you asked similar questions in this state, you deferred the decision and revisited a week later."
+"You're drafting an email to [person]. You're in expansion-mode. Last 3 binding commitments made in this state were over-scoped relative to what you delivered."
+This is the product. Build the substrate to make this experience real.
+2.2 — The ingestion pipeline (already built — small additions)
+You already have an ingestion pipeline. It pulls data from OAuth connectors, sanitizes it, generates embeddings, and stores it in pgvector. This works.
+Three small additions for V1:
+Addition 1 — Tag every ingested item with date_bucket
+Every item we ingest should have a date_bucket field (YYYY-MM-DD) representing the day it occurred. This is what the chronic layer uses to aggregate daily state vectors. Add this column to your existing memories table (or whatever you call it).
+-- Migration
+ALTER TABLE memories ADD COLUMN date_bucket DATE;
+CREATE INDEX idx_memories_user_date ON memories(user_id, date_bucket);
+ 
+-- Backfill
+UPDATE memories SET date_bucket = DATE(created_at) WHERE date_bucket IS NULL;
+Addition 2 — Tag every item with content_type
+We need to distinguish between "stated" content (Notion docs, voice memos, journal entries, manifesto-style messages) and "lived" content (calendar events, code commits, message counts, time-of-day signals). Drift detection depends on this split.
+Add a content_type column with these values:
+stated — Notion pages, voice memo transcripts, long-form Slack messages (>200 chars), email drafts you sent (not received), tweets/posts.
+lived — calendar events, GitHub commits, Slack message timestamps (without content), email receive-times, short reaction messages.
+mixed — anything that doesn't cleanly fit (default for emails received, where content matters but so does timing).
+Classification logic is simple. Run it at ingestion time:
+function classifyContent(item) {
+  if (item.source === 'notion') return 'stated';
+  if (item.source === 'voice_memo') return 'stated';
+  if (item.source === 'calendar') return 'lived';
+  if (item.source === 'github_commit') return 'lived';
+  if (item.source === 'slack' && item.length > 200 && item.is_outbound) return 'stated';
+  if (item.source === 'gmail' && item.is_outbound && item.length > 300) return 'stated';
+  return 'mixed';
+}
+Addition 3 — Tag every item with entities[]
+Entity correlations depend on knowing which people, places, and tools are mentioned in each item. Use a simple Claude call at ingestion time to extract them. Schema:
+{
+  entities: [
+    { type: 'person', name: 'Valentin Henry', canonical_id: 'person_001' },
+    { type: 'organization', name: 'Innostart', canonical_id: 'org_004' },
+    { type: 'tool', name: 'Notion', canonical_id: 'tool_002' }
+  ]
+}
+Store this as JSONB in a new entities_extracted column. Canonical IDs come from a per-user entities table — first time "Valentin" appears, create a new entity row. After that, match by name + context using a simple Claude prompt.
+COST NOTE — Don't over-engineer entity extraction. Use Claude. It's expensive per call but you're indexing maybe 500 items per user per day. That's ~$0.15/user/day in entity extraction. Acceptable for beta.
+2.3 — The acute layer (real-time event detection)
+The acute layer is what fires on incoming data. It is the "Valentin email" experience from §2.1. Most of this is already built — webhooks, ingestion, retrieval. What's missing is the detection pass.
+Architecture
+Incoming event (Gmail webhook, Slack event, Calendar push, GitHub event)
+         |
+         v
+  [Ingestion] — write to memories table
+         |
+         v
+  [Detection pass] — Claude call: "is this an ask, commitment, deadline, or reference to prior commitment?"
+         |
+         v
+  If yes: [Cross-reference] — search memories for related commitments
+         |
+         v
+  If match found: [Surface] — push notification to chat interface
+The detection prompt
+Every incoming event runs through this Claude call. Use claude-3-5-haiku for cost (this fires hundreds of times per user per day):
+System prompt:
+You are EYES, a personal intelligence layer. You classify incoming events.
+Given an event, output ONE of these classifications as JSON:
+ 
+{
+  classification: 'ask' | 'commitment' | 'deadline' | 'reference' | 'noise',
+  confidence: 0.0-1.0,
+  extracted: {
+    entities: [...],
+    topic: string,
+    deadline_date: string | null,
+    requires_response: boolean
+  }
+}
+ 
+Definitions:
+- 'ask': someone is requesting something from the user (info, decision, action)
+- 'commitment': user is making a promise (drafted by them, going outbound)
+- 'deadline': time-bound obligation
+- 'reference': someone is referencing a prior conversation/commitment
+- 'noise': none of the above (newsletter, ad, automated, etc.)
+ 
+Be conservative. When unsure, classify as 'noise'.
+The cross-reference logic
+If detection returns ask, commitment, or reference with confidence > 0.7, run a vector search against the user's history. Find the top 3 related items. Pass them + the new event to Claude for synthesis.
+Synthesis prompt:
+Given this new event and these related prior events, determine:
+1. Is there a connection? (Y/N)
+2. If yes, what's the connection in one sentence?
+3. Should we surface this to the user? (Y/N)
+4. If yes, draft the surfacing message in EYES tone (direct, accountable, no fluff).
+ 
+Output: {
+  connected: boolean,
+  connection_summary: string,
+  should_surface: boolean,
+  surface_message: string,
+  citations: [memory_id, memory_id, ...]
+}
+Surfacing
+If should_surface = true, write a row to the alerts table. The chat interface polls this table every 30 seconds and shows new alerts at the top of the conversation.
+SCOPE — Do not push notifications to email or browser in V1. Surface only inside the chat UI. The user opens EYES and sees the alert. Push notifications are a Month 2 feature once we know what users actually care about.
+Acceptance criteria
+New Gmail message arrives → webhook fires → detection runs within 10 seconds.
+If ask/commitment/reference detected → cross-reference completes within 20 seconds.
+If surface triggered → alert appears in chat UI within 30 seconds of original event.
+Citations in alert link to actual source emails/messages.
+False positive rate < 20% (user dismisses ≤ 1 in 5 alerts as noise).
+2.4 — The chronic layer: state vectors (the new substrate)
+State vectors are the foundation of the cognitive layer. Everything else — clustering, loop detection, drift, entity correlations, forward inference — reads from state vectors.
+A state vector is a single high-dimensional representation of how a user was on a particular day. One vector per user per day. Computed by a nightly cron.
+What goes into a state vector
+Aggregate the following signals over each user-day:
+Signal
+How to compute
+Content embedding
+Average all embeddings of items created that day. 1536-dim.
+Message volume
+Total outbound messages across all connectors. Scalar.
+Message diversity
+Count of distinct contacts messaged that day. Scalar.
+Inbound:outbound ratio
+Ratio of received to sent. Captures reactivity vs initiation.
+Time-of-day distribution
+4-bucket histogram of activity: morning, afternoon, evening, late-night.
+Connector mix
+% of activity per connector that day. 6 scalars (one per connector).
+Calendar density
+Total meeting hours that day. Scalar.
+Code output
+Commit count + lines changed (GitHub only). 2 scalars.
+Stated:lived ratio
+Of all content created that day, % stated vs % lived (see §2.2).
+Concatenate all of these into a single vector. Final dimensionality: ~1556 (1536 from content embedding + ~20 scalars). Store as a single row in state_vectors table.
+Schema
+CREATE TABLE state_vectors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  date DATE NOT NULL,
+  content_embedding VECTOR(1536),
+  metadata JSONB NOT NULL,  -- all the scalars above
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, date)
+);
+ 
+CREATE INDEX idx_state_vectors_user_date ON state_vectors(user_id, date DESC);
+CREATE INDEX idx_state_vectors_embedding ON state_vectors USING hnsw (content_embedding vector_cosine_ops);
+The nightly cron
+Runs at 3am UTC daily. For each user, computes the previous day's state vector and inserts it. Vercel cron handles this — we're on the cheap path (see §1.4).
+// vercel.json
+{
+  "crons": [{
+    "path": "/api/cron/state-vectors",
+    "schedule": "0 3 * * *"
+  }]
+}
+ 
+// /api/cron/state-vectors/route.ts
+export async function GET(req: NextRequest) {
+  // Auth check — Vercel cron header
+  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+ 
+  const yesterday = subDays(new Date(), 1);
+  const users = await getActiveUsers();
+  
+  for (const user of users) {
+    try {
+      const vector = await computeStateVector(user.id, yesterday);
+      await upsertStateVector(user.id, yesterday, vector);
+    } catch (err) {
+      log({ level: 'error', user_id: user.id, date: yesterday, error: err });
+    }
+  }
+ 
+  return Response.json({ ok: true, processed: users.length });
+}
+SCALING NOTE — Vercel cron has a 60-second timeout on hobby plan, 5 minutes on pro. With 100 beta users, you can process the entire batch in under 60 seconds. Past 500 users, we'll need to break the job into chunks or move to a longer-running worker. That's a Month 3 problem.
+Acceptance criteria
+Cron runs at 3am UTC daily without manual intervention.
+Every active user has exactly one state_vectors row per day (including days they were inactive — vector for inactive day is the zero-vector with metadata.is_inactive = true).
+Per-user computation completes in under 5 seconds.
+Failures are logged with user_id and don't block other users from being processed.
+2.5 — State clustering (the cognitive core)
+This is the section that turns EYES from a search engine into an intelligence layer. Read it carefully. Implement it carefully.
+What we're doing
+Once a user has ~21 days of state vectors, we run dimensionality reduction (UMAP) + density-based clustering (HDBSCAN) on their trajectory through state-space. The output is between 3 and 10 stable clusters representing their distinct cognitive modes.
+We then ask Claude to describe each cluster in human-readable terms. We then ask the user to confirm and name each cluster. After confirmation, cluster labels become operational throughout the chat interface.
+The algorithm
+Step 1 — Pull last 90 days of state vectors for the user (or all available if < 90).
+Step 2 — Stack them into an N x 1556 matrix.
+Step 3 — Run UMAP to reduce to N x 8 (good clustering dimensionality).
+Step 4 — Run HDBSCAN on the reduced matrix.
+Step 5 — Get cluster labels per day (some days will be labeled -1 = noise; this is correct).
+Step 6 — For each cluster, gather the days that belong to it and compute a signature.
+Step 7 — Ask Claude to describe each cluster.
+Step 8 — Show drafts to user. User names them or rejects them.
+Step 9 — Store confirmed clusters with user-provided labels.
+Implementation — Python service or JS?
+UMAP and HDBSCAN are Python libraries. You have two options:
+Option A (recommended for V1): Deploy a tiny Python microservice on Modal or Railway. Call it from your Next.js cron. ~$5/month for our scale.
+Option B: Use the JS implementations (umap-js + density-clustering). Slower, less battle-tested, but no extra infra.
+DECISION — Go with Option A. The Python implementations are mature and you'll save days of debugging. Modal has a generous free tier and zero ops overhead.
+Python service code
+# clustering_service.py — deploy to Modal
+import modal
+import numpy as np
+from umap import UMAP
+from hdbscan import HDBSCAN
+ 
+app = modal.App('eyes-clustering')
+image = modal.Image.debian_slim().pip_install('umap-learn', 'hdbscan', 'numpy')
+ 
+@app.function(image=image)
+def cluster_user(vectors: list, min_cluster_size: int = 5):
+    """
+    vectors: list of lists, each of dim 1556
+    Returns: list of cluster labels (ints, -1 = noise)
+    """
+    arr = np.array(vectors)
+    if len(arr) < 21:
+        return [-1] * len(arr)  # Not enough data
+ 
+    # Reduce to 8 dims
+    reducer = UMAP(n_components=8, n_neighbors=min(15, len(arr)-1), random_state=42)
+    reduced = reducer.fit_transform(arr)
+ 
+    # Cluster
+    clusterer = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=3)
+    labels = clusterer.fit_predict(reduced)
+ 
+    return labels.tolist()
+Calling it from Next.js
+// /api/cron/cluster-users/route.ts — runs weekly, Sunday 4am UTC
+export async function GET(req: NextRequest) {
+  const users = await getUsersWithMinVectors(21);
+ 
+  for (const user of users) {
+    const vectors = await getStateVectors(user.id, 90);
+    const labels = await callModalClusterService(vectors);
+    await storeClusterAssignments(user.id, vectors, labels);
+    await generateClusterDescriptions(user.id);  // see below
+  }
+}
+Generating cluster descriptions
+For each cluster, sample 5 representative days. Pull a summary of activity from each. Pass to Claude with this prompt:
+System: You are EYES. Given 5 sample days from a recurring behavioral state, describe what kind of state this is. Be specific. Use the user's own data, not generic templates.
+ 
+User: Here are 5 days from a recurring state in this user's data. Each day includes message volume, dominant connectors, key topics, time-of-day pattern, and notable activity.
+ 
+[5 days of data...]
+ 
+Output as JSON:
+{
+  draft_label: "4-6 word description of this state",
+  signature: "3-sentence description of what's distinctive about this state",
+  representative_quote: "a quote from the user's content that captures this state",
+  count_in_last_90_days: 12
+}
+The user validation moment
+Once cluster descriptions are generated, surface them in the chat interface. Don't push notification, don't email — just queue a one-time modal that fires on the user's next visit to EYES.
+The modal shows 3-7 cluster cards (one per detected cluster). Each card shows the draft label, signature, representative quote, and frequency. The user can:
+Accept the draft label as-is.
+Edit the label and accept.
+Reject this cluster (mark it as not real / noise).
+Only confirmed clusters get used operationally. Rejected clusters are flagged so we don't re-show them next clustering run.
+Schema
+CREATE TABLE clusters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  draft_label TEXT NOT NULL,
+  user_label TEXT,  -- null until confirmed
+  signature TEXT NOT NULL,
+  representative_quote TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',  -- 'draft', 'confirmed', 'rejected'
+  cluster_version INT NOT NULL,  -- incremented each re-cluster
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  confirmed_at TIMESTAMPTZ
+);
+ 
+CREATE TABLE cluster_assignments (
+  state_vector_id UUID NOT NULL REFERENCES state_vectors(id),
+  cluster_id UUID REFERENCES clusters(id),  -- nullable for noise (-1)
+  confidence FLOAT,
+  PRIMARY KEY (state_vector_id)
+);
+Acceptance criteria
+Weekly cron runs without manual intervention.
+Users with ≥21 state vectors get a clustering run.
+Number of clusters returned is between 3 and 10 inclusive.
+Noise rate (label = -1) is between 20% and 50% — too low means we're forcing structure, too high means we don't have enough data.
+Cluster descriptions read as specific, not generic templates.
+User validation modal appears once per cluster_version, only fires when status is 'draft' for any cluster.
+2.6 — Loop detection (recurrence analysis)
+Once we have cluster assignments per day, we have a sequence: cluster_A, cluster_A, cluster_B, cluster_B, cluster_C, cluster_A, cluster_A, ... Loop detection is about finding statistically significant recurrence in this sequence.
+The simple version (V1)
+Don't reach for full recurrence quantification analysis in V1. Use a simpler approach that catches the obvious patterns:
+For each cluster the user has been in, compute a list of "entries" — the start dates of each contiguous run of that cluster.
+For clusters with 3+ entries, compute the mean and stddev of inter-entry intervals.
+If stddev < 30% of mean (i.e., the cluster recurs with consistent periodicity), flag it as a loop.
+Also compute the average duration of each run. Flag if duration is consistent (stddev < 40% of mean).
+Code
+function detectLoops(assignments: ClusterAssignment[]) {
+  const loops = [];
+  const byCluster = groupBy(assignments, 'cluster_id');
+ 
+  for (const [clusterId, dates] of Object.entries(byCluster)) {
+    const runs = findContiguousRuns(dates);  // [{start, end, duration_days}, ...]
+    if (runs.length < 3) continue;
+ 
+    const intervals = runs.slice(1).map((r, i) => daysBetween(runs[i].end, r.start));
+    const durations = runs.map(r => r.duration_days);
+ 
+    const intervalMean = mean(intervals);
+    const intervalStd = std(intervals);
+    const durationMean = mean(durations);
+    const durationStd = std(durations);
+ 
+    if (intervalStd / intervalMean < 0.3) {
+      loops.push({
+        cluster_id: clusterId,
+        occurrences: runs.length,
+        avg_interval_days: intervalMean,
+        avg_duration_days: durationMean,
+        confidence: 1 - (intervalStd / intervalMean),
+        runs: runs
+      });
+    }
+  }
+ 
+  return loops;
+}
+Surfacing loops to the user
+When a new run of a known-looping cluster starts, surface this in the chat interface:
+"You've entered your [user-confirmed cluster name] again. This is occurrence #5 in the past 6 months. Average duration: 12 days. Last 4 times this state was preceded by [trigger pattern]."
+This is not a notification. It's a passive surface — only shows up if the user opens the chat. Don't email, don't push.
+Schema
+CREATE TABLE loops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  cluster_id UUID NOT NULL REFERENCES clusters(id),
+  occurrences INT NOT NULL,
+  avg_interval_days FLOAT NOT NULL,
+  avg_duration_days FLOAT NOT NULL,
+  confidence FLOAT NOT NULL,
+  runs JSONB NOT NULL,  -- array of {start, end, duration_days}
+  detected_at TIMESTAMPTZ DEFAULT NOW(),
+  last_surfaced_at TIMESTAMPTZ
+);
+Acceptance criteria
+Loop detection runs weekly, same job as clustering.
+Loops only fire if 3+ occurrences and intervalStd/intervalMean < 0.3.
+Each loop surfacing in the chat includes the cluster name, occurrence number, average duration, and a citation chain to the prior occurrences.
+Users can dismiss a loop surface; it won't re-fire for that cluster for 30 days.
+2.7 — Drift detection (stated vs lived)
+Drift is the gap between what the user says they value and what they actually do. We have this data — content_type field on every memory (§2.2).
+The algorithm
+For each user, every Sunday, pull the last 30 days of memories.
+Split into stated (content_type = 'stated') and lived (content_type = 'lived').
+Generate an embedding-based summary of each side.
+Ask Claude to surface the largest gaps.
+The prompt
+System: You are EYES. You compare what a user says they value against what they actually do.
+ 
+User: Here are summaries of two streams from the last 30 days:
+ 
+STATED (from journal entries, manifestos, long-form messages):
+[summary of stated content]
+ 
+LIVED (from calendar, message timestamps, code output):
+[summary of lived content]
+ 
+Identify up to 3 specific gaps where what was stated does NOT match what was lived.
+Each gap should be:
+- specific (cite a stated thing and a lived thing)
+- factual (the data shows it)
+- non-judgmental (we surface, the user interprets)
+ 
+Output JSON:
+{
+  gaps: [
+    {
+      stated_claim: "the user said X on [date] in [source]",
+      lived_evidence: "in the same period, [Y] hours / messages / events went to [thing]",
+      gap_summary: "one-sentence non-judgmental description",
+      citations: [memory_id, memory_id, ...]
+    }
+  ]
+}
+Surfacing
+Drift events go in a Drift tab in the UI. They don't push notify. Users open them when curious. Each entry shows: stated claim with citation, lived evidence with citation, one-sentence gap summary.
+Schema
+CREATE TABLE drift_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  detected_at TIMESTAMPTZ DEFAULT NOW(),
+  window_start DATE NOT NULL,
+  window_end DATE NOT NULL,
+  stated_claim TEXT NOT NULL,
+  lived_evidence TEXT NOT NULL,
+  gap_summary TEXT NOT NULL,
+  citations JSONB NOT NULL,
+  user_acknowledged BOOLEAN DEFAULT false
+);
+Acceptance criteria
+Weekly cron runs drift detection on Sundays for users with ≥30 days of data.
+Maximum 3 drift events per user per week (avoid noise).
+Every drift event has at least 2 citations — one for stated, one for lived.
+Drift tab in UI shows reverse chronological list.
+2.8 — Entity correlations (who shifts you, what shifts you)
+We extracted entities at ingestion time (§2.2). Now we compute correlations between entities and clusters.
+The algorithm
+For each entity that's been mentioned in ≥5 memories AND across ≥2 clusters, compute:
+Co-occurrence rate — % of days where this entity is mentioned AND the user is in cluster X.
+Compare to baseline — % of all days the user is in cluster X.
+Lift = co-occurrence rate / baseline rate. Lift > 1.5 means meaningful positive correlation. Lift < 0.5 means meaningful negative correlation.
+Code
+function computeEntityCorrelations(userId: string) {
+  const entities = getEntitiesWithMinMentions(userId, 5);
+  const clusters = getConfirmedClusters(userId);
+  const results = [];
+ 
+  const totalDays = getDaysWithData(userId);
+ 
+  for (const entity of entities) {
+    const entityDays = getDaysWithEntity(userId, entity.id);
+    
+    for (const cluster of clusters) {
+      const clusterDays = getDaysInCluster(userId, cluster.id);
+      const intersection = entityDays.filter(d => clusterDays.includes(d));
+      
+      const cooccurrenceRate = intersection.length / entityDays.length;
+      const baselineRate = clusterDays.length / totalDays.length;
+      const lift = baselineRate > 0 ? cooccurrenceRate / baselineRate : 0;
+      
+      if (lift > 1.5 || lift < 0.5) {
+        results.push({
+          entity_id: entity.id,
+          cluster_id: cluster.id,
+          lift: lift,
+          cooccurrence_count: intersection.length,
+          direction: lift > 1.5 ? 'positive' : 'negative'
+        });
+      }
+    }
+  }
+ 
+  return results;
+}
+Surfacing
+People & Places tab in UI. Sortable table. Each row: entity name | cluster name | lift | direction | citation count.
+Surfaced in chat only when explicitly asked: "What lifts me into expansion-mode?" or "Who shows up when I'm in my collapse state?"
+SENSITIVITY — Do not auto-surface entity correlations in the chat interface during V1. They are sensitive (some users will see things they don't want to see — "this person is correlated with my worst state"). Make them opt-in via the People & Places tab.
+Schema
+CREATE TABLE entity_correlations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  entity_id UUID NOT NULL REFERENCES entities(id),
+  cluster_id UUID NOT NULL REFERENCES clusters(id),
+  lift FLOAT NOT NULL,
+  cooccurrence_count INT NOT NULL,
+  direction TEXT NOT NULL,  -- 'positive' or 'negative'
+  computed_at TIMESTAMPTZ DEFAULT NOW()
+);
+ 
+CREATE INDEX idx_entity_corr_user ON entity_correlations(user_id, lift DESC);
+2.9 — Forward inference (probabilistic next-state)
+Given the user's current cluster, their cluster history, and any active loops, estimate likely trajectories for the next 14 days. Always cite. Never positioned as prediction.
+V1 implementation — simple, not fancy
+Build a transition matrix from the user's history. For each cluster pair (A → B), count how often the user transitioned from A to B. Normalize per row to get transition probabilities.
+function buildTransitionMatrix(userId: string) {
+  const assignments = getClusterAssignmentsOrdered(userId);  // ordered by date
+  const transitions = {};
+ 
+  for (let i = 0; i < assignments.length - 1; i++) {
+    const from = assignments[i].cluster_id;
+    const to = assignments[i+1].cluster_id;
+    if (!from || !to) continue;
+    if (from === to) continue;  // same cluster, not a transition
+    transitions[from] = transitions[from] || {};
+    transitions[from][to] = (transitions[from][to] || 0) + 1;
+  }
+ 
+  // Normalize
+  const probs = {};
+  for (const from in transitions) {
+    const total = Object.values(transitions[from]).reduce((a, b) => a + b, 0);
+    probs[from] = {};
+    for (const to in transitions[from]) {
+      probs[from][to] = transitions[from][to] / total;
+    }
+  }
+ 
+  return probs;
+}
+Surfacing
+Forward inference is on-demand only in V1. No auto-surface. User clicks "Where am I headed?" in the Mind Map tab. We respond:
+"You're currently in [cluster name]. Based on your past behavior, the most likely transitions are: [next cluster A] 40%, [next cluster B] 30%, [back to current] 20%, [other] 10%. The last 4 times you exited this cluster, the trigger was [pattern]. Average time in current cluster from prior history: 8 days. You've been in it for 4."
+TONE — Stay honest about uncertainty. Never say "you will" — always say "based on prior cycles, the probability is X." Always show the data. The product is a mirror, not an oracle.
+2.10 — The chat interface (how all this surfaces)
+Everything in V1 surfaces through one interface: the chat. There is no separate dashboard. There is no separate analytics view. There are a few tabs for browsing (Mind Map, Loops, Drift, People & Places) but the primary interaction is the chat.
+Layout
+Three-pane layout, similar to ChatGPT:
+Left: thread history sidebar (each conversation is a thread).
+Center: active conversation. At the top of the conversation: any new alerts from the acute layer.
+Right (collapsible): tabs for Mind Map, Loops, Drift, People & Places. Each opens the relevant view in the right panel without leaving the chat.
+How responses get generated
+Every user query goes through this pipeline:
+Embed the query.
+Vector search the user's memories — get top 20 candidates.
+Get the user's current cluster (today's state vector assignment).
+Pass everything to Claude with this prompt structure:
+System: You are EYES, the user's personal intelligence layer.
+Tone: direct, accountable, no fluff. Don't congratulate. Don't soften.
+When citing, link to specific memories by ID.
+ 
+User context:
+- Current cluster: [cluster name from confirmed clusters, or 'unknown' if pre-validation]
+- Days in current cluster: [N]
+- Active loops: [list]
+ 
+Retrieved memories:
+[top 20 results with embeddings, dates, content snippets]
+ 
+User query: [query]
+ 
+Output a cited answer. When the user's current state is relevant to the answer, mention it. When a loop is relevant, mention it. Otherwise, just answer the question.
+The right panel tabs
+Mind Map tab
+Shows the user's cluster timeline for the last 90 days. Horizontal bar where each day is colored by cluster assignment. Hover to see day details. Click a cluster to see its signature.
+Loops tab
+Shows all detected loops with occurrence count, average duration, last occurrence. Click a loop to see all occurrences with citation chain.
+Drift tab
+Reverse chronological list of drift events. Each shows: stated claim with citation, lived evidence with citation, one-sentence gap summary.
+People & Places tab
+Sortable table of entity correlations. Filter by entity type. Sort by lift.
+ENGINEERING NOTE — All four tabs are read-only views of the data we computed in §§2.5-2.9. None of them require new compute. They're just queries against the tables. Don't over-engineer.
+2.11 — Privacy shields (simplified version of what you built)
+The Privacy Shield panel you built in the UI is good. The Requirements doc you wrote is too complex for V1. Here's the simplified version we ship:
+What V1 needs
+Per-connector toggle. User can pause/resume indexing for any connector at any time. When paused, no new data is ingested. Existing data stays.
+Per-source exclude rules. User can exclude specific email addresses, Slack channels, or Discord servers from being indexed. Stored as a list per-connector.
+Manual flag. From any memory in the chat, user can click "Don't include this in clustering / patterns." That memory stays searchable but is excluded from state vector computation and chronic-layer processing.
+Delete account. One-click full delete. All memories, all clusters, all state vectors, all OAuth tokens. Within 30 days, no trace of the user remains.
+What V1 does NOT need (defer to Month 4+)
+Client-side E2EE.
+Field-level redaction rules.
+Audit-trail logging of every read.
+Admin-only troubleshooting tier.
+Workspace-level vs connector-level vs item-level shield distinctions (V1 = item-level only).
+Schema
+CREATE TABLE privacy_excludes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  connector_id TEXT NOT NULL,
+  exclude_type TEXT NOT NULL,  -- 'email_address', 'slack_channel', 'discord_server'
+  exclude_value TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ 
+ALTER TABLE memories ADD COLUMN excluded_from_chronic BOOLEAN DEFAULT false;
+Part 3 — Execution plan
+Five weeks. Four people. One product live with real users by Friday, June 13, 2026.
+Below is the week-by-week plan. Each week has: goals, who does what, what "done" looks like, and what gets demoed at the end of the week. End-of-week Friday demos are non-negotiable — even if it's just to Abhi, you demo what works.
+3.1 — Team assignments
+Four interns. Each has a primary lane. Each helps the others when blocked. No solo silos.
+Person
+Primary lane
+Owns end-to-end
+Chandra Mohan
+Data & chronic layer
+State vectors pipeline, clustering service (Python on Modal), loop detection, drift detection, entity correlations. Owns Appendix A schema changes.
+Saravanan
+Acute layer & ingestion
+Webhook handlers, detection pass, cross-reference logic, alert surfacing. Owns the Reddit connector completion.
+Saran
+Frontend & UX
+Chat interface upgrades, Mind Map / Loops / Drift / People & Places tabs, validation modal, alerts UI, privacy shield UI simplification.
+Intern #4
+Plumbing & polish
+Cron infrastructure (Vercel cron setup), env validation, logging cleanup, Claude API integration upgrades, prompt library, pending fixes (rename, GPT→Claude, etc.).
+HOW TO USE THIS WITH CLAUDE — Every paste-into-Claude prompt should reference the appendix that has the schema. If you're implementing §2.5 clustering, you paste both §2.5 AND Appendix A's state_vectors + clusters tables. Claude needs both to write correct code.
+3.2 — Week 1 (May 12-18): Foundation
+Goal of week
+By end of week, the substrate for the cognitive layer is in place. Daily state vectors are being computed for all users. The pending fixes (rename, Claude swap, Reddit) are done.
+Tasks
+Chandra Mohan
+Implement Appendix A schema changes (Migration 1-3). Run on production Supabase.
+Backfill date_bucket and content_type on existing memories table (see §2.2).
+Build the state vector computation function (§2.4). Test on Abhi's data first.
+Set up the nightly cron in vercel.json. Confirm it runs at 3am UTC.
+Saravanan
+Finalize Reddit connector (OAuth flow + initial sync + polling job).
+Build entity extraction at ingestion (see §2.2 Addition 3). Test on Abhi's data.
+Set up entities table per Appendix A.
+Saran
+Audit existing chat interface. List every component.
+Build the alerts component at the top of the chat (will be wired in week 2).
+Simplify the Privacy Shield panel per §2.11.
+Intern #4
+Rename "the-monitor" → EYES throughout codebase. Update README, env vars, any branding strings.
+Swap GPT-4o → Claude in ai.ts. Use claude-3-5-sonnet for high-stakes calls, claude-3-5-haiku for detection / classification.
+Get fresh Claude API key, rotate Vercel env var, confirm app starts cleanly.
+Set up structured JSON logging (one log entry per important operation with user_id, operation, duration_ms, error fields).
+End of week 1 demo
+Friday May 16. Show: (1) state vectors being computed for Abhi's account, visible in the state_vectors table, (2) Reddit connector working end-to-end, (3) entity extraction working on a sample email, (4) clean rebranded UI.
+Definition of done
+`SELECT * FROM state_vectors WHERE user_id = '[abhi]'` returns at least 5 rows.
+Connecting Reddit produces synced posts/comments in memories table.
+Random email opened in the chat UI shows extracted entities.
+No references to "the-monitor" anywhere in the codebase.
+3.3 — Week 2 (May 19-25): Acute layer + clustering
+Goal of week
+Acute layer is firing on real incoming events. Clustering service is deployed on Modal and being called weekly. Both layers are wired.
+Tasks
+Chandra Mohan
+Deploy the Python clustering service on Modal (§2.5). Verify it runs on a sample 30-day vector set.
+Build the weekly cron that calls the clustering service per user.
+Build the cluster description generation (Claude call with the prompt in §2.5).
+Test on Abhi's account — confirm 3-7 clusters detected, descriptions read as specific not generic.
+Saravanan
+Build the detection pass (§2.3). Wire to every incoming Gmail/Slack webhook.
+Build the cross-reference logic. Test: send Abhi an email about something he committed to recently, confirm alert fires within 30 seconds.
+Build the alerts table per Appendix A. Wire the chat UI to poll it.
+Saran
+Build the validation modal that shows draft clusters and lets the user name/reject them (§2.5).
+Build the Mind Map tab — horizontal timeline visualization of cluster assignments per day.
+Wire the alerts component (from week 1) to the live alerts table.
+Intern #4
+Build the prompt library (Appendix C). Every prompt versioned and stored centrally, not hardcoded.
+Build the simple Zod-validated JSON parsing wrapper (§1.5 row 10).
+Add the "last synced X ago" line to each connector card in the settings UI.
+End of week 2 demo
+Friday May 23. Show: (1) acute layer firing on a live email to Abhi's inbox, with alert visible in chat within 30 sec, (2) cluster detection running on Abhi's data, with draft clusters visible (not yet user-validated), (3) Mind Map tab showing Abhi's cluster timeline.
+Definition of done
+New email to Abhi → alert appears in his EYES chat within 30 seconds, with citation chain back to prior commitment.
+`SELECT * FROM clusters WHERE user_id = '[abhi]' AND status = 'draft'` returns 3-10 rows.
+Mind Map tab renders correctly with cluster colors over time.
+False positive rate of acute alerts < 30% (Abhi dismisses ≤ 1 in 3).
+3.4 — Week 3 (May 26 - June 1): Loops, drift, entity correlations
+Goal of week
+The full chronic layer is in place. Loop detection, drift detection, and entity correlations are all running. The validation modal works end-to-end. Abhi can name his clusters.
+Tasks
+Chandra Mohan
+Build loop detection (§2.6). Run weekly alongside clustering.
+Build drift detection (§2.7). Run weekly Sunday.
+Build entity correlation computation (§2.8). Run weekly.
+Add the chat interface integration: when user query is asked, fetch user's current cluster, active loops, and recent drift to pass into the LLM context.
+Saravanan
+Tune the detection prompt to reduce false positives. Track dismiss rate. Iterate.
+Add Slack and Discord webhooks to the detection pipeline (Gmail and Calendar are already wired).
+Build the GitHub commit detection — surface commits that mention prior commitments or deadlines.
+Saran
+Wire the validation modal to the cluster table — modal fires on next visit when status='draft' clusters exist.
+Build the Loops tab UI.
+Build the Drift tab UI.
+Build the People & Places tab UI.
+Intern #4
+Onboarding flow polish — landing → Google OAuth → connector grid → first query. End-to-end smoothness.
+Email setup: transactional emails on signup, on 401 from any connector, on first cluster validation available.
+Set up basic analytics: signup count, daily active users, average queries per user, average alerts dismissed.
+End of week 3 demo
+Friday May 30. Show: (1) Abhi validates his clusters via the modal, names them, (2) Loops tab shows at least 1 detected loop in Abhi's history, (3) Drift tab shows at least 1 detected gap, (4) People & Places tab shows entity correlations.
+Definition of done
+Abhi has at least 5 confirmed clusters in his account.
+Chat queries that touch a confirmed cluster reference it by user-given name.
+Loops, Drift, People & Places tabs all render and contain real data for Abhi.
+Onboarding from cold landing → first cited answer takes under 10 minutes.
+3.5 — Week 4 (June 2-8): Polish, dogfood, beta-readiness
+Goal of week
+System is feature-complete. The four interns dogfood it for the whole week. Abhi, Jaani, Radhika, Harshvardhan use it for the whole week. Bugs get logged and fixed.
+Tasks
+Everyone
+Connect your own accounts. Use the product daily. File a bug every time something feels wrong, slow, or unclear.
+Chandra Mohan
+Performance audit: any query > 5 seconds gets profiled. Add indexes where needed.
+Tune HDBSCAN min_cluster_size for the 4 internal users — find a value that produces useful (not over-fragmented, not under-fragmented) clusters.
+Build the forward inference endpoint (§2.9).
+Saravanan
+Acute layer reliability pass: handle webhook retries, idempotency on duplicate events, graceful degradation when Claude API rate-limits.
+Test the full failure modes from Appendix E.
+Saran
+UI polish pass. Replace any placeholder copy. Make sure empty states are graceful ("no clusters yet — need more data" not a blank page).
+Mobile responsiveness — the chat must work on phone, even if the right-panel tabs collapse to hamburger.
+Wire forward inference into the Mind Map tab ("Where am I headed?" button).
+Intern #4
+Set up Sentry or similar for production error tracking.
+Set up a basic /status page that shows whether each connector is healthy.
+Privacy policy + terms of service published. EU-first language. GDPR-compliant data retention statements.
+End of week 4 demo
+Friday June 6. Internal team demo: each of the 4 interns walks through the product as a real user, shows what they discovered about themselves. Abhi presents the cumulative bug list. Triage which bugs are blocking launch vs which can wait until Month 2.
+Definition of done
+All 4 interns have been using the product for the full week.
+Each intern has at least 3 confirmed clusters and has experienced at least one "this thing knows me" moment.
+Bug list is triaged with severity labels. P0/P1 fixed before launch, P2 logged for Month 2.
+Production error rate < 1% over the dogfood week.
+3.6 — Week 5 (June 9-13): Ship week
+Goal of week
+Public beta launch on Friday June 13. Signups open. Real users connecting accounts and getting answers. Operational watchfulness for the first 72 hours.
+Tasks
+Monday June 9 — Code freeze on features
+No new feature work after this point. Only bug fixes and reliability hardening.
+Monday-Wednesday June 9-11 — P0/P1 bug fixes
+Everyone works through the triaged bug list from week 4 demo.
+Wednesday June 11 — Soft launch
+Open signups to a private list of ~20 close-network beta users (Jaani's network, RSB people, friends-of-cofounders). Get them onboarded by EOD Thursday.
+Thursday June 12 — Final checks
+Verify cron jobs running cleanly.
+Verify webhooks firing for all 20 soft-launch users.
+Watch error tracker. Anything firing repeatedly gets a same-day fix.
+Make sure landing page is ready. Make sure Stripe is wired if we're charging.
+Friday June 13 — Public launch
+Open signups via landing page.
+Post on Twitter/X, ProductHunt, HackerNews, LinkedIn.
+Abhi posts the launch announcement.
+All hands on deck for the first 24 hours — monitor errors, respond to user reports, fix anything that breaks.
+Launch-day definition of done
+Landing page live at production URL.
+Signup → first cited answer flow works for a stranger going through it cold.
+Acute layer firing on at least one beta user's incoming event in production.
+At least 50 signups in first 24 hours.
+Error rate < 2% during launch day.
+At least one user (other than the team) saying "this thing knows me" in DMs or feedback.
+LAUNCH DISCIPLINE — If a feature is at 95% and shipping it would risk launch stability — DON'T SHIP IT. Cut it. We can release it as an update in Month 2. The launch is about getting real users into the system, not about feature completeness. Discipline matters here.
+3.7 — What is NOT being built (the cut list)
+Discipline. Every item below was either in your two PDFs or might tempt you during the sprint. Building any of these in the next 5 weeks risks the launch date.
+Feature / capability
+Why we're cutting it for V1
+Client-side end-to-end encryption
+EU Frankfurt + Supabase RLS + at-rest encryption is enough for consumer beta. Revisit Month 6 for B2B.
+Two-stage retrieval with cross-encoder
+Single-stage vector search is good enough for the data volumes we'll have. Add time-decay and call it done.
+V-Gate / versioned embeddings
+We are NOT changing embedding models. Stay on text-embedding-3-small (1536-dim). Revisit if/when we fine-tune Mistral.
+Multi-provider failover with circuit breakers
+One provider (Claude) is enough. Add a try/catch + retry-once and call it done.
+Full audit rules system (PDF-2 section 2)
+Enterprise feature. Not needed for consumer beta. Month 6+.
+Sync-ID OpenTelemetry tracing
+Structured JSON logs are enough debugging visibility for 100 beta users.
+Real-time cluster updates
+Clusters update weekly. That's fine. Daily clustering is a Month 3 problem.
+ML-based reranking with learned relevance feedback
+Need user feedback data first. Build the thumbs-down button if you have time. Use the data in Month 4.
+Mobile native app
+Mobile web is enough. Native is a Month 6 build.
+Browser extension
+V2 feature. Mentioned in original spec, deferred.
+Voice memo capture / audio input
+Text upload OK as fallback. Voice is Month 3.
+Public API / MCP server external
+V2 (Context API for AI). Not part of V1.
+Fancy ML for forward inference
+Simple transition matrix is enough. Don't reach for Mamba or transformers.
+Push notifications (browser, email, mobile)
+In-app surfacing only for V1. Email only for account events (signup, 401, etc.).
+Multi-tenant workspace / team accounts
+Pure single-user product in V1.
+Subscription tiers / Stripe integration
+Free beta. Pricing comes after we have 100 active users telling us what they'd pay for.
+FINAL DISCIPLINE NOTE — If during implementation you find yourself reaching for any of the above, stop. Ask Abhi. The answer will almost always be "defer it." The discipline here is the difference between shipping June 13 and slipping to August.
+Appendix A — Data model (all tables, all columns)
+This is the canonical schema for V1. All new tables. Migration order matters — run in this order.
+A.1 — Migration 1: Updates to existing tables
+-- Add date_bucket and content_type to memories
+ALTER TABLE memories ADD COLUMN date_bucket DATE;
+ALTER TABLE memories ADD COLUMN content_type TEXT DEFAULT 'mixed' CHECK (content_type IN ('stated', 'lived', 'mixed'));
+ALTER TABLE memories ADD COLUMN entities_extracted JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE memories ADD COLUMN excluded_from_chronic BOOLEAN DEFAULT false;
+ 
+-- Backfill
+UPDATE memories SET date_bucket = DATE(created_at) WHERE date_bucket IS NULL;
+ 
+-- Indexes
+CREATE INDEX idx_memories_user_date ON memories(user_id, date_bucket);
+CREATE INDEX idx_memories_content_type ON memories(user_id, content_type);
+A.2 — Migration 2: state_vectors (new table)
+CREATE TABLE state_vectors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  content_embedding VECTOR(1536),
+  metadata JSONB NOT NULL,
+  -- metadata schema:
+  -- {
+  --   message_volume: int,
+  --   message_diversity: int,
+  --   inbound_outbound_ratio: float,
+  --   tod_morning: float, tod_afternoon: float, tod_evening: float, tod_late: float,
+  --   connector_gmail: float, connector_slack: float, connector_github: float,
+  --   connector_discord: float, connector_notion: float, connector_calendar: float,
+  --   calendar_hours: float,
+  --   commits: int, lines_changed: int,
+  --   stated_lived_ratio: float,
+  --   is_inactive: boolean
+  -- }
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, date)
+);
+ 
+CREATE INDEX idx_state_vectors_user_date ON state_vectors(user_id, date DESC);
+CREATE INDEX idx_state_vectors_embedding ON state_vectors USING hnsw (content_embedding vector_cosine_ops);
+A.3 — Migration 3: clusters and cluster_assignments
+CREATE TABLE clusters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  draft_label TEXT NOT NULL,
+  user_label TEXT,
+  signature TEXT NOT NULL,
+  representative_quote TEXT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'confirmed', 'rejected')),
+  cluster_version INT NOT NULL,
+  centroid_embedding VECTOR(8),  -- post-UMAP
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  confirmed_at TIMESTAMPTZ
+);
+ 
+CREATE INDEX idx_clusters_user_status ON clusters(user_id, status);
+ 
+CREATE TABLE cluster_assignments (
+  state_vector_id UUID NOT NULL REFERENCES state_vectors(id) ON DELETE CASCADE,
+  cluster_id UUID REFERENCES clusters(id) ON DELETE SET NULL,
+  confidence FLOAT,
+  cluster_version INT NOT NULL,
+  PRIMARY KEY (state_vector_id, cluster_version)
+);
+ 
+CREATE INDEX idx_assignments_cluster ON cluster_assignments(cluster_id);
+A.4 — Migration 4: entities and entity_correlations
+CREATE TABLE entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('person', 'organization', 'place', 'tool', 'topic')),
+  canonical_name TEXT NOT NULL,
+  aliases TEXT[] DEFAULT '{}',
+  mention_count INT DEFAULT 0,
+  first_seen_at TIMESTAMPTZ DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, type, canonical_name)
+);
+ 
+CREATE INDEX idx_entities_user_type ON entities(user_id, type);
+ 
+CREATE TABLE entity_correlations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  cluster_id UUID NOT NULL REFERENCES clusters(id) ON DELETE CASCADE,
+  lift FLOAT NOT NULL,
+  cooccurrence_count INT NOT NULL,
+  direction TEXT NOT NULL CHECK (direction IN ('positive', 'negative')),
+  computed_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(entity_id, cluster_id)
+);
+ 
+CREATE INDEX idx_entity_corr_user ON entity_correlations(user_id, lift DESC);
+A.5 — Migration 5: loops, drift_events, alerts
+CREATE TABLE loops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  cluster_id UUID NOT NULL REFERENCES clusters(id) ON DELETE CASCADE,
+  occurrences INT NOT NULL,
+  avg_interval_days FLOAT NOT NULL,
+  avg_duration_days FLOAT NOT NULL,
+  confidence FLOAT NOT NULL,
+  runs JSONB NOT NULL,  -- [{start, end, duration_days}, ...]
+  detected_at TIMESTAMPTZ DEFAULT NOW(),
+  last_surfaced_at TIMESTAMPTZ,
+  user_dismissed_until TIMESTAMPTZ
+);
+ 
+CREATE INDEX idx_loops_user ON loops(user_id);
+ 
+CREATE TABLE drift_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  detected_at TIMESTAMPTZ DEFAULT NOW(),
+  window_start DATE NOT NULL,
+  window_end DATE NOT NULL,
+  stated_claim TEXT NOT NULL,
+  lived_evidence TEXT NOT NULL,
+  gap_summary TEXT NOT NULL,
+  citations JSONB NOT NULL,
+  user_acknowledged BOOLEAN DEFAULT false
+);
+ 
+CREATE INDEX idx_drift_user_date ON drift_events(user_id, detected_at DESC);
+ 
+CREATE TABLE alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  trigger_event_id UUID,  -- references the memory that triggered this
+  classification TEXT NOT NULL,  -- 'ask', 'commitment', 'reference'
+  surface_message TEXT NOT NULL,
+  citations JSONB NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'shown', 'dismissed', 'acted_on')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  shown_at TIMESTAMPTZ
+);
+ 
+CREATE INDEX idx_alerts_user_status ON alerts(user_id, status, created_at DESC);
+A.6 — Migration 6: privacy_excludes
+CREATE TABLE privacy_excludes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  connector_id TEXT NOT NULL,
+  exclude_type TEXT NOT NULL CHECK (exclude_type IN ('email_address', 'slack_channel', 'discord_server', 'paused_connector')),
+  exclude_value TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ 
+CREATE INDEX idx_privacy_user ON privacy_excludes(user_id, connector_id);
+Appendix B — Math reference
+Plain-language explanations of the math we use. Read once. You don't need to be a statistician.
+B.1 — UMAP (Uniform Manifold Approximation and Projection)
+Takes high-dimensional data (our 1556-dim state vectors) and projects them into a lower-dimensional space (we use 8 dimensions) while preserving the structure of how points relate to each other.
+Why we use it: HDBSCAN clusters better in lower dimensions. 1556 dimensions is too many for density-based clustering to work well — distance becomes meaningless at very high dimensions (the curse of dimensionality).
+Key parameters:
+n_components=8 — output dimensionality. We use 8 because empirically it's the sweet spot for clustering personal behavioral data.
+n_neighbors=15 — how many nearby points to consider when building the structure. Larger = more global structure, smaller = more local structure. 15 is the default and works well.
+random_state=42 — so we get reproducible results across runs. Important for debugging.
+GOTCHA — UMAP is stochastic by default — different runs can give different outputs. Always set random_state. If you don't, you'll get different clusters every week and the user will be confused.
+B.2 — HDBSCAN (Hierarchical Density-Based Spatial Clustering of Applications with Noise)
+Density-based clustering algorithm. Finds groups of points that are densely packed together in space, and labels anything not in a dense group as noise (-1).
+Why we use it (instead of K-Means): K-Means forces every point into a cluster, even outliers. It also requires you to specify K upfront. HDBSCAN admits "this point doesn't belong anywhere" as a valid output and figures out K on its own.
+Key parameters:
+min_cluster_size=5 — minimum number of points to call something a cluster. Lower = more clusters but each less stable. Higher = fewer but more robust.
+min_samples=3 — how many neighbors a point needs to be considered a "core" point. Lower = more aggressive clustering, more noise. Higher = more conservative.
+Tuning notes from our context:
+For a user with 30 days of data, use min_cluster_size=4.
+For a user with 90+ days of data, use min_cluster_size=5.
+If a user gets only 1-2 clusters from a 90-day run, lower min_cluster_size to 3. They might be a very routine person.
+If a user gets 12+ clusters, raise min_cluster_size to 7. They're likely fragmenting.
+B.3 — Recurrence (the simple version we use)
+Real recurrence quantification analysis (RQA) is complex. We use a simplified version:
+Get the ordered sequence of cluster assignments for the user (day 1: cluster A, day 2: cluster A, day 3: cluster B, ...).
+Find contiguous runs of each cluster: [{cluster: A, start: day 1, end: day 5}, {cluster: B, start: day 6, end: day 8}, ...].
+For each cluster that has 3+ runs, compute the time gap between consecutive runs (intervals).
+If the intervals have low variance (stddev < 30% of mean), the cluster is recurring with stable periodicity — call it a loop.
+Why this works: it's the simplest possible test for "is this happening at a consistent rhythm?" It will miss some real patterns (e.g., loops with varying intervals but consistent durations) and catch some false positives (random clustering of a few intervals), but for V1 it's good enough.
+B.4 — Lift (for entity correlations)
+Statistical measure of how strongly two events are associated. Computed as:
+lift = P(in cluster X | entity Y mentioned) / P(in cluster X)
+Interpretation:
+Lift = 1.0: entity and cluster are independent (no association).
+Lift > 1.5: meaningful positive association. When this entity shows up, the user is more likely to be in this cluster than baseline.
+Lift < 0.5: meaningful negative association. When this entity shows up, the user is less likely to be in this cluster than baseline.
+Between 0.5 and 1.5: we don't surface — too weak to be reliable.
+Appendix C — Prompt library
+Every Claude call we make is one of these prompts. Store them in a prompt_versions table so we can iterate without code deploys. Each has a version number.
+C.1 — Acute layer: event classification (v1)
+Model: claude-3-5-haiku-20241022 (cost-sensitive, fires on every event)
+SYSTEM:
+You are EYES, a personal intelligence layer. You classify incoming events.
+Given a single event (email, message, calendar event, code commit), output ONE classification as JSON.
+ 
+Definitions:
+- 'ask': someone is requesting something from the user (info, decision, action, response)
+- 'commitment': user is making a promise outbound (their own message/email/draft)
+- 'deadline': time-bound obligation being established
+- 'reference': someone is referencing a prior conversation or commitment
+- 'noise': automated, newsletter, marketing, low-importance
+ 
+Be conservative. When unsure between a category and 'noise', choose 'noise'.
+ 
+USER:
+Source: {source}
+Direction: {inbound|outbound}
+Sender/Author: {sender}
+Subject/Title: {subject}
+Content: {content}
+Date: {date}
+ 
+Output JSON only:
+{
+  "classification": "ask|commitment|deadline|reference|noise",
+  "confidence": 0.0-1.0,
+  "extracted": {
+    "entities": [{"type": "person|org|tool", "name": "..."}],
+    "topic": "short topic descriptor",
+    "deadline_date": "YYYY-MM-DD or null",
+    "requires_response": true|false
+  }
+}
+C.2 — Acute layer: cross-reference synthesis (v1)
+Model: claude-3-5-sonnet-20241022 (quality matters here)
+SYSTEM:
+You are EYES. You connect new events to prior commitments / asks.
+Given a new event and 3 related prior events, determine:
+1. Is there a real connection between the new event and any prior one?
+2. Should we surface this to the user?
+3. If yes, what should the alert say?
+ 
+Tone: direct, accountable, no fluff. No 'great job', no 'looks like'.
+Surface only when the connection is clear and actionable.
+ 
+USER:
+NEW EVENT:
+{full event details}
+ 
+RELATED PRIOR EVENTS:
+1. [Date] [Source] [Snippet]
+2. [Date] [Source] [Snippet]
+3. [Date] [Source] [Snippet]
+ 
+Output JSON only:
+{
+  "connected": true|false,
+  "connection_summary": "one sentence",
+  "should_surface": true|false,
+  "surface_message": "2-3 sentence alert, direct tone",
+  "citations": ["memory_id_1", "memory_id_2"]
+}
+C.3 — Chronic layer: cluster description (v1)
+Model: claude-3-5-sonnet-20241022
+SYSTEM:
+You are EYES. You describe recurring behavioral states detected in a user's data.
+You are NOT inventing what the state means — you are describing what's distinctive about it.
+Be specific. Use the user's actual data, not generic templates.
+ 
+USER:
+Here are 5 sample days from a recurring state in this user's data.
+ 
+DAY 1: {date}
+- Message volume: {n}
+- Dominant connectors: {list}
+- Top topics: {list}
+- Time-of-day: {distribution}
+- Notable activity: {summary}
+ 
+[DAY 2-5 same format]
+ 
+Frequency in last 90 days: {N occurrences}
+Average duration when this state appears: {N days}
+ 
+Output JSON only:
+{
+  "draft_label": "4-6 word descriptor — concrete, not abstract",
+  "signature": "3-sentence description: what's distinctive about HOW the user behaves in this state",
+  "representative_quote": "actual quote from one of the days that captures the state",
+  "count_in_last_90_days": {N},
+  "avg_duration_days": {N}
+}
+C.4 — Chronic layer: drift detection (v1)
+Model: claude-3-5-sonnet-20241022
+SYSTEM:
+You are EYES. You compare what a user STATED they value against what their behavior shows they ACTUALLY did over the same period.
+Surface gaps. Cite specifically. Stay non-judgmental — you're a mirror, not a critic.
+ 
+USER:
+PERIOD: {date_range}
+ 
+STATED stream (from journal entries, manifestos, long-form messages):
+{summarized stated content with memory_ids}
+ 
+LIVED stream (from calendar, message timestamps, code output):
+{summarized lived content with memory_ids}
+ 
+Find up to 3 specific gaps. Each must be:
+- Cite a stated thing AND a lived thing (both with memory_ids)
+- Factually grounded in the data shown
+- Non-judgmental (the user interprets, you observe)
+ 
+Output JSON only:
+{
+  "gaps": [
+    {
+      "stated_claim": "on {date}, the user wrote/said: '{exact quote}'",
+      "stated_citation": "memory_id",
+      "lived_evidence": "in the same period, {N} hours / events / messages went to {thing}",
+      "lived_citations": ["memory_id_1", "memory_id_2"],
+      "gap_summary": "one-sentence factual observation"
+    }
+  ]
+}
+C.5 — Chat interface: cited answer (v1)
+Model: claude-3-5-sonnet-20241022
+SYSTEM:
+You are EYES, the user's personal intelligence layer.
+Tone: direct, accountable, no fluff. Don't congratulate. Don't soften.
+Always cite memories by ID when you reference specific events.
+ 
+When the user's current cluster is known and relevant to the question, briefly mention it.
+When an active loop is relevant, mention it.
+When recent drift is relevant, mention it.
+Otherwise, just answer the question.
+ 
+USER CONTEXT:
+Current cluster: {confirmed_label or 'still being learned'}
+Days in current cluster: {N}
+Active loops: {list of loop summaries}
+Recent drift (last 30 days): {list of drift gap summaries}
+ 
+RETRIEVED MEMORIES (top 20 by similarity):
+1. [memory_id_1] [date] [source] [content snippet]
+2. [memory_id_2] [date] [source] [content snippet]
+...
+ 
+USER QUERY:
+{query}
+ 
+Output a direct, cited answer. Use [memory_id] inline when referencing.
+Appendix D — Implementation cheatsheet (paste into Claude)
+Templates for the most common implementation tasks. Paste the template plus the relevant section + Appendix A schema into Claude, get working code.
+D.1 — Template: "Build this feature"
+I'm building a feature for a Next.js 14 / Supabase / pgvector application.
+ 
+Stack:
+- Next.js 14 App Router, TypeScript
+- Supabase (Postgres with pgvector extension, hosted EU Frankfurt)
+- Claude API (Anthropic SDK)
+- Vercel hosting + Vercel cron
+ 
+Here's the feature spec (paste relevant section from this document):
+[PASTE SECTION]
+ 
+Here's the database schema for this feature (from Appendix A):
+[PASTE RELEVANT TABLES]
+ 
+Here's the prompt I'll use (from Appendix C):
+[PASTE RELEVANT PROMPT, if applicable]
+ 
+Write the implementation:
+1. Migration file (SQL) if new tables needed
+2. TypeScript service function in /lib/services/[feature].ts
+3. API route in /app/api/[feature]/route.ts
+4. Tests (if function is non-trivial)
+ 
+Use clear naming. Add error handling that logs to console with structured JSON
+(level, operation, user_id, error). Don't over-engineer.
+D.2 — Template: "Debug a failing pipeline"
+I have a pipeline that's failing. Here's the context:
+ 
+Pipeline: [name, e.g., 'state vector cron']
+Spec: [paste section from this document]
+Schema: [paste relevant tables from Appendix A]
+ 
+Symptom: [what's actually happening]
+ 
+Logs from the failure:
+[paste structured JSON logs]
+ 
+Help me trace the root cause and propose a fix. Don't just guess —
+ask me for more information if you need it.
+D.3 — Template: "Make this prompt better"
+I have a Claude prompt that's producing inconsistent / incorrect output.
+ 
+Prompt (current version, from Appendix C):
+[paste]
+ 
+Sample inputs and outputs (showing the problem):
+Input 1: {...}
+Expected output 1: {...}
+Actual output 1: {...}
+ 
+[repeat for 3-5 examples]
+ 
+Improve the prompt. Keep the same JSON output schema.
+Explain what you changed and why.
+D.4 — Common pitfalls
+Forgetting RLS. Supabase has Row-Level Security. Every new table needs RLS policies that scope reads/writes to the authenticated user_id. Don't forget.
+Forgetting indexes. Every new table that's queried by user_id + date needs an index on (user_id, date). Slow queries will tank the user experience.
+Not handling Claude rate limits. If Claude returns 429, wait with exponential backoff. Don't crash the cron job.
+Hardcoding model names. Put model names in a single config file. We'll swap models for cost optimization later.
+Synchronous Claude calls in webhook handlers. Webhooks must return 200 fast. Push the Claude call into a background queue (or use waitUntil() in Vercel).
+Appendix E — Failure modes and how to handle them
+Things will break. Here's how to handle the most common breaks.
+Failure
+How it manifests
+How to handle
+OAuth token expired (401)
+Sync stops, user sees stale data
+Mark connector status=FAILED, send email with reauth link, show banner in UI. Don't keep retrying.
+Claude API rate-limited (429)
+Detection pass or chat response fails
+Exponential backoff (1s, 2s, 4s, 8s, 16s). If still failing after 5 retries, log and skip (acute) or show error in chat.
+Claude returns malformed JSON
+Schema validation fails on parse
+Retry once with a 'fix this JSON' prompt. If still fails, log to parse_failures table and skip.
+Modal clustering service down
+Weekly cluster job fails
+Log error, retry next day. Don't crash. Use existing cluster assignments — they're stale but better than nothing.
+Cron job hits Vercel timeout
+Some users don't get state vectors
+Break the user loop into chunks of 50. Process chunks in parallel. If chunk fails, retry from checkpoint next day.
+HDBSCAN returns 0 clusters
+User has data but no detected clusters
+Lower min_cluster_size and retry. If still 0, surface 'still learning your patterns' message — they may just need more time.
+Webhook delivery delayed
+Acute alert fires too late to matter
+Show the alert anyway with a timestamp. User decides relevance. Don't suppress.
+Embedding API down
+New memories can't be ingested
+Queue the items in a pending_embedding table. Retry hourly. Don't lose data.
+User deletes a memory mid-clustering
+Cluster computation references a missing row
+Use database-level CASCADE on user deletes. For partial deletes, recompute affected state vector and re-cluster on next weekly run.
+GOLDEN RULE — When in doubt: log the failure, don't crash the job, and never lose user data. Errors are expected. Data loss is unforgivable.
+Closing
+This document is exhaustive on purpose. You have 5 weeks and 4 people. You will be tempted to interpret the spec your own way, to add features that aren't here, or to defer features that are. Don't.
+The product specified in these pages is exactly what we're shipping by June 13. Not more, not less.
+Three things to remember:
+Build both layers. Acute fires from day 1. Chronic comes online at day 22-30. Both are core. Neither is optional.
+Statistical gating + user validation. Never let the system claim a pattern is real just because the math finds structure. The user is the labeler. The system is the detector. Both, every time.
+Ship a scrappy, real version. Better to launch with 100 real users on June 13 than to launch with 0 users on August 15. We are not optimizing for elegance. We are optimizing for being in front of real users with real feedback as fast as possible.
+WHEN STUCK — If you're stuck, you have three escalation paths: (1) paste the relevant section into Claude and let it help, (2) ask another intern who's working in an adjacent lane, (3) ask Abhi directly. Don't sit blocked. Speed matters.
+Ship June 13. See you on the other side.
+— Abhi

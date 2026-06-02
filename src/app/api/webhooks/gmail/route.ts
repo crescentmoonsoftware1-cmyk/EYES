@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { invokeModel } from '@/services/ai/ai';
+import { waitUntil } from '@vercel/functions';
+import { extractForUser } from '../../actions/extract/route';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -57,6 +59,13 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error('[Gmail Webhook]', err);
+  }
+
+  // Trigger Action Queue extraction immediately in the background
+  if (userId) {
+    waitUntil(extractForUser(userId, supabase).catch(err => 
+      console.error('[Gmail Webhook] Background extraction failed:', err)
+    ));
   }
 
   return NextResponse.json({ received: true });

@@ -1,0 +1,1264 @@
+EYES
+CONFIDENTIAL · INTERNAL
+Handover
+Specification
+EYES V1 — Crescent Moon Final Sprint
+This document specifies the complete final sprint for EYES V1,
+the conditions for acceptance, and the full migration of code,
+infrastructure, and intellectual property from the Crescent Moon
+engineering team to Abhi (Founder) upon delivery.
+DOCUMENT
+Handover Specification — EYES V1
+VERSION
+1.0
+ISSUED BY
+Abhi (Founder, EYES)
+ISSUED TO
+Crescent Moon Engineering Team
+DATE
+April 29, 2026
+CLASSIFICATION
+Confidential — Internal Distribution Only
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+02
+CONFIDENTIAL
+Contents
+01
+Executive Summary
+p. 04
+02
+Current State Audit
+p. 05
+03
+Code & Account Ownership Migration
+p. 07
+04
+V1 Product Specification
+p. 11
+05
+Reputation Audit Specification
+p. 14
+06
+Performance & Quality Bar
+p. 18
+07
+Mistral AI Integration & Behavioral Data Layer
+p. 20
+08
+Technical Architecture Requirements
+p. 22
+09
+Acceptance Criteria & Sign-off
+p. 24
+10
+Timeline & Milestones
+p. 26
+11
+Communication & Escalation
+p. 27
+A
+Database Schema Reference
+p. 28
+B
+OAuth Apps Inventory
+p. 29
+C
+Audit PDF Layout Mock
+p. 30
+D
+Acceptance Test Script
+p. 31
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+03
+CONFIDENTIAL
+Preamble
+Purpose of this document
+This is the binding specification for the final sprint of EYES V1, executed by the Crescent
+Moon engineering team and delivered to Abhi, founder of EYES.
+It defines three things, in order of precedence: (1) the complete migration of code, infrastructure,
+intellectual property, and operational accounts from Crescent Moon to Abhi; (2) the product surface that
+must be functional, performant, and demonstrable by end of sprint; (3) the conditions under which final
+sign-off and payment occur.
+Where this document is in conflict with prior verbal or written communication, this document supersedes
+them. Where this document is silent, the contractual agreement between Abhi and Crescent Moon
+governs.
+Standard of work
+EYES is being delivered to a Y Combinator interview audience and to early investors. The product will
+be used in live demonstrations. The standard of work is therefore not "functional in best case" but
+"reliable under demonstration conditions, including network instability, large indexed datasets, and
+unprepared queries." Every feature specified in this document is required to meet that standard.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+04
+CONFIDENTIAL
+Section 01
+Executive Summary
+EYES is a personal digital memory operating system. It indexes a user's full online history through
+OAuth connectors, makes that history queryable through an AI interface with citations, and detects
+commitments and opportunities in incoming data streams in real time.
+V1 is one complete consumer web application. A user signs up, connects two or more accounts via
+OAuth, the system indexes their historical data, and the user can query that data with citations. Inside
+the same application sits the Reputation Audit, a paid feature priced at €39, which generates a
+downloadable PDF report. Real-time commitment detection runs on incoming webhooks. The
+application also exposes itself as an MCP server so it can be queried from Claude Desktop, Cursor, and
+any other MCP-compatible AI client.
+What Crescent Moon delivers
+By end of sprint, the Crescent Moon team must deliver, in order of priority:
+01
+Complete migration of all code, infrastructure, accounts, and intellectual property to
+Abhi-owned identity.
+02
+A working V1 web application: OAuth connection flow, indexed memory, query interface with
+citations, MCP server exposure.
+03
+Reputation Audit feature: live preview in-app and full PDF export, branded, watermarked,
+GDPR-compliant.
+04
+Real-time commitment detection writing to a dedicated database table.
+05
+Mistral AI abstraction layer in code from day one (no Mistral integration required, only the
+abstraction).
+06
+Behavioral data capture (Layer 2) instrumented from the first user.
+07
+Documentation, deployment guides, and a recorded acceptance test.
+What Crescent Moon does not retain
+Upon delivery, Crescent Moon retains no rights, no access, no credentials, and no intellectual property
+associated with EYES. All copies of code, schemas, prompts, training data, design assets, and
+credentials in their possession must be deleted, with written confirmation provided to Abhi within seven
+days of final sign-off. This is not negotiable and is consistent with the IP transfer agreement already in
+place.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+05
+CONFIDENTIAL
+Section 02
+Current State Audit
+An honest assessment of what exists today, verified through screenshots of the production system as of
+the date of this document. This is the starting line. Anything not listed here is either incomplete, missing,
+or aspirational and falls under the scope of this sprint.
+Production infrastructure (live)
+The following components are operational in production and have been verified by direct inspection of
+the live system:
+Database
+Supabase, EU Frankfurt region. 13 tables in the public schema including
+raw_events, embeddings, oauth_tokens, oauth_refresh_logs,
+sync_status, sync_run_logs, sync_retry_queue,
+sync_retry_dead_letters, sync_escalation_events, connector_settings,
+topics, user_profiles, provider_disconnect_audits.
+OAuth Connectors (Live)
+Six active and syncing: Gmail, Slack, GitHub, Discord, Notion, Google
+Calendar. Sync status table confirms regular polling intervals and
+successful refresh cycles.
+Web UI Surfaces
+Privacy Shields panel (sender/domain exclusion list). Neural Tuning
+panel (Risk Sensitivity slider, Sync Depth selector with Shallow /
+Balanced / Deep options). Connectors management view. Account
+settings.
+Source Readiness Indicator
+Reports 6/30 platforms connected, marks reliability as High.
+Vector Store
+pgvector extension on Supabase. HNSW indexes on embeddings table.
+1536-dimension vectors compatible with OpenAI embeddings API.
+OAuth applications registered, not yet connected
+The following OAuth applications have been registered with the respective providers but are not yet
+connected to the live application:
+X (Twitter)
+Developer Console app created. Consumer Key generated. Access
+Token generation pending. Account: Tommy59012.
+Trello
+API key + secret generated. App registered as "THE". OAuth 1 flow
+configured, redirect URIs not yet set.
+Netlify
+Personal access token generated. Not yet wired into UI.
+Canva
+Integration registered as "THE EYES". Client ID and secret generated.
+Submitted for review status pending.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+06
+CONFIDENTIAL
+PostHog
+Default project created in US Cloud. Project token and Project ID
+generated. Not yet wired.
+Dropbox
+App registered. App key, secret, and access token generated. Redirect
+URIs not yet configured.
+Reddit
+Not registered. Critical for V1 demo. Must be created in this sprint.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+07
+CONFIDENTIAL
+What is missing for V1
+The following capabilities do not exist in any usable form today and must be delivered by end of sprint:
+Reddit OAuth integration
+Critical. Reddit and Gmail are the V1 demo scope. Must be registered,
+indexed, and queryable.
+Reputation Audit feature
+Both the in-app preview and the PDF export. Does not exist today.
+Stripe payment integration
+For €39 audit purchase. Does not exist.
+Commitment detection
+Real-time webhook-based detection logic. Does not exist.
+MCP server
+EYES must expose itself as an MCP server. Does not exist.
+Mistral abstraction layer
+Code-level abstraction allowing model swap between Claude, OpenAI,
+and future Mistral fine-tune. Does not exist.
+Behavioral data capture
+Anonymized query log table for future fine-tuning data. Does not exist.
+Landing page
+Public marketing surface with audit purchase flow. Does not exist.
+Production-grade error
+handling
+Current system fails silently on OAuth refresh failures and rate limits.
+Must surface to user, retry gracefully, and log for diagnosis.
+UI polish to brand standard
+Current UI is functional but does not match the editorial / sovereign
+brand aesthetic specified separately.
+The handover problem
+Every account currently anchoring this product belongs to alias identities controlled by the Crescent
+Moon team. Supabase organisation "ThomasShelby25's Org". X developer account "Tommy59012".
+Dropbox under thomasshelby251890@gmail.com. This is acceptable as a development arrangement. It
+is not acceptable as a production state. By the time this document is signed off, every account must be
+either transferred to Abhi-owned identities or rebuilt under Abhi-owned identities, with documented
+evidence in each case.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+08
+CONFIDENTIAL
+Section 03
+Code & Account Ownership Migration
+This is the most important section of this document. The product can be delayed by two weeks
+and recover. Incomplete ownership transfer cannot be recovered after Crescent Moon
+disengages. Every step in this section is mandatory and must be witnessed.
+Target end state
+All EYES infrastructure, code, intellectual property, and operational credentials are owned by an
+Abhi-controlled identity, registered against founder@eyes.ai (or equivalent canonical email). Crescent
+Moon retains no active access of any kind. Ownership is documented, verified, and irrevocable from
+their side.
+Migration sequence
+The following migration steps must be executed in order. Each step has an owner, a verification
+method, and a sign-off line that must be checked by Abhi before proceeding to the next step.
+CODE REPOSITORY
+Current state: GitHub repository(ies) live under Crescent Moon GitHub organization or personal
+accounts.
+Target state: A new GitHub organization named "eyes-app" (or similar) is created and owned by Abhi.
+All repositories are transferred to that organization using GitHub's native repository transfer feature,
+which preserves issues, pull requests, commit history, and stars. Crescent Moon team members are
+removed from the organization on the day of final sign-off.
+Verification: Abhi logs into github.com/eyes-app, sees every repository listed, can push to main branch, and
+confirms no Crescent Moon collaborators remain on any repository.
+SUPABASE
+Current state: Project lives under "ThomasShelby25's Org" on Supabase. EU Frankfurt region.
+Database contains real schema, real OAuth tokens, real indexed data.
+Target state: Use Supabase's organization transfer flow. Either (a) Crescent Moon transfers the
+organization itself to Abhi's Supabase account, or (b) Abhi creates a new organization and the project is
+moved across using Supabase's project transfer. Option (a) is preferred to avoid data migration. All API
+keys are rotated immediately after transfer. Abhi enables MFA on his Supabase account before the
+transfer occurs.
+Verification: Abhi logs in, sees the project under his organization, can view all 13 tables, can run a SQL query, and
+the previous owner email is removed from the organization member list.
+HOSTING (VERCEL OR EQUIVALENT)
+Current state: To be confirmed by Crescent Moon. Likely Vercel under a Crescent Moon account.
+Target state: Production deployment lives in Abhi-owned Vercel team. Custom domain is bound to that
+deployment. Environment variables are re-created with new credentials. The previous deployment is
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+09
+CONFIDENTIAL
+decommissioned only after the new deployment serves traffic successfully for 48 hours.
+Verification: Abhi can deploy a no-op commit and see it go live. The custom domain resolves to his Vercel project.
+Previous owner has no access.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+10
+CONFIDENTIAL
+DOMAIN
+Current state: Domain ownership to be confirmed. If currently registered under any Crescent Moon
+account, it must be transferred.
+Target state: Domain registered under Abhi-owned registrar account (Cloudflare, Namecheap, or
+equivalent), with DNS records pointing to the Abhi-owned hosting deployment. Registrar lock enabled.
+Auto-renew enabled. Two-factor authentication enabled.
+Verification: Abhi can log into the registrar, view the domain, modify DNS records, and confirm no other
+administrator email is on the account.
+OAUTH APPLICATIONS
+Current state: Multiple OAuth applications registered under alias accounts (Tommy59012,
+ThomasShelby251890, etc.) across providers including X, Trello, Netlify, Canva, PostHog, Dropbox,
+plus the live six (Gmail, Slack, GitHub, Discord, Notion, Google Calendar).
+Target state: Every OAuth application is re-registered under Abhi-owned developer accounts on each
+provider, OR (where the provider supports it) the existing application is transferred to Abhi-owned
+ownership. The latter is preferred when supported because it preserves user authorizations. When
+re-registration is required, all currently authorized end-user tokens in the database become invalid; this
+is acceptable for V1 because the user base is small.
+Verification: For each provider in Appendix B, Abhi logs into the developer console under his own credentials,
+confirms the application is listed, and confirms the alias account no longer has access. New client ID and client
+secret values are committed to the new environment variable store. Old credentials are revoked.
+STRIPE (FOR €39 AUDIT)
+Current state: No Stripe account exists.
+Target state: Abhi creates a Stripe account in his own legal name, verifies the account, links to a
+personal or business bank account appropriate to his jurisdiction. Stripe API keys are created and used
+in the application's environment variables. Crescent Moon never receives or handles Stripe credentials
+at any point. This is mandatory for legal and tax reasons.
+Verification: Abhi can log into Stripe dashboard, sees the test-mode transactions from the integration, can switch to
+live mode, and confirms the connected bank account is his own.
+CREDENTIALS, SECRETS, ENVIRONMENT VARIABLES
+Every API key, OAuth client secret, database password, and webhook signing secret currently in use
+must be rotated by Abhi after the transfer is complete. Crescent Moon must not retain a copy of any
+credential after rotation. A documented rotation log lists each credential, the date rotated, and the new
+secret reference (not the secret itself).
+Verification: A signed credential rotation log is provided. Abhi runs the application against the rotated credentials
+and confirms it operates correctly. Crescent Moon team confirms in writing that no copy of any previous or current
+credential is retained.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+11
+CONFIDENTIAL
+INTELLECTUAL PROPERTY ASSIGNMENT
+On final sign-off, Crescent Moon executes a written confirmation that all code, schemas, data, prompts,
+designs, documentation, and derivative works produced under this engagement are assigned
+exclusively to Abhi or his designated entity. The confirmation references the existing IP agreement
+between the parties. This document does not replace that agreement; it operationalizes it.
+If Crescent Moon used any third-party libraries, AI prompt sets, or components under licenses requiring
+attribution or imposing restrictions, those must be enumerated in a separate license inventory. Use of
+AGPL-licensed components or copyleft components without explicit prior approval is grounds for
+non-acceptance.
+Migration sign-off matrix
+AREA
+OWNER
+STATE
+GitHub repository
+Crescent Moon
+Pending
+Supabase organization
+Crescent Moon
+Pending
+Hosting (Vercel)
+Crescent Moon
+Pending
+Domain registrar
+Crescent Moon
+Pending
+6 live OAuth apps (Gmail, Slack, GitHub, Discord, Notion, Calendar)
+Crescent Moon
+Pending
+Pending OAuth apps (X, Trello, Netlify, Canva, PostHog, Dropbox)
+Crescent Moon
+Pending
+Reddit OAuth (new)
+Crescent Moon
+Not started
+Stripe account
+Abhi
+Not started
+All credentials rotated
+Abhi (post-handover)
+Pending
+IP assignment confirmation
+Crescent Moon
+Pending
+Credential deletion confirmation
+Crescent Moon
+Pending
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+12
+CONFIDENTIAL
+Section 04
+V1 Product Specification
+V1 is one consumer web application. It is not a prototype. It is not a demo stub. It is the
+product Abhi will sell to first paying customers and demonstrate live to Y Combinator partners.
+It must work without rehearsal.
+Core capabilities
+01. User authentication and onboarding
+A user can sign up using email and password. Magic-link or passwordless authentication is acceptable
+as an alternative. After signup, the user is directed to the onboarding flow, which requires connecting at
+least one OAuth source before the application becomes usable. Onboarding includes the Privacy
+Shields configuration step and the Sync Depth selection step.
+02. OAuth connector framework
+The user can connect any of the supported platforms through a single, uniform UI. For V1, Gmail and
+Reddit are mandatory. Beyond those two, any of the existing six (Slack, GitHub, Discord, Notion,
+Google Calendar) should remain working as they do today, plus any of the additional six (X, Trello,
+Netlify, Canva, PostHog, Dropbox) that can be brought to a production-ready state during this sprint.
+Connectors that do not reach production-ready state by sprint end must be hidden from the UI rather
+than shipped broken.
+03. Indexing pipeline
+When a connector is added, the application begins indexing the user's historical data on that platform.
+Indexing must complete within five minutes per connector under typical conditions (a Gmail account with
+up to 50,000 messages over ten years; a Reddit account with up to 5,000 comments and posts). Where
+the data volume exceeds these thresholds, the system indexes in chronological priority order (most
+recent first) so that queries on recent data work even before full indexing completes. The user is shown
+indexing progress in real time, per platform.
+If indexing exceeds five minutes for the typical case described above, the application is not
+ready for handover. This is a hard requirement.
+04. Query interface
+The user types a natural language query into a single prominent input. The system retrieves relevant
+indexed records using vector similarity search (via pgvector) augmented with keyword filters. The
+retrieved records are passed to Claude with a system prompt that instructs Claude to answer the query
+using only the provided records, and to cite the source of each factual claim by referencing the record
+ID. The UI then renders the answer with inline citation chips that link to the original source (e.g. the
+exact email, Reddit comment, or calendar event). Citation links must actually open the source. Broken
+citations are unacceptable.
+05. Citations
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+13
+CONFIDENTIAL
+Every factual claim in a query response must be accompanied by at least one citation. A citation is a
+reference chip rendered inline or below the answer, displaying the source platform, date, and a short
+identifier (subject line for emails, post title for Reddit, etc.). Clicking a citation opens the source in a new
+browser tab using the appropriate deep link (gmail.com/mail/u/0/#inbox/MSG_ID for Gmail,
+reddit.com/r/... for Reddit, etc.). If the source no longer exists at the destination, the chip displays
+"Source no longer available" rather than a broken link.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+14
+CONFIDENTIAL
+06. Reputation Audit
+See Section 05 for the complete specification. In summary: the user pays €39 via Stripe, the system
+runs the audit pipeline on their indexed data, and produces both an in-app preview (revealing only
+summary signals) and a downloadable PDF (containing the full report including raw citations). This is
+the demo-critical feature. It must work flawlessly in front of Y Combinator partners.
+07. Commitment detection
+When new data arrives via Gmail Pub/Sub webhooks (or polling, for sources without push notifications),
+each new record is passed through a Claude call with a tight system prompt asking: does this record
+contain a commitment, deadline, or opportunity? If yes, extract the commitment text, the likely due date
+if mentioned, and the type. Insert into the detected_commitments table. The Claude call must complete
+within two seconds; if it does not, the prompt must be tightened until it does. For V1, no proactive alerts
+are required. Detections are stored and displayed in the Commitments view.
+08. MCP server
+EYES exposes itself as an MCP server. Other AI clients (Claude Desktop, Cursor, OpenCode, etc.) can
+connect to a user's EYES instance using the user's API key, and call tools such as query_my_history,
+get_recent_commitments, and find_communications_about. The MCP server implementation must
+follow the Anthropic MCP specification. Authentication is per-user via API key generated in the user's
+account settings.
+09. Privacy Shields
+The user can specify a list of email senders, domains, or keywords that are excluded from indexing.
+This list is enforced before any data enters the raw_events table. Records matching an exclusion are
+not stored, not embedded, not indexed, not queryable. The exclusion list is applied to the initial backfill
+and to all incoming webhook events. The user can modify the list at any time; modifications take effect
+on future events only. To purge already-indexed data matching a new exclusion, the user must explicitly
+trigger a re-index.
+10. Sync Depth
+The user can choose Shallow (last 30 days), Balanced (last 6 months), or Deep (full available history).
+This setting affects the initial backfill. Once set, it can be changed; changing from a shallower to a
+deeper setting triggers an incremental backfill of the additional historical window.
+11. Risk Sensitivity
+The Neural Tuning slider controls how aggressively the commitment detection model flags potential
+risks, opportunities, and overdue commitments. At low sensitivity, only explicit deadlines are flagged. At
+high sensitivity, implied commitments and soft promises are also flagged. The slider value (0–100) is
+passed into the Claude system prompt for the commitment detection step.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+15
+CONFIDENTIAL
+Out of scope for V1
+The following are explicitly not part of this sprint. Do not build them. Do not partially build them. They are
+V2.
+— Mistral fine-tune. Only the abstraction layer must exist; no Mistral calls are made in V1.
+— Browser extension.
+— Mobile native applications. The web app must be mobile-responsive but no native iOS or Android
+client is required.
+— Proactive alerts (email, push, SMS). Detection is stored only.
+— Cross-platform burnout detection.
+— B2B Executive Shield product surface.
+— Context API for third-party AI tools to consume user context.
+— Team / shared workspaces. V1 is single-user only.
+— Custom AI model hosting infrastructure.
+— On-premise deployment options.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+16
+CONFIDENTIAL
+Section 05
+Reputation Audit Specification
+The Reputation Audit is the demo-critical feature. It is what Y Combinator partners will see live.
+It is what the first paying customer pays €39 for. The entire investment thesis of EYES — that
+personal data is an asset the owner should be able to inspect, not a resource that platforms
+exploit — is communicated through this single feature. It must be exceptional.
+Tone and feel
+The audit is cold, clinical, and direct. It does not flatter the user. It does not soften findings. It is
+structured like an intelligence report produced by Palantir, written with the editorial discipline of an
+Economist leader column. Where competitors would say "It looks like you might want to consider
+following up with...", the audit says "You committed on April 22 and have not followed up. The deadline
+passed three days ago."
+The audit's purpose is to find the things the user has missed. Every page of the report should
+reinforce that mission.
+Scope
+The audit is dynamic. It runs against whatever connectors the user has active at the moment of audit
+purchase. If the user has only Gmail and Reddit connected, the audit covers Gmail and Reddit. If the
+user has all six live connectors, it covers all six. The PDF report adapts its section count to the
+connectors covered.
+The audit operates only on the user's authorized connector data. It does not search the public web. It
+does not query third-party data brokers. It does not enrich with external information. This must be stated
+explicitly in the report's GDPR notice.
+Two surfaces: live preview and PDF export
+The audit produces two distinct experiences from the same underlying analysis run.
+Live preview (in-app)
+Shown immediately after audit completes, inside the EYES web application. The preview reveals only
+the summary signals: the risk score, the count of mentions per platform, the count of detected
+commitments, and a single headline finding ("You have 3 unfulfilled commitments referenced in
+investor-facing communications"). The full citations, raw quotes, and platform breakdowns are not
+shown in the preview. A prominent "Download full report" button triggers the PDF export.
+Why this split: the live preview is what is shown during the demo (intriguing, premium, controlled). The PDF is what
+the customer keeps and uses (comprehensive, detailed, citable). Both must be designed to brand.
+PDF export
+Generated server-side using ReportLab (or equivalent). Targeted length: 6 to 8 pages of A4.
+Single-column layout. Cream background (#FAFAF7). Ink black body text on cream. Forest green
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+17
+CONFIDENTIAL
+(#1F4D3F) for accent rules and status indicators. Muted red (#8B2E2E) reserved for overdue or
+high-risk items only. Helvetica or system equivalent for body, Helvetica Bold for headings, Courier for
+source identifiers. CONFIDENTIAL diagonal watermark on every page at low opacity. EYES wordmark
+in the top-left of every page header. Page numbers in the footer.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+18
+CONFIDENTIAL
+PDF report structure
+The PDF follows this fixed structure. Section count adapts to active connectors but the order and styling
+do not vary.
+Page 1 — Cover
+EYES wordmark, title "Reputation Audit Certificate", subject's name (as authenticated), date and time generated,
+audit identifier, list of connectors covered. Forest green accent rule under the title. Footer states the report is bound
+to the certificate identifier and is non-transferable.
+Page 2 — Executive Summary
+One paragraph plain-language narrative summary. Below it, three headline metrics in a row: total mentions
+discovered, sentiment balance, count of unfulfilled commitments. Below that, the risk score visualised as a number
+from 1 to 10 with a one-line interpretation. No charts, no decorative graphics. Typographic hierarchy carries the
+page.
+Pages 3 to 5 — Per-Connector Breakdown
+One page per connector covered. Each page shows: the platform name, indexing window, total records analysed,
+top mentioned entities (people, topics, projects), sentiment distribution by quarter, and the top three individual
+records flagged as significant. Each significant record is shown as a quoted excerpt with full source citation.
+Page 6 — Commitments and Opportunities
+Two columns. Left column: detected commitments, with status (pending, overdue, completed) and exact citation.
+Right column: detected opportunities the user has not acted on. Each item is one line of commitment text plus one
+line of citation metadata. Cold, declarative tone. No advisory language.
+Page 7 — Risk Findings
+The findings the user is most likely to be unaware of: contradictions between public-facing statements, stale
+promises, communications patterns that may concern external observers (such as investors performing diligence).
+Each finding has a severity badge (Low, Medium, High) in the appropriate accent color, the underlying evidence,
+and a single-sentence statement of why it matters. No recommendations. The report names the problem; the user
+decides what to do about it.
+Page 8 — Citations Index and Legal Notice
+Full enumerated list of every source citation referenced in the report. Each entry includes the platform, date,
+identifier, and a short excerpt. Below the citations index, the GDPR notice, the data-source disclosure, and the
+EYES legal footer.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+19
+CONFIDENTIAL
+Audit generation pipeline
+The pipeline runs server-side. End-to-end completion target: under 60 seconds for typical accounts. If
+generation will take longer, the user is shown a progress screen and the PDF is emailed when ready.
+Step 1. User completes Stripe checkout. Webhook fires audit.purchase.completed event. Server-side
+handler creates an audit record in the database with status pending.
+Step 2. Pipeline pulls the user's raw_events for the last two years (configurable). For each connected
+platform, fetches up to 5,000 most recent records.
+Step 3. Runs Claude with extraction prompt: "Find every mention of [user's name] and any associated
+identifiers. For each mention, extract: source, date, sentiment (+1, 0, -1), is this a commitment made by
+the subject, is this a commitment made to the subject, is this potentially sensitive."
+Step 4. Aggregates extraction output. Computes risk score: (negative_count × 2 + neutral_count × 0.5 +
+unfulfilled_commitment_count × 3) / total_mentions × 10, capped at 10.
+Step 5. Runs second Claude call to generate executive summary narrative. Cold tone, no flattery.
+Step 6. Renders PDF using ReportLab template. Stores PDF in Supabase storage bucket under
+audits/{user_id}/{audit_id}.pdf with appropriate access policy.
+Step 7. Returns signed download URL to client. Sends email to user with the same URL. Updates audit
+record status to completed.
+Risk score methodology (visible in report)
+The methodology is published in the report itself, in a small typeset block on the executive summary
+page. Transparency about the score is part of the brand promise.
+Risk score = ( ( count(negative_mentions) × 2 ) + ( count(neutral_mentions) × 0.5 ) +
+( count(unfulfilled_commitments) × 3 ) ) ÷ count(total_mentions) × 10, capped at 10.
+Recency weighting is applied to the underlying counts: mentions in the last 30 days carry weight 1.0,
+last 6 months carry 0.5, older than 6 months carry 0.2. This is also stated in the methodology block.
+Mandatory legal text
+The following text appears, verbatim, on the final page of every audit. Do not modify the wording without
+sign-off from Abhi.
+"This certificate has been generated using only the data sources you have explicitly authorized
+through OAuth. Citations referenced in this report are sourced from your authorized connectors
+only. EYES does not search the public web, query third-party data brokers, or enrich this report
+with information from sources outside your authorized scope."
+"Pursuant to Articles 15 and 20 of the General Data Protection Regulation (EU 2016/679), the
+data analysed in this report constitutes your personal data, processed on your instruction. You
+have the right to access, rectify, erase, and export this data at any time through your EYES
+account. EYES does not retain analysis artefacts beyond the audit delivery period and does not
+use your data to train any model without your separate, explicit, opt-in consent."
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+20
+CONFIDENTIAL
+Section 06
+Performance & Quality Bar
+Each of the following thresholds is a hard requirement. They are not aspirational. They are the
+conditions under which the application behaves acceptably during a live demo. Failure to meet
+any of them is grounds for non-acceptance.
+METRIC
+DESCRIPTION
+TARGET
+Indexing — typical
+case
+Each connector completes initial indexing within 5 minutes for a
+typical user (10 years of email up to 50,000 messages; 5 years of
+Reddit up to 5,000 records).
+5 min/connector
+Indexing —
+concurrent
+Indexing two connectors simultaneously does not double the wall
+clock; system uses parallel workers.
+≤ 7 min for 2
+Query response time
+From user pressing Enter on a query to first byte of streamed
+response on screen. Measured on production deployment from
+Western European IP.
+≤ 3 seconds
+Query streaming
+First token visible on screen within 1.5 seconds. Full response
+within 8 seconds for a typical query.
+≤ 1.5 s first token
+Citation rendering
+All citation chips appear inline with the answer, not after a
+separate roundtrip. Clicking a citation opens the source within 1
+second.
+Inline, ≤ 1 s click
+Audit generation
+End-to-end from Stripe webhook fired to PDF available for
+download for typical account.
+≤ 60 seconds
+Audit fallback
+If audit will exceed 60 seconds, user is shown progress UI and
+receives email when ready. PDF must be ready within 5 minutes
+even for the largest account.
+≤ 5 min worst case
+OAuth connect flow
+From clicking "Connect Gmail" to redirected back into EYES with
+the connector live. Excludes Google's own consent screen time.
+≤ 4 seconds
+Webhook
+commitment
+detection
+From Gmail message arriving in user's inbox to commitment row
+written to detected_commitments table.
+≤ 60 seconds
+UI polish
+Matches the visual brand specification provided separately. No
+unstyled HTML elements, no placeholder text, no Lorem Ipsum,
+no unused buttons, no broken navigation.
+Brand-compliant
+Error handling
+All OAuth refresh failures, rate-limit responses, and indexing
+errors are surfaced to the user in plain language and logged for
+diagnosis. No silent failures.
+Surface all failures
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+21
+CONFIDENTIAL
+Mobile
+responsiveness
+Web app is fully usable on a 390px-wide viewport (iPhone). Audit
+purchase flow and query interface both work on mobile.
+≥ 390px viewport
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+22
+CONFIDENTIAL
+Section 07
+Mistral AI Integration & Behavioral Data Layer
+EYES will not call Mistral AI in V1. Every model invocation in V1 uses Claude (for reasoning,
+citation, and detection) and OpenAI (for embeddings). However, two architectural decisions
+must be made now to preserve the path to a Mistral fine-tune around month seven, when the
+behavioral dataset becomes large enough to justify training. Failure to instrument these now
+requires invasive refactoring later.
+Decision 1: Model abstraction layer
+Every model call in the codebase must go through a single abstraction rather than directly invoking the
+Anthropic or OpenAI SDK. The abstraction supports model selection by capability (chat, embed,
+classify) rather than by provider, and selects the underlying provider based on configuration.
+Indicative interface (final form decided by the engineering team, but must satisfy this contract):
+from eyes.models import invoke_model
+result = invoke_model(
+    capability="chat", # chat | embed | classify
+    system=system_prompt,
+    messages=messages,
+    preference="claude", # claude | mistral | openai | auto
+    capture=True, # log to behavioral data layer
+)
+When preference is "auto" and the configuration enables it, the layer may route the call to a fine-tuned
+Mistral endpoint for the categories of queries on which the fine-tune outperforms (or matches) Claude.
+In V1 the Mistral configuration is empty, so "auto" always resolves to Claude. The presence of the
+routing layer means flipping that switch in V2 requires zero application changes.
+Decision 2: Behavioral data capture (Layer 2)
+From the first user, EYES captures anonymized behavioral data about how users query their own past.
+This dataset is the foundation of the Mistral fine-tune (month 7) and the long-term moat of EYES. A new
+table is added to the schema:
+CREATE TABLE query_behavior (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_hash TEXT NOT NULL, -- SHA-256 of user_id + salt
+    query_text TEXT NOT NULL,
+    query_type TEXT NOT NULL, -- audit | search | commitment | mcp
+    sources_used TEXT[] NOT NULL, -- which connectors fed retrieval
+    result_count INT NOT NULL,
+    response_length INT NOT NULL,
+    model_used TEXT NOT NULL, -- claude | mistral | openai
+    latency_ms INT NOT NULL,
+    quality_signal NUMERIC, -- placeholder for future feedback
+    coarse_geography TEXT, -- country code only, never IP
+    coarse_time_bucket TEXT, -- morning | afternoon | evening | night
+    created_at TIMESTAMPTZ DEFAULT now()
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+23
+CONFIDENTIAL
+);
+Anonymization rules. user_hash is computed as SHA-256(user_id || global_salt) where global_salt is a
+server-side secret. The mapping is one-way and not stored in reverse. coarse_geography is
+country-level only; no city, no IP, no precise timezone. coarse_time_bucket is one of four labels; no
+exact timestamp of query. query_text is stored verbatim because the dataset's value depends on real
+query language; this is acceptable under GDPR because the user_hash cannot be reversed and the
+data is processed under the user's consent (captured at signup).
+Consent. The signup flow includes a clearly worded consent statement: "EYES captures anonymized
+patterns of how you query your data to improve the product over time. Your queries are stored under a
+one-way hash that cannot be linked back to your identity. Your underlying data, citations, and personal
+information are never included." The user can decline this in settings; if declined, no rows are written to
+query_behavior for that user.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+24
+CONFIDENTIAL
+Section 08
+Technical Architecture Requirements
+Stack consistency
+The existing stack stays. Next.js 14 frontend, Supabase EU Frankfurt for data and authentication,
+pgvector for embeddings, Claude API for reasoning, OpenAI API for embeddings, Vercel for hosting. Do
+not introduce new infrastructure layers, alternative databases, or competing frameworks during this
+sprint without explicit written approval from Abhi.
+Code organization
+The codebase is organized so that someone joining the project can locate any feature within five
+minutes. Folder structure follows feature boundaries: connectors, audit, query, mcp_server,
+commitments, billing, etc. Each feature folder contains its own routes, server actions, components, and
+database queries. Shared utilities live in a lib folder. Tests live alongside the code they cover.
+Documentation
+The repository contains, at minimum: a README explaining how to run the project locally; an
+ARCHITECTURE document describing the data flow and key components; a DEPLOYMENT document
+explaining how the production deployment is configured; an OAUTH document listing every OAuth
+application and how to recreate it from scratch; a SCHEMA document describing every database table
+and its columns; a PROMPTS document containing every Claude system prompt used by the
+application, with version history.
+Tests
+End-to-end test coverage for the four user-critical flows: signup and OAuth connect, query with citations,
+audit purchase and PDF generation, MCP server invocation. Unit tests for the model abstraction layer,
+the anonymization function for query_behavior, and the audit generation pipeline. Tests run in CI on
+every push and on every pull request.
+Observability
+Application logs are sent to a centralized logging service (PostHog if the existing PostHog integration is
+wired, otherwise Vercel logs are acceptable for V1). Errors are captured with stack traces and user
+context. Slow query alerts fire if any query exceeds the performance threshold defined in Section 06.
+Security baseline
+Row-level security policies on every Supabase table containing user data. OAuth tokens encrypted at
+rest using Supabase's vault feature or equivalent. Service-role key never exposed to the client. All
+server-to-server calls authenticated. Stripe webhooks verified against Stripe signing secret. CORS
+policy restrictive — only the production domain is allowed.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+25
+CONFIDENTIAL
+Backup and recovery
+Supabase point-in-time recovery enabled. Daily database snapshots stored in a separate region. PDF
+audit artifacts retained for 90 days then purged unless the user opts to keep them. A documented
+runbook exists for restoring the application from a Supabase snapshot in case of total data loss.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+26
+CONFIDENTIAL
+Section 09
+Acceptance Criteria & Sign-off
+Final sign-off occurs only when every item in this section is verified by Abhi against the live
+system. Verification is recorded by initialing next to each item in the printed copy of this
+document. Items marked unverified are blocking. Partial completion is not acceptance.
+AREA
+ITEM
+VERIFIED
+Migration
+GitHub repository transferred to eyes-app organization, Crescent Moon
+collaborators removed.
+■
+Migration
+Supabase organization transferred or project moved; Abhi has full admin access.
+■
+Migration
+Hosting deployment under Abhi-owned account; production domain serving traffic
+from the new deployment for 48+ hours.
+■
+Migration
+Domain registered under Abhi-owned registrar account; registrar lock and 2FA
+enabled.
+■
+Migration
+All 6 live OAuth applications migrated or rebuilt under Abhi-owned developer
+accounts.
+■
+Migration
+Reddit OAuth application created under Abhi-owned Reddit developer account.
+■
+Migration
+Stripe account created under Abhi's legal name and verified.
+■
+Migration
+All credentials rotated; written confirmation that Crescent Moon retains no copy of
+any credential.
+■
+Migration
+IP assignment confirmation signed and filed.
+■
+Product
+User can sign up via email and reach the onboarding flow.
+■
+Product
+User can connect Gmail; indexing completes within 5 minutes for a typical inbox.
+■
+Product
+User can connect Reddit; indexing completes within 5 minutes for a typical account.
+■
+Product
+User can run a query and receive a cited response within 3 seconds of submitting.
+■
+Product
+Citations are clickable and open the original source.
+■
+Product
+User can purchase the €39 audit via Stripe; PDF is generated and downloadable
+within 60 seconds.
+■
+Product
+Audit PDF matches the structure specified in Section 05, with branding, watermark,
+and GDPR notice.
+■
+Product
+Live audit preview in-app reveals only summary signals; full report is gated behind
+PDF download.
+■
+Product
+Commitment detection writes a row to detected_commitments table within 60
+seconds of a Gmail message arriving.
+■
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+27
+CONFIDENTIAL
+Product
+MCP server endpoint is reachable and responds correctly to tool invocations from
+Claude Desktop.
+■
+Product
+Privacy Shields exclude list is enforced on incoming events.
+■
+Product
+All UI surfaces match the visual brand specification; no broken layouts at 390px
+width.
+■
+Architecture
+Model abstraction layer is in place; all model invocations route through it.
+■
+Architecture
+query_behavior table exists; rows are written for every query when consent is
+granted.
+■
+Architecture
+Documentation exists for README, ARCHITECTURE, DEPLOYMENT, OAUTH,
+SCHEMA, and PROMPTS.
+■
+Architecture
+End-to-end tests pass in CI for the four critical user flows.
+■
+Architecture
+Row-level security is enforced on every user-data table.
+■
+Demo
+A recorded acceptance test (screen recording) walks through the full demo flow
+without errors, narrated in plain English.
+■
+Demo
+A live demo with Abhi successfully shows: signup, connect 2 platforms, indexing
+complete, run 3 different queries, purchase audit, download PDF, view in-app
+preview, see commitments populated.
+■
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+28
+CONFIDENTIAL
+Section 10
+Timeline & Milestones
+The sprint runs from sign-off of this document to final acceptance. Working assumption: 28 calendar
+days. The following milestones are indicative; the binding outcomes are the acceptance criteria in
+Section 09.
+WINDOW
+MILESTONE
+DELIVERABLES
+Day 1–3
+Migration kickoff
+GitHub transfer initiated. Supabase ownership transfer initiated.
+Domain transfer initiated. Stripe account created by Abhi. Reddit
+developer account created by Abhi.
+Day 4–10
+Reddit + audit pipeline
+Reddit connector built and indexing. Audit pipeline backend
+(extraction, scoring, PDF generation) implemented and tested on
+synthetic data. Stripe checkout flow live in test mode.
+Day 11–17
+MCP + commitments
+MCP server implemented and tested with Claude Desktop.
+Commitment detection wired to Gmail Pub/Sub webhook. UI
+surfaces (Commitments view, Audit purchase flow) brought to
+brand spec.
+Day 18–22
+Mistral abstraction +
+behavioral data
+Model abstraction layer refactor across the codebase.
+query_behavior table and anonymization function. Consent UX in
+signup. Documentation pass on all sections from Section 08.
+Day 23–25
+Hardening
+Performance tuning to meet Section 06 thresholds. Error handling
+audit. RLS policies verified. End-to-end tests written and passing
+in CI. Brand compliance audit against the visual specification.
+Day 26–28
+Acceptance
+Internal dry-run of the demo flow. Recorded acceptance test. Live
+acceptance walkthrough with Abhi. Sign-off matrix completed.
+Credential rotation and Crescent Moon access removal.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+29
+CONFIDENTIAL
+Section 11
+Communication & Escalation
+Cadence
+Weekly written status report from Crescent Moon to Abhi, every Friday by 18:00 CET, covering: items
+completed, items in progress, blockers, expected delivery against the timeline. The report is one page
+maximum. Verbal calls only when written communication has failed to resolve a blocker.
+Decision authority
+All scope, design, and architectural decisions rest with Abhi. The Crescent Moon team has full authority
+over implementation choices that do not affect the specification: language, library, internal structure, and
+tactical optimization. Where a Crescent Moon engineer believes a specification item should be modified,
+they raise it in writing with rationale; Abhi decides; the modification is recorded as an addendum to this
+document.
+Escalation path
+Tactical issues: Crescent Moon engineer to Crescent Moon project lead. Spec or scope issues:
+Crescent Moon project lead to Abhi, in writing. Material delivery risk (any single milestone slipping by
+more than 3 calendar days): immediate written notification to Abhi with revised timeline and root cause.
+End-of-sprint communication
+On final sign-off, Crescent Moon provides a written closeout document containing: a summary of work
+delivered against this specification; the complete migration log; the credential rotation log; the IP
+assignment confirmation; the credential deletion confirmation. This closeout document is filed alongside
+this specification.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+30
+CONFIDENTIAL
+Appendix A
+Database Schema Reference
+Existing tables (as of date of this document)
+connector_settings
+Per-user, per-connector configuration.
+embeddings
+Vector embeddings of raw_events content. 1536 dimensions, HNSW
+indexed.
+oauth_refresh_logs
+Audit log of OAuth token refresh attempts.
+oauth_tokens
+Encrypted OAuth access and refresh tokens, per user per connector.
+provider_disconnect_audits
+Log of disconnect events from providers.
+raw_events
+Canonical event store for all indexed records across platforms.
+sync_escalation_events
+Records sync issues that required escalation.
+sync_retry_dead_letters
+Sync attempts that exceeded retry budget.
+sync_retry_queue
+Sync attempts queued for retry.
+sync_run_logs
+Audit log of sync runs.
+sync_status
+Current sync status per user per connector.
+topics
+Extracted topics for clustering and discovery.
+user_profiles
+Per-user profile and preferences.
+New tables to add in this sprint
+detected_commitments
+Output of commitment detection pipeline. Columns: id, user_id,
+commitment_text, source, source_reference, likely_due_date, status
+(pending|overdue|completed), created_at, updated_at.
+audits
+Reputation Audit records. Columns: id, user_id, stripe_payment_id,
+status (pending|generating|completed|failed), pdf_storage_path,
+risk_score, summary_narrative, created_at, completed_at.
+query_behavior
+Anonymized behavioral data layer. See Section 07 for full schema.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+31
+CONFIDENTIAL
+Appendix B
+OAuth Apps Inventory
+Every OAuth application currently registered or required for V1, with current status and target ownership
+state.
+PROVIDER
+STATUS
+MIGRATION ACTION
+Gmail (Google Cloud)
+Live
+Transfer or rebuild under Abhi GCP project.
+Slack
+Live
+Recreate under Abhi-owned Slack workspace.
+GitHub
+Live
+Transfer to eyes-app GitHub organization.
+Discord
+Live
+Recreate under Abhi-owned Discord developer account.
+Notion
+Live
+Recreate under Abhi-owned Notion integration.
+Google Calendar
+Live
+Same project as Gmail; transfer together.
+Reddit
+Not started
+Create new under Abhi-owned Reddit developer account. Critical for V1.
+X (Twitter)
+Registered, not connected
+Recreate under Abhi-owned X developer account.
+Trello
+Registered, not connected
+Recreate under Abhi-owned Trello account.
+Netlify
+Token only
+Replace token with Abhi-owned Netlify token.
+Canva
+Submitted for review
+Transfer integration ownership; if not supported, recreate.
+PostHog
+Project token only
+Recreate under Abhi-owned PostHog project.
+Dropbox
+Registered
+Recreate under Abhi-owned Dropbox developer account.
+Connectors that cannot reach a production-ready, Abhi-owned state by end of sprint must be
+hidden from the user interface rather than shipped broken or shipped under a Crescent
+Moon-owned identity.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+32
+CONFIDENTIAL
+Appendix C
+Audit PDF Layout Mock
+A textual mock of the Reputation Audit PDF cover page and executive summary, reproduced here so
+the engineering team and Abhi share a clear image of the artifact. Visual fidelity will be implemented in
+ReportLab.
+COVER PAGE
+[ Top-left: "EYES" wordmark, 14pt Helvetica Bold, ink black. Top-right: "CONFIDENTIAL
+· CERTIFICATE" 8pt Helvetica Bold, muted red. Thin horizontal rule below in ink
+black. ]
+Reputation Audit
+Certificate
+Prepared for: Abhi Sundaram
+Date: April 28, 2026 · 14:31 UTC
+Audit ID: EYES-RA-2026-04-28-A1B2C3
+Connectors covered
+Gmail · Reddit · LinkedIn · GitHub · Twitter (X) · Calendar
+[ Forest green accent rule, 4cm wide, under the section header. ]
+[ Bottom: Footer in 7pt gray. "This certificate is bound to the audit ID above and is
+non-transferable. Generated using only the user's authorized data sources." ]
+EXECUTIVE SUMMARY (Page 2)
+Executive Summary
+Across six authorized connectors covering 11,427 records over the trailing 24-month
+window, EYES identified 412 mentions of the subject. The dominant narrative across
+these mentions is operational: shipping products, hiring, fundraising. Three findings
+are flagged as material for an external observer performing diligence.
+Risk score: 6.4 / 10 (Methodology below.)
+Total mentions:412Sentiment balance:+0.21 (slightly positive)Unfulfilled
+commitments:3High-risk findings:1
+[ Methodology block, 8pt, in lighter weight: Risk score = ((negative × 2) + (neutral
+× 0.5) + (unfulfilled × 3)) / total × 10, capped at 10. Recency weighting: ≤30 days at
+1.0, ≤6 months at 0.5, older at 0.2. ]
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+33
+CONFIDENTIAL
+Appendix D
+Acceptance Test Script
+The script below is the demo Abhi will run during acceptance and during the live Y Combinator
+demonstration. Crescent Moon is responsible for ensuring every step of this script executes without
+manual intervention or workaround.
+01
+Navigate to production EYES URL in a fresh browser session.
+02
+Sign up with email and password. Receive verification email (or magic link) and complete
+authentication.
+03
+Land on onboarding screen 1 (welcome and license activation).
+04
+Proceed through to the Connect Sources screen.
+05
+Click "Connect" on Gmail. Complete Google OAuth consent. Land back in EYES with Gmail
+showing as "Indexing...".
+06
+Click "Connect" on Reddit. Complete Reddit OAuth. Land back in EYES with Reddit showing
+as "Indexing...".
+07
+Confirm both indexing tasks complete within 5 minutes each. Source Readiness indicator
+updates to "2/30 Platforms".
+08
+Open the query interface. Type: "What did I commit to Valentin last week?"
+09
+Receive a cited response within 3 seconds. Click on a citation chip and confirm it opens the
+source.
+10
+Type a second query: "Show me everything I wrote about EYES on Reddit."
+11
+Receive results with citations. Confirm at least one result is from Reddit.
+12
+Type a third query: "What deadlines am I currently overdue on?"
+13
+Receive a result that draws from the detected_commitments table. Confirm the response is
+direct and clinical.
+14
+Open the Reputation Audit purchase screen. Click "Generate audit · €39".
+15
+Complete Stripe checkout in test mode.
+16
+Watch the in-app preview render. Confirm summary signals appear; confirm full citations are
+NOT shown in the preview.
+17
+Click "Download full report". Confirm PDF downloads within 60 seconds total since step 14.
+18
+Open the downloaded PDF. Verify: cover page with brand and watermark; executive summary
+on page 2; per-connector breakdown; commitments and opportunities; risk findings; citations
+index; GDPR notice on final page.
+
+EYES
+HANDOVER SPECIFICATION  ·  v1.0  ·  CONFIDENTIAL
+2026-04-29
+EYES — Personal Digital Memory OS  ·  Property of Abhi (Founder)
+34
+CONFIDENTIAL
+19
+From a separate computer running Claude Desktop, configure the EYES MCP server using
+the user's API key.
+20
+In Claude Desktop, ask Claude to query EYES for recent commitments. Confirm Claude
+invokes the EYES MCP tool and returns results from the user's account.
+21
+Send a test email to the connected Gmail with the text "I'll send the report by Friday". Wait 60
+seconds. Confirm a row appears in the Commitments view of EYES.
+If any step in the above script fails or requires manual intervention during the acceptance run,
+that step is recorded as a defect and blocking. Acceptance is granted only when the full script
+executes without intervention.
+End of Specification
+Total pages: this document. All exhibits are inline. No external references required for execution.
+

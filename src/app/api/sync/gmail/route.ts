@@ -34,6 +34,29 @@ function getHeader(headers: Array<{ name: string; value: string }> | undefined, 
   return headers?.find((header) => header.name.toLowerCase() === key.toLowerCase())?.value;
 }
 
+// Fix common mojibake (UTF-8 bytes incorrectly decoded as Latin-1 by email clients)
+function fixEncoding(text: string): string {
+  if (!text) return text;
+  try {
+    // Check for common UTF-8 start bytes that look like Latin-1 characters (â, ð, Ã)
+    if (/[âðÃ]/.test(text)) {
+      // Ensure all characters are within the Latin-1 range (0-255)
+      // If there are higher characters, it's not pure mojibake
+      for (let i = 0; i < text.length; i++) {
+        if (text.charCodeAt(i) > 255) return text; 
+      }
+      const fixed = Buffer.from(text, 'latin1').toString('utf8');
+      // If the resulting string has replacement characters, the original wasn't valid UTF-8 bytes
+      if (!fixed.includes('')) {
+        return fixed;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return text;
+}
+
 function decodeBase64Url(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
@@ -91,6 +114,24 @@ export async function POST(request: Request) {
       }, { status: 423 }); // 423 Locked
     }
 
+    // Get User Settings for Sync Depth and Excluded Senders
+    const { data: settingsData } = await supabase
+      .from('connector_settings')
+      .select('data_types')
+      .eq('user_id', userId)
+      .eq('platform', 'user_global')
+      .maybeSingle();
+
+    let syncDepth = 'balanced';
+    let excludedSenders: string[] = [];
+    if (settingsData?.data_types?.[0]) {
+      try {
+        const parsedSettings = JSON.parse(settingsData.data_types[0]);
+        if (parsedSettings.syncDepth) syncDepth = parsedSettings.syncDepth;
+        if (Array.isArray(parsedSettings.excludedSenders)) excludedSenders = parsedSettings.excludedSenders.map((s: string) => s.toLowerCase());
+      } catch {}
+    }
+
     // 1. Get existing sync status to find the cursor
     const { data: currentStatus } = await supabase
       .from('sync_status')
@@ -135,6 +176,11 @@ export async function POST(request: Request) {
 
       const fetchUrl = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
       fetchUrl.searchParams.set('maxResults', String(maxResultsPerPage));
+      if (syncDepth === 'shallow') {
+        fetchUrl.searchParams.set('q', 'newer_than:30d');
+      } else if (syncDepth === 'balanced') {
+        fetchUrl.searchParams.set('q', 'newer_than:180d');
+      }
       if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
 
       const listResponse = await fetch(fetchUrl.toString(), {
@@ -208,19 +254,27 @@ export async function POST(request: Request) {
       }
     }
 
-    const events = await Promise.all(messages.map(async (message) => {
-      const subject = getHeader(message.payload?.headers, 'Subject') || 'No subject';
-      const from = getHeader(message.payload?.headers, 'From') || 'Unknown sender';
-      const bodyText = extractTextFromPart({
+    const eventsRaw = await Promise.all(messages.map(async (message) => {
+      const subject = fixEncoding(getHeader(message.payload?.headers, 'Subject') || 'No subject');
+      const fromRaw = getHeader(message.payload?.headers, 'From') || 'Unknown sender';
+      const from = fixEncoding(fromRaw);
+
+      // Privacy Shield: Drop excluded senders
+      if (excludedSenders.some(ex => from.toLowerCase().includes(ex))) {
+        return null; // Ignore this email
+      }
+      const bodyText = fixEncoding(extractTextFromPart({
         mimeType: 'multipart/mixed',
         body: message.payload?.body,
         parts: message.payload?.parts,
-      });
-      const content = `${subject}\n${message.snippet || ''}\n${bodyText}`.trim().slice(0, 12000);
+      }));
+      const snippet = fixEncoding(message.snippet || '');
+      
+      const content = `${subject}\n${snippet}\n${bodyText}`.trim().slice(0, 12000);
       const ts = message.internalDate ? new Date(Number(message.internalDate)).toISOString() : new Date().toISOString();
       const risk = await scoreGmailEvent({
         subject,
-        snippet: `${message.snippet || ''} ${bodyText.slice(0, 1500)}`.trim(),
+        snippet: `${snippet} ${bodyText.slice(0, 1500)}`.trim(),
         from,
       });
 
@@ -246,11 +300,77 @@ export async function POST(request: Request) {
       };
     }));
 
+    // Filter out dropped emails from privacy shields
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const events = eventsRaw.filter(Boolean) as any[];
+
     // upsertRawEventsSafely: stores to unified memories table
     await upsertRawEventsSafely(supabase, events);
     console.log(`[Gmail Sync] Upserted ${events.length} events for user ${userId}`);
 
+    // Trigger action extraction and Resend draft approval email hook if we got new emails
+    if (events.length > 0) {
+      try {
+        console.log(`[Gmail Sync] Triggering action extraction for user ${userId}`);
+        const { extractForUser } = await import('@/app/api/actions/extract/route');
+        
+        const { data: beforeActions } = await supabase
+          .from('action_queue')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'pending');
+        const beforeIds = new Set((beforeActions ?? []).map((a: { id: string }) => a.id));
+
+        await extractForUser(userId, supabase);
+
+        const { data: afterActions } = await supabase
+          .from('action_queue')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'pending');
+
+        const newActions = (afterActions ?? []).filter((a: { id: string }) => !beforeIds.has(a.id));
+        const emailReplies = newActions.filter((a: { action_type: string }) => a.action_type === 'EMAIL_REPLY');
+        
+        if (emailReplies.length > 0) {
+          const { sendDraftApprovalEmail } = await import('@/services/email/resend');
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('email, name')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (profile?.email) {
+            for (const reply of emailReplies) {
+              const bodyText = reply.suggested_action || reply.description || '';
+              const citationsText = reply.description || 'No citations context provided.';
+              const author = reply.platform === 'gmail' && reply.memory_id ? 
+                (events.find(e => e.platform_id === reply.memory_id)?.author || 'Sender') : 'Sender';
+
+              await sendDraftApprovalEmail({
+                to: profile.email,
+                name: profile.name || 'User',
+                sender: author,
+                summary: reply.title || 'Incoming email',
+                draftReply: bodyText,
+                citations: citationsText,
+                actionId: reply.id
+              });
+            }
+          }
+        }
+      } catch (extractErr) {
+        console.error('[Gmail Sync] Action extraction/notification hook failed:', extractErr);
+      }
+    }
+
     // Save the new cursor (nextPageToken) back to Supabase
+    // Count actual total memories across ALL platforms for this user (prevents reset on reconnect)
+    const { count: actualTotalMemories } = await supabase
+      .from('memories')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     await Promise.all([
       upsertSyncStatusSafely(supabase, {
         user_id: userId,
@@ -264,8 +384,8 @@ export async function POST(request: Request) {
         error_message: null,
       }),
       supabase.from('user_profiles').update({
-        // Use cumulative total (same as sync_status.total_items) — not just current batch
-        memories_indexed: (currentStatus?.total_items || 0) + events.length,
+        // Use actual DB count — not sync_status.total_items which resets on OAuth reconnection
+        memories_indexed: actualTotalMemories ?? 0,
         updated_at: new Date().toISOString(),
       }).eq('user_id', userId),
     ]);

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { classifyContentType, processAcuteDetection } from '@/services/acute/detection';
 
 type PostgrestErrorLike = {
   code?: string;
@@ -55,26 +56,44 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
 
   // Map RawEventUpsertRow fields to the memories table schema
   // Key difference: platform_id (raw_events) → source_id (memories)
-  const memoryRows = dedupedEvents.map((event) => ({
-    user_id: event.user_id,
-    platform: event.platform,
-    source_id: event.platform_id,
-    event_type: event.event_type,
-    title: event.title,
-    content: event.content,
-    author: event.author,
-    timestamp: event.timestamp,
-    metadata: event.metadata,
-    is_flagged: event.is_flagged,
-    flag_severity: event.flag_severity,
-    flag_reason: event.flag_reason,   // ← was silently dropped before this fix
-  }));
+  const memoryRows = dedupedEvents.map((event) => {
+    // Auto-classify content_type for drift detection (§2.2)
+    const contentType = classifyContentType({
+      platform: event.platform,
+      content: event.content,
+      is_outbound: event.metadata?.is_outbound === true,
+      event_type: event.event_type,
+    });
+    // Auto-compute date_bucket for state vector aggregation (§2.2)
+    const dateBucket = event.timestamp
+      ? new Date(event.timestamp).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+
+    return {
+      user_id: event.user_id,
+      platform: event.platform,
+      source_id: event.platform_id,
+      event_type: event.event_type,
+      title: event.title,
+      content: event.content,
+      author: event.author,
+      timestamp: event.timestamp,
+      metadata: event.metadata,
+      is_flagged: event.is_flagged,
+      flag_severity: event.flag_severity,
+      flag_reason: event.flag_reason,
+      content_type: contentType,
+      date_bucket: dateBucket,
+    };
+  });
 
   const { error: upsertError } = await supabase
     .from('memories')
     .upsert(memoryRows, { onConflict: 'user_id,platform,source_id' });
 
   if (!upsertError) {
+    // Fire acute detection asynchronously (non-blocking)
+    fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
     return;
   }
 
@@ -118,6 +137,111 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
 
   const { error: insertError } = await supabase.from('memories').insert(memoryRows);
   if (insertError) throw insertError;
+
+  // Fire acute detection asynchronously (non-blocking)
+  fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
+  // Fire entity extraction asynchronously (non-blocking)
+  fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
+}
+
+/**
+ * Fire-and-forget acute detection on recently ingested events.
+ * Runs in background — never blocks the sync response.
+ */
+async function fireAcuteDetection(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
+  try {
+    const acuteEvents = events.map(e => ({
+      id: `${e.user_id}-${e.platform}-${e.platform_id}`,
+      user_id: e.user_id,
+      platform: e.platform,
+      title: e.title,
+      content: e.content,
+      author: e.author,
+      timestamp: e.timestamp,
+      is_outbound: e.metadata?.is_outbound === true,
+    }));
+    await processAcuteDetection(supabase, acuteEvents);
+  } catch (err) {
+    console.warn('[Acute] Background detection failed (non-fatal):', err);
+  }
+}
+
+/**
+ * Fire-and-forget entity extraction on recently ingested events.
+ * Extracts people, orgs, tools from each memory and populates entities table.
+ * Limits to 5 events per batch to control AI costs.
+ */
+async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
+  try {
+    // Only extract from events with meaningful content
+    const eligible = events.filter(e => e.content && e.content.length >= 80).slice(0, 5);
+    if (eligible.length === 0) return;
+
+    const { invokeModel } = await import('@/services/ai/ai');
+
+    for (const event of eligible) {
+      try {
+        const aiResponse = await invokeModel({
+          capability: 'classify',
+          system: 'You extract named entities from text. Respond with valid JSON only.',
+          messages: [{
+            role: 'user',
+            content: `Extract entities from this message. Return JSON array only:
+[{"type":"person|organization|tool|place","name":"Exact Name"}]
+Return [] if no entities found.
+
+Text: ${event.content.slice(0, 1000)}`,
+          }],
+          preference: 'auto',
+          capture: false,
+        });
+
+        if (!aiResponse) continue;
+
+        let entities: Array<{ type: string; name: string }> = [];
+        try {
+          const match = String(aiResponse).match(/\[[\s\S]*?\]/);
+          if (match) entities = JSON.parse(match[0]);
+        } catch { continue; }
+
+        if (!entities.length) continue;
+
+        const enriched = entities.map(e => ({
+          ...e,
+          canonical_id: `${e.type}_${e.name.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`,
+        }));
+
+        // Store in entities_extracted column
+        await supabase
+          .from('memories')
+          .update({ entities_extracted: enriched })
+          .eq('user_id', event.user_id)
+          .eq('platform', event.platform)
+          .eq('source_id', event.platform_id)
+          .then(() => {});
+
+        // Upsert into entities table
+        for (const entity of enriched) {
+          await supabase
+            .from('entities')
+            .upsert({
+              user_id: event.user_id,
+              canonical_id: entity.canonical_id,
+              name: entity.name,
+              entity_type: entity.type,
+              last_seen_at: new Date().toISOString(),
+            }, { onConflict: 'user_id,canonical_id' })
+            .then(() => {});
+        }
+
+        console.log(`[Entities] Extracted ${enriched.length} entities from ${event.platform}/${event.platform_id.slice(0, 12)}`);
+      } catch {
+        // Non-critical — skip this event
+      }
+    }
+  } catch (err) {
+    console.warn('[Entities] Background extraction failed (non-fatal):', err);
+  }
 }
 
 export async function upsertSyncStatusSafely(supabase: SupabaseClient, syncStatus: SyncStatusUpsertRow) {

@@ -303,8 +303,30 @@ function PeopleTab({ correlations }: { correlations: EntityCorrelation[] }) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <p style={{ color: '#4b5563', fontSize: '12px', textAlign: 'center', marginTop: '40px', lineHeight: 1.6 }}>
-      {text}
-    </p>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '60px', gap: '24px' }}>
+      <div style={{ 
+        position: 'relative', width: '80px', height: '80px', 
+        borderRadius: '50%', border: '1px solid rgba(99, 102, 241, 0.2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(99, 102, 241, 0.02)',
+        overflow: 'hidden'
+      }}>
+        {/* Radar Center Dot */}
+        <div style={{ width: '4px', height: '4px', background: '#6366f1', borderRadius: '50%', zIndex: 2 }} />
+        {/* Radar Sweep Animation (Inline CSS) */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', width: '40px', height: '40px',
+          background: 'conic-gradient(from 0deg, transparent 70%, rgba(99, 102, 241, 0.4) 100%)',
+          transformOrigin: '0 0',
+          animation: 'neuralPulseRotate 2s linear infinite',
+          zIndex: 1
+        }} />
+        {/* Grid Lines */}
+        <div style={{ position: 'absolute', inset: 0, border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '50%' }} />
+      </div>
+      <p style={{ color: '#6b7280', fontSize: '11px', textAlign: 'center', maxWidth: '200px', lineHeight: 1.6, fontWeight: 500 }}>
+        {text}
+      </p>
+    </div>
   );
 }

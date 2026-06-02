@@ -7,6 +7,11 @@
   /* Parent handles overflow */
 }
 
+/* Audit-only: tighter padding so header gap is removed */
+.auditMain {
+  padding: 16px 24px 24px 24px;
+}
+
 /* SOLO VIEWS (Feed, History, Timeline, etc.) */
 .soloView {
   width: 100%;

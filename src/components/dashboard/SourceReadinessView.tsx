@@ -9,12 +9,44 @@ interface SourceReadinessViewProps {
   platforms: PlatformStatus[];
 }
 
+function getTimeAgo(dateString?: string | null) {
+  if (!dateString) return 'Never';
+  const diff = Date.now() - new Date(dateString).getTime();
+  if (diff < 0) return 'Just now';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} mins ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hours ago`;
+  return `${Math.floor(hours / 24)} days ago`;
+}
+
+function parseErrorMessage(raw?: string | null): string {
+  if (!raw) return 'Link Fractured';
+  
+  let clean = raw;
+  // If the error contains JSON after a colon or space, try to parse it
+  const jsonMatch = raw.match(/(\{.*\})/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      if (parsed.message) return parsed.message;
+      if (parsed.error) return parsed.error;
+      if (parsed.type) return parsed.type.replace(/_/g, ' ');
+    } catch { /* not JSON */ }
+  }
+
+  // Fallback cleanup
+  clean = raw.replace(/[{}"]/g, '').trim();
+  return clean.length > 65 ? clean.slice(0, 65) + '…' : clean;
+}
+
 export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
   const connectedCount = platforms.filter(p => p.connected).length;
   const connectedList = platforms.filter(p => p.connected);
 
-  // Mock health score calculation
-  const healthScore = connectedCount === 0 ? 100 : Math.round((platforms.filter(p => p.status === 'connected').length / connectedCount) * 100);
+  // True health score: percentage of connected platforms that are not in an 'error' state
+  const healthScore = connectedCount === 0 ? 0 : Math.round(((connectedCount - platforms.filter(p => p.status === 'error').length) / connectedCount) * 100);
 
   const handleDisconnect = async (platformId: string, platformName: string) => {
     if (!window.confirm(`Disconnect ${platformName} and remove its active tokens?`)) {
@@ -118,13 +150,30 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
                return (
                 <div key={p.id} className={`${styles.readinessCard} ${styles.connectedCard} ${isSyncing ? styles.cardSyncing : ''} ${isError ? styles.cardError : ''}`} style={{ cursor: 'default' }}>
                   <div className={styles.cardHeader}>
-                    <div className={styles.readinessIcon}>
+                    <div 
+                      className={styles.readinessIcon}
+                      style={{
+                        backgroundColor: config?.color?.startsWith('#') ? `${config.color}15` : 'var(--bg-secondary)',
+                        border: config?.color?.startsWith('#') ? `1px solid ${config.color}30` : '1px solid var(--border-subtle)',
+                      }}
+                    >
                       {config?.icon ? React.cloneElement(config.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
                     </div>
                     <div className={styles.readinessInfo}>
                       <strong>{p.name}</strong>
-                      <span className={isError ? styles.errorStatusText : (isSyncing ? styles.syncStatusText : styles.readyStatusText)}>
-                        {isError ? (p.errorMessage || 'Link Fractured') : (isSyncing ? 'Synchronizing Pulse...' : 'Optimal Neural Link')}
+                      <span 
+                        className={isError ? styles.errorStatusText : (isSyncing ? styles.syncStatusText : styles.readyStatusText)}
+                        title={p.errorMessage || ''}
+                        style={{ 
+                          display: '-webkit-box', 
+                          WebkitLineClamp: 2, 
+                          WebkitBoxOrient: 'vertical', 
+                          overflow: 'hidden',
+                          wordBreak: 'break-word',
+                          lineHeight: '1.4'
+                        }}
+                      >
+                        {isError ? parseErrorMessage(p.errorMessage) : (isSyncing ? 'Synchronizing Pulse...' : 'Optimal Neural Link')}
                       </span>
                     </div>
                     {isSyncing && <div className={styles.syncPulse} />}
@@ -133,15 +182,11 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
                   <div style={{ margin: '12px 0', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '8px' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>LAST SYNC</span>
-                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>4 mins ago</span>
-                     </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '8px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>RECORDS</span>
-                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{p.items || 0}</span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{getTimeAgo(p.lastSyncAt)}</span>
                      </div>
                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>LATENCY</span>
-                        <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>Low (8ms)</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>RECORDS</span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{p.items || 0}</span>
                      </div>
                   </div>
 

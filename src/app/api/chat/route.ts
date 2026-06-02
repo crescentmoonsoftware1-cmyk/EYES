@@ -172,10 +172,13 @@ function toGroundedScore(citations: ChatCitation[]) {
 function citationsHeaderValue(citations: ChatCitation[]) {
   const compact = citations.slice(0, 4).map((citation) => ({
     sourceId: citation.sourceId,
+    memoryId: citation.memoryId,
     platform: citation.platform,
     title: citation.title,
+    snippet: citation.snippet.slice(0, 120),
     similarity: citation.similarity,
     rerankScore: citation.rerankScore,
+    timestamp: citation.timestamp,
   }));
   return Buffer.from(JSON.stringify(compact), 'utf8').toString('base64url');
 }
@@ -229,6 +232,7 @@ export async function POST(request: Request) {
     let retrievalError: string | null = null;
 
     if (queryResult && typeof queryResult === 'object' && 'embedding' in queryResult) {
+      console.log(`[Chat] Embedding OK — dim=${queryResult.embedding.length}, user=${user.id.slice(0,8)}`);
       // 2. Real Hybrid Similarity Search
       const { data: matches, error: matchError } = await supabase.rpc('hybrid_search', {
         query_text: message,
@@ -239,8 +243,12 @@ export async function POST(request: Request) {
 
       if (matchError) {
         retrievalError = matchError.message;
+        console.warn(`[Chat] hybrid_search ERROR: ${matchError.message}`);
       } else if (matches && (matches as HybridSearchRow[]).length > 0) {
+        console.log(`[Chat] hybrid_search returned ${(matches as HybridSearchRow[]).length} results`);
+
         const rerankedRows = (matches as HybridSearchRow[])
+          .filter(m => (m.similarity ?? 0) > 0.18) // Drop low-relevance noise
           .sort((a, b) => b.combined_score - a.combined_score)
           .slice(0, 8);
 
@@ -280,6 +288,140 @@ export async function POST(request: Request) {
           }
         }
       }
+
+      // 2.6: Temporal supplemental fetch — when user asks about "today", "yesterday", etc.
+      // Semantic search doesn't understand dates, so we fetch recent records directly from DB.
+      const temporalMatch = message.match(/\b(today|yesterday|this week|this morning|tonight|last night|last|latest|recent|past \d+ (days?|hours?))\b/i);
+
+      // Detect platform intent from message phrasing
+      const platformIntent = (() => {
+        if (/\bemail|gmail|inbox|mail\b/i.test(message)) return 'gmail';
+        if (/\bcalendar|meeting|event|schedule\b/i.test(message)) return 'google-calendar';
+        if (/\bgithub|pr|pull request|commit|repo\b/i.test(message)) return 'github';
+        if (/\bslack|channel|dm\b/i.test(message)) return 'slack';
+        if (/\bnotion|page|doc\b/i.test(message)) return 'notion';
+        return null;
+      })();
+
+      if (temporalMatch) {
+        const now = new Date();
+        let since: Date;
+        const term = temporalMatch[1].toLowerCase();
+        if (term === 'today' || term === 'this morning' || term === 'tonight') {
+          since = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // midnight today
+        } else if (term === 'yesterday' || term === 'last night') {
+          since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        } else if (term === 'this week' || term === 'last' || term === 'latest' || term === 'recent') {
+          since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        } else {
+          // "past N days/hours"
+          const numMatch = term.match(/(\d+)/);
+          const n = numMatch ? parseInt(numMatch[1]) : 1;
+          since = term.includes('hour') ? new Date(now.getTime() - n * 3600000) : new Date(now.getTime() - n * 86400000);
+        }
+
+        let temporalQuery = supabase
+          .from('memories')
+          .select('id, platform, title, content, author, timestamp')
+          .eq('user_id', user.id)
+          .gte('timestamp', since.toISOString())
+          .order('timestamp', { ascending: false })
+          .limit(15);
+
+        if (platformIntent) temporalQuery = temporalQuery.eq('platform', platformIntent);
+
+        const { data: recentRecords } = await temporalQuery;
+
+        if (recentRecords && recentRecords.length > 0) {
+          // Deduplicate against existing citations
+          const existingIds = new Set(citations.map(c => c.memoryId));
+          const newRecords = recentRecords.filter(r => !existingIds.has(r.id));
+          
+          if (newRecords.length > 0) {
+            const temporalContext = newRecords.map((r, i) => {
+              const platform = (r.platform || 'unknown').toUpperCase();
+              const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'Unknown Date';
+              const time = r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '';
+              const snippet = maskPII(`${r.title || ''}: ${r.content || ''}`.slice(0, 420));
+              return `[RECENT ${i + 1}] [${platform}] [${date} ${time}]\n${snippet}`;
+            }).join('\n\n---\n\n');
+
+            context = context
+              ? `RECENT RECORDS (${term.toUpperCase()}):\n${temporalContext}\n\nSEMANTIC MATCHES:\n${context}`
+              : `RECENT RECORDS (${term.toUpperCase()}):\n${temporalContext}`;
+              
+            const temporalCitations = newRecords.map((r) => ({
+              sourceId: 0,
+              memoryId: r.id,
+              platform: r.platform || 'unknown',
+              title: r.title || null,
+              eventType: null,
+              author: r.author || null,
+              timestamp: r.timestamp || null,
+              similarity: 1.0,
+              rerankScore: 1.0,
+              snippet: maskPII(`${r.title || ''}: ${r.content || ''}`.slice(0, 420)),
+            }));
+            
+            citations = [...temporalCitations, ...citations];
+            citations.forEach((c, idx) => c.sourceId = idx + 1);
+            
+            console.log(`[Chat] Temporal fetch: ${newRecords.length} records since ${since.toISOString()} for '${term}'`);
+          }
+        } else {
+          // ── Fallback: no records for the requested time window ──────────────
+          // Fetch most recent records from the detected platform so the AI
+          // can answer with actual data rather than "no records found".
+          console.log(`[Chat] Temporal fetch returned 0 results for '${term}'. Falling back to most recent${platformIntent ? ` ${platformIntent}` : ''} records.`);
+
+          let fallbackQuery = supabase
+            .from('memories')
+            .select('id, platform, title, content, author, timestamp')
+            .eq('user_id', user.id)
+            .order('timestamp', { ascending: false })
+            .limit(10);
+
+          if (platformIntent) fallbackQuery = fallbackQuery.eq('platform', platformIntent);
+
+          const { data: fallbackRecords } = await fallbackQuery;
+
+          if (fallbackRecords && fallbackRecords.length > 0) {
+            const existingIds = new Set(citations.map(c => c.memoryId));
+            const newFallback = fallbackRecords.filter(r => !existingIds.has(r.id));
+
+            if (newFallback.length > 0) {
+              const fallbackContext = newFallback.map((r, i) => {
+                const platform = (r.platform || 'unknown').toUpperCase();
+                const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'Unknown Date';
+                const time = r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '';
+                const snippet = maskPII(`${r.title || ''}: ${r.content || ''}`.slice(0, 420));
+                return `[FALLBACK ${i + 1}] [${platform}] [${date} ${time}]\n${snippet}`;
+              }).join('\n\n---\n\n');
+
+              const note = `NOTE: No records found specifically for "${term}". The following are the most recent ${platformIntent ?? 'available'} records in the archive — inform the user of this if relevant.`;
+              context = context
+                ? `${note}\n\nMOST RECENT RECORDS:\n${fallbackContext}\n\nSEMANTIC MATCHES:\n${context}`
+                : `${note}\n\nMOST RECENT RECORDS:\n${fallbackContext}`;
+
+              const fallbackCitations = newFallback.map(r => ({
+                sourceId: 0,
+                memoryId: r.id,
+                platform: r.platform || 'unknown',
+                title: r.title || null,
+                eventType: null,
+                author: r.author || null,
+                timestamp: r.timestamp || null,
+                similarity: 0.8,
+                rerankScore: 0.8,
+                snippet: maskPII(`${r.title || ''}: ${r.content || ''}`.slice(0, 420)),
+              }));
+
+              citations = [...fallbackCitations, ...citations];
+              citations.forEach((c, idx) => c.sourceId = idx + 1);
+            }
+          }
+        }
+      }
     }
 
     const cognitiveContext = await cognitiveContextPromise;
@@ -294,20 +436,26 @@ export async function POST(request: Request) {
       retrievalError,
     };
 
-    const hasContext = context.trim().length > 0;
+    const hasArchiveContext = context.trim().length > 0;
+    const hasCognitiveContext = cognitiveContext !== null && cognitiveContext.trim().length > 0;
+    const hasAnyContext = hasArchiveContext || hasCognitiveContext;
 
-    const systemPrompt = `You are EYES — a personal intelligence layer that surfaces information and behavioral patterns from the user's synced digital archive.
+    const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const systemPrompt = `You are EYES — a personal intelligence layer and cognitive analyst that surfaces information and behavioral patterns from the user's synced digital archive.
+
+CURRENT DATE: ${todayStr}
 
 STRICT RULES — follow these exactly:
-1. ONLY answer from the CONTEXT records provided below. Do not use general knowledge or make things up.
-2. If the context is empty OR the records are not relevant to the question, say ONLY: "I don't have any records matching that in your synced archive. This could mean the data hasn't been synced yet, or it doesn't exist in your connected platforms." Do NOT show unrelated records.
+1. SYNTHESIZE AND ANALYZE: Do not just act like a dumb search engine. If the user asks a subjective or behavioral question (e.g., "Why am I happy today?", "Why do I like Fridays?"), use the CONTEXT provided below combined with your deep psychological reasoning to hypothesize an answer. 
+2. NO ROBOTIC FALLBACKS: If the CONTEXT doesn't contain a direct, factual answer, DO NOT say "I don't see any evidence of this." Instead, say "You haven't explicitly written about this, but looking at your digital trace..." and then infer an answer based on their overall habits, schedules, or lack thereof.
 3. NEVER tell the user to manually check a website, app, or inbox. EYES is the interface — not a redirect service.
-4. NEVER output [MEMORY X], [GMAIL], [GITHUB], [Unknown Date] or any other internal tags. These are internal labels — strip them completely from your response.
+4. NEVER output [MEMORY X], [GMAIL], [GITHUB], [Unknown Date], [RECENT X] or any other internal tags. These are internal labels — strip them completely from your response.
 5. Speak directly and concisely. Match the format to the question — short answers for simple questions, structured for complex ones.
-6. Use **bold** only to highlight a single key fact (a name, date, or number). Do not overformat.
-7. When the user's cognitive state, active loops, or drift are known and RELEVANT to the question, briefly reference them. Otherwise ignore them.
-${cognitiveContext ? `\nCOGNITIVE CONTEXT (user's current behavioral state — use when relevant):\n${cognitiveContext}\n` : ''}
-${hasContext ? `CONTEXT FROM ARCHIVE (internal — do NOT repeat these tags in your response):\n${context}` : 'CONTEXT: No matching records found in the user\'s archive.'}`.trim();
+6. Use **bold** only to highlight a single key fact. Do not overformat.
+7. DISTINGUISH between actual emails (person-to-person) and platform notification emails.
+
+${hasCognitiveContext ? `\nCOGNITIVE CONTEXT (user's current behavioral state — use to answer questions about behavior, loops, or state):\n${cognitiveContext}\n` : ''}
+${hasArchiveContext ? `\nCONTEXT FROM ARCHIVE (internal — do NOT repeat these tags in your response):\n${context}` : '\nCONTEXT FROM ARCHIVE: No matching records found.'}`.trim();
 
     const messages: ChatHistoryMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -316,6 +464,35 @@ ${hasContext ? `CONTEXT FROM ARCHIVE (internal — do NOT repeat these tags in y
     ];
 
     if (streamRequested) {
+      if (message.trim().toLowerCase() === 'test') {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(
+              "Here is a test of the new Markdown UI:\n\n" +
+              "### 📊 Activity Overview\n" +
+              "| Metric | Value | Status |\n" +
+              "|---|---|---|\n" +
+              "| Syncs | 12 | ✅ |\n" +
+              "| Errors | 0 | ✅ |\n\n" +
+              "Here is a Python code block:\n" +
+              "```python\n" +
+              "def hello_world():\n" +
+              "    print('Hello, Markdown UI!')\n" +
+              "```\n\n" +
+              "- Clean layout\n" +
+              "- Beautiful typography\n\n" +
+              "**Bold Text** and *Italics* work perfectly!"
+            ));
+            controller.close();
+          }
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      }
+
       const stream = await invokeModelStream({
         capability: 'chat',
         messages,

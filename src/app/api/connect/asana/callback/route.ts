@@ -3,10 +3,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { encryptToken } from '@/services/auth/tokens';
 
-function appBaseUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -15,32 +11,32 @@ export async function GET(request: Request) {
   const clientId = process.env.ASANA_CLIENT_ID;
   const clientSecret = process.env.ASANA_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/connect/asana?oauth=error&reason=missing_env', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/asana?oauth=error&reason=missing_env', url.origin));
   }
 
   const cookieStore = await cookies();
   const expectedState = cookieStore.get('asana_oauth_state')?.value;
   if (!expectedState || expectedState !== state || !code) {
-    return NextResponse.redirect(new URL('/connect/asana?oauth=error&reason=invalid_state', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/asana?oauth=error&reason=invalid_state', url.origin));
   }
   cookieStore.delete('asana_oauth_state');
 
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) return NextResponse.redirect(new URL('/login', appBaseUrl()));
+  if (!authData.user) return NextResponse.redirect(new URL('/login', url.origin));
 
   const tokenResp = await fetch('https://app.asana.com/-/oauth_token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code, client_id: clientId, client_secret: clientSecret,
-      redirect_uri: new URL('/api/connect/asana/callback', appBaseUrl()).toString(),
+      redirect_uri: new URL('/api/connect/asana/callback', url.origin).toString(),
       grant_type: 'authorization_code',
     }),
   });
 
   if (!tokenResp.ok) {
-    return NextResponse.redirect(new URL('/connect/asana?oauth=error&reason=token_exchange_failed', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/asana?oauth=error&reason=token_exchange_failed', url.origin));
   }
 
   const tokenBody = await tokenResp.json();
@@ -60,5 +56,5 @@ export async function GET(request: Request) {
     }, { onConflict: 'user_id,platform' }),
   ]);
 
-  return NextResponse.redirect(new URL('/connect/asana?oauth=success', appBaseUrl()));
+  return NextResponse.redirect(new URL('/connect/asana?oauth=success', url.origin));
 }

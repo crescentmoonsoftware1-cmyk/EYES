@@ -15,14 +15,18 @@ export async function GET(request: Request) {
 
   const state = crypto.randomUUID();
   const cookieStore = await cookies();
-  cookieStore.set('linear_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 600 });
+  cookieStore.set('linear_oauth_state', state, {
+    httpOnly: true, sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/', maxAge: 60 * 10,
+  });
 
   const authUrl = new URL('https://linear.app/oauth/authorize');
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', new URL('/api/connect/linear/callback', baseUrl).toString());
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('scope', 'read');
   authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('scope', 'read');
 
   return NextResponse.redirect(authUrl);
 }

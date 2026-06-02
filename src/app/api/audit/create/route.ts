@@ -25,12 +25,19 @@ export async function POST(request: Request) {
     // 2. Switch to Admin Client for database operations (RLS bypass)
     const supabase = await createAdminClient();
 
+    let type = 'full';
+    try {
+      const body = await request.json();
+      if (body?.type) type = body.type;
+    } catch {}
+
     // 3. Create the pending audit record
     const { data: audit, error: createError } = await supabase
       .from('reputation_audits')
       .insert({
         user_id: user.id,
-        status: 'pending'
+        status: 'pending',
+        metadata: { audit_type: type }
       })
       .select()
       .single();

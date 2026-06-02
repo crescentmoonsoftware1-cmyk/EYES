@@ -51,28 +51,22 @@ export async function POST(req: NextRequest) {
 
   // 1. Upsert the thread
   let finalThreadId = threadId;
-  if (!finalThreadId) {
-    const { data: newThread, error: threadErr } = await supabase
-      .from('chat_threads')
-      .insert({
-        user_id: user.id,
-        title: title || 'New Chat',
-      })
-      .select('id')
-      .single();
 
-    if (threadErr || !newThread) {
-      return NextResponse.json({ error: threadErr?.message ?? 'Failed to create thread' }, { status: 500 });
-    }
-    finalThreadId = newThread.id;
-  } else if (title) {
-    // Update title if provided
-    await supabase
-      .from('chat_threads')
-      .update({ title })
-      .eq('id', finalThreadId)
-      .eq('user_id', user.id);
+  // Always attempt to upsert the thread since frontend might send a new UUID
+  const { data: threadData, error: threadErr } = await supabase
+    .from('chat_threads')
+    .upsert({
+      id: finalThreadId || undefined, // undefined lets DB generate if missing
+      user_id: user.id,
+      title: title || 'New Chat',
+    }, { onConflict: 'id' })
+    .select('id')
+    .single();
+
+  if (threadErr || !threadData) {
+    return NextResponse.json({ error: threadErr?.message ?? 'Failed to upsert thread' }, { status: 500 });
   }
+  finalThreadId = threadData.id;
 
   // 2. Delete existing messages for this thread and re-insert (simple full replace)
   await supabase

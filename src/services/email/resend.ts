@@ -96,6 +96,8 @@ function connectorErrorHtml(name: string, platform: string) {
 </html>`;
 }
 
+
+
 // ── Public send functions ──────────────────────────────────────────────────────
 
 export async function sendWelcomeEmail(to: string, name: string) {
@@ -142,3 +144,73 @@ export async function sendConnectorErrorEmail(to: string, name: string, platform
     console.error('[Email] Connector error failed:', err);
   }
 }
+
+function draftApprovalHtml(name: string, sender: string, summary: string, draftReply: string, citations: string, actionId: string) {
+  const approvalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/?view=action-queue&id=${actionId}`;
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #e5e7eb; margin: 0; padding: 0; }
+  .container { max-width: 560px; margin: 40px auto; padding: 40px; background: #111; border: 1px solid #1f2937; border-radius: 12px; }
+  h1 { font-size: 24px; font-weight: 700; color: #fff; margin: 0 0 8px; }
+  .badge { display: inline-block; padding: 4px 12px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #818cf8; border-radius: 20px; font-size: 13px; margin-bottom: 20px; }
+  p { color: #9ca3af; line-height: 1.6; margin: 12px 0; }
+  .quote-box { background: rgba(255,255,255,0.03); border-left: 3px solid #6366f1; padding: 16px; margin: 16px 0; border-radius: 4px; color: #e5e7eb; font-style: italic; white-space: pre-wrap; }
+  .citation-box { background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); padding: 12px; margin: 16px 0; border-radius: 4px; color: #9ca3af; font-size: 13px; }
+  .cta { display: inline-block; margin-top: 24px; padding: 12px 24px; background: #6366f1; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
+  .footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid #1f2937; font-size: 12px; color: #4b5563; }
+</style></head>
+<body>
+  <div class="container">
+    <div class="badge">✉ Action Draft Ready</div>
+    <h1>Draft Reply for: "${summary}"</h1>
+    <p>Hi ${name},</p>
+    <p>EYES has prepared a draft response to an email from <strong>${sender}</strong>. Review the draft below:</p>
+    
+    <div class="quote-box">${draftReply}</div>
+    
+    <h3>Why EYES wrote this:</h3>
+    <div class="citation-box">${citations}</div>
+    
+    <p>Please note: this reply will NOT be sent until you approve it.</p>
+    
+    <a href="${approvalUrl}" class="cta">Approve & Send Draft →</a>
+    <div class="footer">
+      EYES Neural Memory OS · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendDraftApprovalEmail(params: {
+  to: string;
+  name: string;
+  sender: string;
+  summary: string;
+  draftReply: string;
+  citations: string;
+  actionId: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  try {
+    await getResendClient().emails.send({
+      from: FROM,
+      to: params.to,
+      subject: `[EYES Draft Approval] Reply to "${params.summary}"`,
+      html: draftApprovalHtml(
+        params.name,
+        params.sender,
+        params.summary,
+        params.draftReply,
+        params.citations,
+        params.actionId
+      ),
+    });
+    console.log(`[Email] Draft approval email sent → ${params.to}`);
+  } catch (err) {
+    console.error('[Email] Draft approval failed:', err);
+  }
+}
+
+

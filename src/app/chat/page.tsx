@@ -13,36 +13,10 @@ import type { Message, Citation } from '@/types/dashboard';
 import { AlertsBanner } from '@/components/chat/AlertsBanner';
 import { ClusterValidationModal } from '@/components/chat/ClusterValidationModal';
 import { CognitiveRightPanel } from '@/components/chat/CognitiveRightPanel';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-/**
- * Converts AI markdown output to rendered HTML.
- * Handles bold, italic, bullet lists, numbered lists, and line breaks.
- */
-function renderMarkdown(text: string): string {
-  // Process line by line to wrap <li> groups in <ul> without needing the `s` flag
-  const lines = text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/__(.*?)__/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/^[-\*•]\s+(.+)$/gm, '<li>$1</li>')
-    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
-    .split('\n');
 
-  const result: string[] = [];
-  let inList = false;
-  for (const line of lines) {
-    if (line.startsWith('<li>')) {
-      if (!inList) { result.push('<ul>'); inList = true; }
-      result.push(line);
-    } else {
-      if (inList) { result.push('</ul>'); inList = false; }
-      result.push(line);
-    }
-  }
-  if (inList) result.push('</ul>');
-
-  return '<p>' + result.join('\n').replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br />') + '</p>';
-}
 
 function ChatPageInner() {
   const router = useRouter();
@@ -232,10 +206,31 @@ function ChatPageInner() {
 
                       <div className={styles.msgBody}>
                         {m.role === 'assistant' && m.content ? (
-                          <div
-                            className={styles.markdownContent}
-                            dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content) }}
-                          />
+                          <div className={styles.markdownContent}>
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                p: ({node, ...props}) => <p style={{margin: '0 0 10px 0', lineHeight: 1.6}} {...props} />,
+                                ul: ({node, ...props}) => <ul style={{margin: '0 0 10px 20px', padding: 0, listStyle: 'disc'}} {...props} />,
+                                ol: ({node, ...props}) => <ol style={{margin: '0 0 10px 20px', padding: 0, listStyle: 'decimal'}} {...props} />,
+                                li: ({node, ...props}) => <li style={{margin: '4px 0', lineHeight: 1.5}} {...props} />,
+                                table: ({node, ...props}) => <div style={{overflowX: 'auto', margin: '16px 0', borderRadius: '8px', border: '1px solid var(--border-subtle)'}}><table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}} {...props} /></div>,
+                                th: ({node, ...props}) => <th style={{borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', textAlign: 'left', background: 'var(--bg-secondary)', fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
+                                td: ({node, ...props}) => <td style={{borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', color: 'var(--text-secondary)'}} {...props} />,
+                                code: ({node, inline, ...props}: any) => 
+                                  inline 
+                                    ? <code style={{background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace'}} {...props} />
+                                    : <div style={{background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)'}}><code {...props} /></div>,
+                                pre: ({node, ...props}) => <pre style={{margin: 0, padding: 0, background: 'transparent'}} {...props} />,
+                                strong: ({node, ...props}) => <strong style={{fontWeight: 700, color: 'var(--text-primary)'}} {...props} />,
+                                h1: ({node, ...props}) => <h1 style={{fontSize: '18px', fontWeight: 700, margin: '20px 0 10px', color: 'var(--text-primary)'}} {...props} />,
+                                h2: ({node, ...props}) => <h2 style={{fontSize: '16px', fontWeight: 700, margin: '18px 0 10px', color: 'var(--text-primary)'}} {...props} />,
+                                h3: ({node, ...props}) => <h3 style={{fontSize: '14px', fontWeight: 700, margin: '16px 0 8px', color: 'var(--text-primary)'}} {...props} />,
+                                a: ({node, ...props}) => <a style={{color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500}} {...props} />,
+                                blockquote: ({node, ...props}) => <blockquote style={{margin: '12px 0', paddingLeft: '12px', borderLeft: '3px solid var(--border-subtle)', color: 'var(--text-secondary)', fontStyle: 'italic'}} {...props} />
+                              }}
+                            >{m.content}</ReactMarkdown>
+                          </div>
                         ) : (
                           m.content
                         )}

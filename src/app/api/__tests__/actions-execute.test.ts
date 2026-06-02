@@ -156,4 +156,75 @@ describe('POST /api/actions/execute', () => {
     expect(payload.success).toBe(true);
     expect(payload.executed).toBe('CALENDAR');
   });
+
+  it('sends a Gmail reply and logs to action_sent_log for EMAIL_REPLY actions', async () => {
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    const fromMock = vi.fn().mockReturnValue({ insert: insertMock });
+    const supabaseMock = {
+      ...createSupabase(),
+      from: fromMock,
+    };
+    hoisted.createClientMock.mockResolvedValue(supabaseMock as never);
+
+    const fetchMock = vi.spyOn(global, 'fetch');
+    
+    // Parent metadata mock response
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        threadId: 'thread-xyz',
+        payload: {
+          headers: [
+            { name: 'Message-ID', value: '<parent-msg-id@gmail.com>' },
+            { name: 'Subject', value: 'Hello there' },
+            { name: 'From', value: 'Sender <sender@example.com>' }
+          ]
+        }
+      }), { status: 200 })
+    );
+
+    // Send email mock response
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'sent-msg-id' }), { status: 200 })
+    );
+
+    const response = await POST(new Request('http://localhost/api/actions/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionType: 'EMAIL_REPLY',
+        memoryId: 'msg-12345',
+        suggestedAction: 'This is the draft reply text',
+      }),
+    }));
+
+    const payload = await response.json() as { success?: boolean; executed?: string };
+
+    expect(response.status).toBe(200);
+    expect(payload.success).toBe(true);
+    expect(payload.executed).toBe('EMAIL_REPLY');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages/msg-12345?format=metadata',
+      expect.any(Object)
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+      expect.any(Object)
+    );
+
+    expect(fromMock).toHaveBeenCalledWith('action_sent_log');
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platform: 'gmail',
+        recipient: 'sender@example.com',
+        subject: 'Re: Hello there',
+        body: 'This is the draft reply text',
+      })
+    );
+
+    fetchMock.mockRestore();
+  });
 });

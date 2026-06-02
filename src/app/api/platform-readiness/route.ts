@@ -8,7 +8,7 @@ type PlatformId =
   | 'vercel' | 'netlify' | 'supabase' | 'sentry' | 'posthog' | 'webflow' | 'devin' | 'cursor'
   | 'canva'
   | 'strava' | 'fitbit' | 'withings'
-  | 'sonos' | 'philips-hue';
+  | 'sonos' | 'philips-hue' | 'zoom' | 'hubspot' | 'salesforce' | 'jira' | 'confluence' | 'aws' | 'gcp' | 'azure' | 'quickbooks' | 'xero' | 'sap' | 'excel' | 'stripe' | 'tableau' | 'monday' | 'mailchimp' | 'google-analytics' | 'meta-ads' | 'linkedin-ads' | 'productboard' | 'figma' | 'mixpanel' | 'datadog' | 'linkedin-sales-navigator' | 'ms-project' | 'azure-devops' | 'miro' | 'gitlab' | 'vscode' | 'postman' | 'docker' | 'stack-overflow';
 
 type PlatformReadiness = {
   id: PlatformId;
@@ -97,7 +97,7 @@ const platformConfigs: Array<{
   {
     id: 'linear',
     name: 'Linear',
-    env: ['LINEAR_CLIENT_ID', 'LINEAR_CLIENT_SECRET', 'LINEAR_DEFAULT_TEAM_ID', 'TOKEN_ENCRYPTION_KEY'],
+    env: ['LINEAR_CLIENT_ID', 'LINEAR_CLIENT_SECRET', 'TOKEN_ENCRYPTION_KEY'],
     scopes: ['read'],
   },
   {
@@ -115,7 +115,7 @@ const platformConfigs: Array<{
   {
     id: 'netlify',
     name: 'Netlify',
-    env: ['NETLIFY_AUTH_TOKEN'],
+    env: ['NETLIFY_CLIENT_ID', 'NETLIFY_CLIENT_SECRET'],
     scopes: ['read'],
   },
   {
@@ -127,7 +127,7 @@ const platformConfigs: Array<{
   {
     id: 'sentry',
     name: 'Sentry',
-    env: ['SENTRY_AUTH_TOKEN'],
+    env: ['SENTRY_CLIENT_ID', 'SENTRY_CLIENT_SECRET'],
     scopes: ['event:read', 'project:read'],
   },
   {
@@ -139,7 +139,7 @@ const platformConfigs: Array<{
   {
     id: 'webflow',
     name: 'Webflow',
-    env: ['WEBFLOW_API_TOKEN'],
+    env: ['WEBFLOW_CLIENT_ID', 'WEBFLOW_CLIENT_SECRET'],
     scopes: ['read'],
   },
   {
@@ -157,7 +157,7 @@ const platformConfigs: Array<{
   {
     id: 'canva',
     name: 'Canva',
-    env: ['CANVA_API_KEY'],
+    env: ['CANVA_CLIENT_ID', 'CANVA_CLIENT_SECRET'],
     scopes: ['read'],
   },
   {
@@ -189,6 +189,48 @@ const platformConfigs: Array<{
     name: 'Philips Hue',
     env: ['HUE_BRIDGE_IP', 'HUE_USER_TOKEN'],
     scopes: ['read'],
+  },
+  {
+    id: 'gcp',
+    name: 'Google Cloud Platform',
+    env: ['GCP_CLIENT_ID'],
+    scopes: ['cloud-platform.read-only'],
+  },
+  {
+    id: 'xero',
+    name: 'Xero',
+    env: ['XERO_CLIENT_ID'],
+    scopes: ['accounting.transactions', 'accounting.reports.read'],
+  },
+  {
+    id: 'figma',
+    name: 'Figma',
+    env: ['FIGMA_API_TOKEN'],
+    scopes: ['file_read'],
+  },
+  {
+    id: 'jira',
+    name: 'Jira',
+    env: ['JIRA_CLIENT_ID', 'JIRA_CLIENT_SECRET'],
+    scopes: ['read:jira-work'],
+  },
+  {
+    id: 'quickbooks',
+    name: 'QuickBooks',
+    env: ['QUICKBOOKS_CLIENT_ID', 'QUICKBOOKS_CLIENT_SECRET'],
+    scopes: ['com.intuit.quickbooks.accounting'],
+  },
+  {
+    id: 'monday',
+    name: 'Monday.com',
+    env: ['MONDAY_CLIENT_ID', 'MONDAY_CLIENT_SECRET'],
+    scopes: ['boards:read', 'workspaces:read'],
+  },
+  {
+    id: 'mixpanel',
+    name: 'Mixpanel',
+    env: ['MIXPANEL_CLIENT_ID', 'MIXPANEL_CLIENT_SECRET'],
+    scopes: ['data:read'],
   },
 ];
 

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "eyes-memory": {
+      "command": "npm",
+      "args": [
+        "run",
+        "mcp"
+      ],
+      "env": {
+        "MCP_DEFAULT_USER_ID": "REPLACE_WITH_YOUR_USER_ID"
+      }
+    }
+  }
+}

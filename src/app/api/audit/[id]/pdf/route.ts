@@ -1,18 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import PDFDocument from 'pdfkit';
+import { PDFGenerationService } from '@/services/audit/pdf-generator';
+import { ReputationAudit } from '@/types/dashboard';
+
+// PDFKit uses Node.js streams — must run in Node.js runtime, not Edge.
+export const runtime = 'nodejs';
 
 /**
  * GET /api/audit/[id]/pdf
- * Full 8-page Reputation Audit Certificate — generated on-demand, streamed to browser.
- * Nothing stored in Supabase Storage.
- *
- * Page 1: Cover Page
- * Page 2: Executive Summary & Core Metrics
- * Pages 3–5: Per-Connector Breakdown (up to 3 platforms)
- * Page 6: Commitments & Opportunities
- * Page 7: Risk Findings
- * Page 8: Citations Index & Legal Notice
+ * Full 9-page Reputation Audit Certificate — generated on-demand, streamed to browser.
+ * Nothing stored in Supabase Storage for this path for GDPR privacy compliance.
  */
 export async function GET(
   _request: Request,
@@ -28,393 +25,63 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: audit, error: fetchError } = await supabase
+    const cleanId = id.trim().toLowerCase();
+    console.log('[PDF GET] Querying for:', { cleanId, userId: user.id });
+
+    let query = supabase
       .from('reputation_audits')
       .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
+
+    if (cleanId.length === 8) {
+      query = query.like('id', `${cleanId}%`);
+    } else {
+      query = query.eq('id', cleanId);
+    }
+
+    const { data: audit, error: fetchError } = await query.maybeSingle();
 
     if (fetchError || !audit || audit.status !== 'completed') {
+      console.error('[PDF GET] Audit validation failed:', {
+        fetchError: fetchError?.message || fetchError,
+        auditFound: !!audit,
+        auditStatus: audit?.status,
+        auditUserId: audit?.user_id,
+        requestUserId: user.id
+      });
       return NextResponse.json({ error: 'Audit not found or not yet completed.' }, { status: 404 });
     }
 
-    const meta = audit.metadata || {};
-
-    interface AuditCommitment {
-      text?: string;
-      platform?: string;
-      status?: string;
-      citation?: string;
-      date?: string;
-    }
-    interface AuditRiskFinding {
-      severity?: string;
-      finding?: string;
-      impact?: string;
-      evidence?: string;
-    }
-
-    const commitments: AuditCommitment[] = meta.commitments  || [];
-    const riskFindings: AuditRiskFinding[] = meta.riskFindings || [];
-    const topEntities: string[] = meta.topEntities  || [];
-    const opportunities: string[] = meta.opportunities || [];
-    const connectors: string[] = audit.connectors_covered || [];
-
-    // ── Per-platform data: fetch 20 records each, compute sentiment + entities ──
-    // Patterns that identify profile/account records (not real content)
-    const PROFILE_PATTERN = /email:\s|user id:|discord user|account id:|phone:|address:|\bemail\b.*@|#\d{4}\b/i;
-
-    type PlatformData = {
-      memories:  { title: string; content: string; timestamp: string }[];
-      sentiment: { pos: number; neg: number; neutral: number };
-      entities:  string[];
-      count:     number;
+    // Map DB fields to camelCase ReputationAudit type
+    const mappedAudit: ReputationAudit = {
+      id: audit.id,
+      status: audit.status,
+      riskScore: Number(audit.risk_score || 0),
+      mentionsCount: audit.mentions_count || 0,
+      commitmentsCount: audit.commitments_count || 0,
+      summaryNarrative: audit.summary_narrative,
+      connectorsCovered: audit.connectors_covered || [],
+      reportUrl: audit.report_url,
+      createdAt: audit.created_at,
+      metadata: audit.metadata || {}
     };
-    const platformData: Record<string, PlatformData> = {};
 
-    for (const platform of connectors.slice(0, 3)) {
-      const { data: rawMems } = await supabase
-        .from('memories')
-        .select('title, content, timestamp, is_flagged')
-        .eq('user_id', user.id)
-        .eq('platform', platform)
-        .not('content', 'is', null)
-        .order('timestamp', { ascending: false })
-        .limit(20);
+    // Generate PDF in-memory buffer via shared PDFGenerationService
+    const pdfBuffer = await PDFGenerationService.generateBuffer(mappedAudit, user.id);
 
-      const all = rawMems ?? [];
+    const shortId = audit.id.slice(0, 8).toUpperCase();
+    const filename = `eyes-audit-${shortId}.pdf`;
 
-      // 1. Filter out profile/account records AND GitHub metadata-only records
-      const contentMems = all.filter(m =>
-        !PROFILE_PATTERN.test(m.content ?? '') &&
-        !PROFILE_PATTERN.test(m.title ?? '') &&
-        (m.content ?? '').length > 20 &&
-        !/^No description provided/i.test(m.content ?? '')
-      );
+    console.log(`[PDF GET] Generated booklet buffer: ${pdfBuffer.length} bytes | Filename: ${filename}`);
 
-      // 2. Per-platform sentiment from is_flagged ratio
-      const total   = all.length || 1;
-      const flagged = all.filter(m => m.is_flagged).length;
-      const posP    = Math.round(((total - flagged) / total) * 100);
-      const negP    = Math.round((flagged / total) * 100);
-
-      // 3. Per-platform entities — frequency of capitalised words from content
-      const SKIP = new Set(['The','This','That','With','From','Have','When','Will','Your',
-                            'More','Some','They','Been','Also','Into','Over','Such','Then',
-                            'State','Branch','Commit','Source','Indexing','Records',
-                            // GitHub/Vercel metadata field names
-                            'Language','Stars','Forks','Repo','Description','TypeScript',
-                            'Python','JavaScript','None','Provided','Ready','Error',
-                            'Main','Build','Deploy','Production','Preview',
-                            // Calendar noise words
-                            'Reminder','Sync','Plan','Update','Notification','Sent',
-                            'Upgrade','Service','Disable','Enable','Free','Team']);
-      const freq: Record<string, number> = {};
-      for (const m of contentMems.slice(0, 10)) {
-        const words = `${m.title ?? ''} ${m.content ?? ''}`.match(/\b[A-Z][a-zA-Z]{2,}\b/g) ?? [];
-        for (const w of words) {
-          if (SKIP.has(w)) continue;
-          freq[w] = (freq[w] ?? 0) + 1;
-        }
-      }
-      const entities = Object.entries(freq)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .map(([w]) => w);
-
-      platformData[platform] = {
-        memories:  contentMems.slice(0, 3).map(m => ({ title: m.title ?? '', content: m.content ?? '', timestamp: m.timestamp ?? '' })),
-        sentiment: { pos: posP, neg: negP, neutral: Math.max(0, 100 - posP - negP) },
-        entities:  entities.length >= 2 ? entities : topEntities.slice(0, 5),
-        count:     all.length,
-      };
-    }
-
-    // ── Generate PDF in-memory ────────────────────────────────────────────
-    const chunks: Buffer[] = [];
-
-    await new Promise<void>((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'A4', margin: 0, info: {
-        Title: `Reputation Audit Certificate – ${audit.id}`,
-        Author: 'EYES Neural Memory OS',
-        Subject: 'Reputation Audit Report',
-        Keywords: 'reputation, audit, neural, EYES',
-      }});
-
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', resolve);
-      doc.on('error', reject);
-
-      const W = doc.page.width;
-      const H = doc.page.height;
-
-      // ── Design Tokens ─────────────────────────────────────────────────
-      const FONT_BODY = 'Helvetica';
-      const FONT_BOLD = 'Helvetica-Bold';
-      const FONT_MONO = 'Courier';
-      const BG        = '#FFFFFF';
-      const INK       = '#080808';
-      const GREEN     = '#00899B';
-      const RED       = '#EF4444';
-      const GRAY      = '#888888';
-      const LIGHT     = '#F0F0F0';
-      const AMBER     = '#B8860B';
-
-      const bg = () => doc.rect(0, 0, W, H).fill(BG);
-
-      const footer = (n: number) =>
-        doc.fillColor(GRAY).fontSize(7).font(FONT_BODY)
-           .text(`Audit ID: ${audit.id} | Page ${n} of 8 | Confidential — EYES Neural Memory OS`,
-                 50, H - 40, { align: 'center', width: W - 100 });
-
-      const hRule = (y: number, color = LIGHT) =>
-        doc.moveTo(50, y).lineTo(W - 50, y).strokeColor(color).lineWidth(0.5).stroke();
-
-      const renderMetric = (label: string, value: string, y: number) => {
-        doc.font(FONT_BODY).fontSize(10).fillColor(INK).text(`• ${label}:`, 65, y, { width: 170 });
-        doc.font(FONT_BOLD).fontSize(10).fillColor(INK).text(value, 245, y);
-      };
-
-      // ══════════════════════════════════════════════════════════════════
-      // PAGE 1 — COVER
-      // ══════════════════════════════════════════════════════════════════
-      bg();
-      doc.fillColor(INK).fontSize(14).font(FONT_BOLD).text('EYES', 50, 40);
-      doc.fillColor(RED).fontSize(8).font(FONT_BOLD)
-         .text('CONFIDENTIAL · CERTIFICATE', 50, 40, { align: 'right', width: W - 100 });
-      hRule(62, INK);
-
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(36)
-         .text('Reputation\nAudit\nCertificate', 50, 130, { lineGap: 8 });
-      doc.moveTo(50, 270).lineTo(200, 270).strokeColor(GREEN).lineWidth(3).stroke();
-
-      const date = new Date(audit.created_at);
-      const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      const timeStr = `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')} UTC`;
-
-      doc.fontSize(12).font(FONT_BODY).fillColor(INK)
-         .text(`Date: ${dateStr} · ${timeStr}`, 50, 295)
-         .text(`Audit ID: EYES-RA-${audit.id.slice(0, 8).toUpperCase()}`, 50, 318)
-         .text(`Risk Score: ${audit.risk_score ?? 'N/A'} / 10`, 50, 341)
-         .text(`Records Analysed: ${audit.mentions_count ?? 0}`, 50, 364);
-
-      doc.fontSize(10).font(FONT_BOLD).text('Connectors Covered', 50, 410);
-      doc.fontSize(10).font(FONT_BODY).text(connectors.join(' · ') || 'N/A', 50, 428, { width: W - 100 });
-      footer(1);
-
-      // ══════════════════════════════════════════════════════════════════
-      // PAGE 2 — EXECUTIVE SUMMARY & CORE METRICS
-      // ══════════════════════════════════════════════════════════════════
-      doc.addPage(); bg();
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(22).text('Executive Summary', 50, 80);
-      hRule(110);
-
-      const narrative = audit.summary_narrative || 'Analysis complete. No significant anomalies detected at this threshold.';
-      doc.font(FONT_BODY).fontSize(11).lineGap(4).fillColor(INK)
-         .text(narrative, 50, 125, { width: W - 100, align: 'justify' });
-
-      let y2 = 330;
-      hRule(y2); y2 += 20;
-      doc.font(FONT_BOLD).fontSize(14).fillColor(INK).text('Key Metrics', 50, y2); y2 += 28;
-
-      renderMetric('Total Records Audited',    String(audit.mentions_count ?? 0),          y2);
-      renderMetric('Negative Findings',         String(riskFindings.length),                y2 + 22);
-      renderMetric('Failure Rate',              `${meta.failureRate ?? '0'}%`,              y2 + 44);
-      renderMetric('Compliance Rate',           `${meta.complianceRate ?? '100'}%`,        y2 + 66);
-      renderMetric('Open Commitments',          String(audit.commitments_count ?? 0),      y2 + 88);
-      renderMetric('Risk Profile',              `${audit.risk_score ?? 0} / 10`,           y2 + 110);
-
-      // Risk score callout
-      const rsY = y2 + 150;
-      doc.fontSize(36).font(FONT_BOLD).fillColor(INK).text(String(audit.risk_score ?? 0), 50, rsY);
-      doc.fontSize(14).font(FONT_BODY).fillColor(GRAY).text('/ 10  Risk Score', 120, rsY + 10);
-      const label = (audit.risk_score ?? 0) > 7 ? 'Critical Risk' : (audit.risk_score ?? 0) > 4 ? 'Moderate Exposure' : 'Minimal Exposure';
-      doc.fontSize(10).font(FONT_BODY).fillColor(GRAY).text(label, 50, rsY + 46);
-      footer(2);
-
-      // ══════════════════════════════════════════════════════════════════
-      // PAGES 3–5 — PER-CONNECTOR BREAKDOWN
-      // ══════════════════════════════════════════════════════════════════
-      for (let i = 0; i < 3; i++) {
-        doc.addPage(); bg();
-        const platform = connectors[i];
-
-        if (!platform) {
-          // Filler page when fewer than 3 connectors
-          doc.fillColor(GRAY).font(FONT_BOLD).fontSize(14)
-             .text('No Additional Connector Data', 50, H / 2 - 20, { align: 'center', width: W - 100 });
-          footer(3 + i);
-          continue;
-        }
-
-        doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text(`Platform Breakdown: ${platform.toUpperCase()}`, 50, 80);
-        hRule(110);
-
-        const pd = platformData[platform] ?? { memories: [], sentiment: { pos: 100, neg: 0, neutral: 0 }, entities: topEntities.slice(0, 5), count: 0 };
-        const perPlatformCount = pd.count || Math.round((audit.mentions_count ?? 0) / Math.max(connectors.length, 1));
-
-        doc.font(FONT_MONO).fontSize(8).fillColor(GRAY)
-           .text(`Indexing window: 24 months | Records analysed: ~${perPlatformCount}`, 50, 120);
-
-        // Per-platform entities
-        doc.fillColor(INK).font(FONT_BOLD).fontSize(11).text('Top Mentioned Entities', 50, 155);
-        doc.font(FONT_BODY).fontSize(10)
-           .text(pd.entities.join(' · ') || 'None detected', 50, 172, { width: W - 100 });
-
-        // Per-platform sentiment
-        doc.font(FONT_BOLD).fontSize(11).text('Sentiment Distribution', 50, 210);
-        doc.font(FONT_MONO).fontSize(9)
-           .text(`Positive: ${pd.sentiment.pos}%  |  Negative: ${pd.sentiment.neg}%  |  Neutral: ${pd.sentiment.neutral}%`, 50, 227);
-
-        doc.font(FONT_BOLD).fontSize(11).text('Significant Records', 50, 265);
-
-        const realMems = pd.memories;
-        const platformCommitments = commitments.filter(c => c.platform === platform);
-
-        if (realMems.length > 0) {
-          realMems.forEach((mem, ci: number) => {
-            const ry = 285 + ci * 95;
-            doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
-            const snippet = (mem.content || mem.title || '').slice(0, 240);
-            doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-               .text(`"${snippet}${snippet.length >= 240 ? '…' : ''}"`, 62, ry + 14, { width: W - 124 });
-            doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-               .text(`Source: ${platform.toUpperCase()} | ${mem.timestamp ? new Date(mem.timestamp).toLocaleDateString() : 'N/A'}`, 62, ry + 60);
-          });
-        } else if (platformCommitments.length > 0) {
-          platformCommitments.slice(0, 3).forEach((c, ci: number) => {
-            const ry = 285 + ci * 95;
-            doc.rect(50, ry, W - 100, 80).strokeColor(LIGHT).lineWidth(0.5).stroke();
-            doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-               .text(`"${(c.text ?? '').slice(0, 220)}…"`, 62, ry + 14, { width: W - 124 });
-            doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-               .text(`Source: ${(c.platform ?? platform).toUpperCase()} | ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'}`, 62, ry + 60);
-          });
-        } else {
-          doc.font(FONT_BODY).fontSize(10).fillColor(GRAY)
-             .text('No significant content records found for this connector.', 62, 290);
-        }
-        footer(3 + i);
-      }
-
-      // ══════════════════════════════════════════════════════════════════
-      // PAGE 6 — COMMITMENTS & OPPORTUNITIES
-      // ══════════════════════════════════════════════════════════════════
-      // Page 6: Adaptive layout — full width for opportunities when no commitments
-      doc.addPage(); bg();
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text('Commitments & Opportunities', 50, 80);
-      hRule(110);
-
-      const mid = W / 2;
-      const hasCommitments = commitments.length > 0;
-      const oppX     = hasCommitments ? mid + 10 : 50;
-      const oppWidth = hasCommitments ? mid - 70  : W - 100;
-      const oppCols  = hasCommitments ? 5          : 7; // items to show
-
-      // Left column — Commitments
-      doc.fontSize(12).font(FONT_BOLD).fillColor(INK).text('Detected Commitments', 50, 130);
-      if (!hasCommitments) {
-        doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No commitments detected.', 50, 155);
-      } else {
-        commitments.slice(0, 7).forEach((c, i: number) => {
-          const cy = 155 + i * 60;
-          doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-             .text(`${i + 1}. ${(c.text ?? '').slice(0, 120)}`, 50, cy, { width: mid - 70 });
-          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-             .text(`${c.platform ?? ''} | Status: ${(c.status ?? 'pending').toUpperCase()}`, 50, cy + 26);
-        });
-      }
-
-      // Opportunities column (full-width when no commitments)
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(12).text('Detected Opportunities', oppX, 130);
-      if (opportunities.length === 0) {
-        doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No opportunities detected.', oppX, 155);
-      } else {
-        opportunities.slice(0, oppCols).forEach((o: string, i: number) => {
-          const oy = 155 + i * (hasCommitments ? 60 : 80);
-          doc.font(FONT_BODY).fontSize(9).fillColor(INK)
-             .text(`${i + 1}. ${o}`, oppX, oy, { width: oppWidth });
-          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-             .text('Strategy focus: High Priority', oppX, oy + (hasCommitments ? 34 : 54));
-        });
-      }
-      footer(6);
-
-      // ══════════════════════════════════════════════════════════════════
-      // PAGE 7 — RISK FINDINGS
-      // ══════════════════════════════════════════════════════════════════
-      doc.addPage(); bg();
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text('Risk Findings', 50, 80);
-      hRule(110);
-
-      if (riskFindings.length === 0) {
-        doc.font(FONT_BODY).fontSize(11).fillColor(GRAY)
-           .text('No significant risk findings were detected in this audit cycle.', 50, 140);
-      } else {
-        riskFindings.slice(0, 5).forEach((f, i: number) => {
-          const ry = 130 + i * 112;
-          doc.rect(50, ry, W - 100, 100).strokeColor(LIGHT).lineWidth(0.5).stroke();
-          const accent = f.severity === 'High' ? RED : f.severity === 'Medium' ? AMBER : GREEN;
-          doc.fillColor(accent).font(FONT_BOLD).fontSize(8)
-             .text(f.severity?.toUpperCase() ?? 'MEDIUM', 65, ry + 14);
-          doc.fillColor(INK).fontSize(12)
-             .text(f.finding ?? 'Risk signal detected', 65, ry + 30, { width: W - 130 });
-          doc.font(FONT_BODY).fontSize(9).fillColor(GRAY)
-             .text(f.impact ?? 'Potential diligence concern.', 65, ry + 66, { width: W - 130 });
-          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY)
-             .text(`Evidence: ${(f.evidence ?? 'N/A').slice(0, 80)}`, 65, ry + 82);
-        });
-      }
-      footer(7);
-
-      // ══════════════════════════════════════════════════════════════════
-      // PAGE 8 — CITATIONS INDEX & LEGAL NOTICE
-      // ══════════════════════════════════════════════════════════════════
-      doc.addPage(); bg();
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(20).text('Citations Index', 50, 80);
-      hRule(110);
-
-      if (commitments.length === 0) {
-        doc.font(FONT_BODY).fontSize(10).fillColor(GRAY).text('No citations to index.', 50, 130);
-      } else {
-        commitments.slice(0, 14).forEach((c, i: number) => {
-          const cy = 125 + i * 32;
-          doc.font(FONT_MONO).fontSize(8).fillColor(INK)
-             .text(`${i + 1}. [${(c.platform ?? '').toUpperCase()}] ${c.date ? new Date(c.date).toLocaleDateString() : 'N/A'} — ID: ${(c.citation ?? '').slice(0, 8)}`, 50, cy);
-          doc.font(FONT_BODY).fontSize(7).fillColor(GRAY)
-             .text(`"${(c.text ?? '').slice(0, 130)}…"`, 50, cy + 12);
-        });
-      }
-
-      // Legal Notice
-      const legalY = H - 200;
-      hRule(legalY, INK);
-      doc.fillColor(INK).font(FONT_BOLD).fontSize(10).text('Legal Notice & Disclosures', 50, legalY + 18);
-      doc.font(FONT_BODY).fontSize(8).lineGap(2).fillColor(INK)
-         .text(
-           'GDPR Compliance: All data processed under explicit subject authorisation. Stored encrypted at rest; never used for model training. ' +
-           'Source Disclosure: Findings derived solely from connected neural links representing a point-in-time snapshot. ' +
-           'EYES OS assumes no liability for decisions based on this automated synthesis. ' +
-           'This report is generated on-demand and not stored on any server. The subject is solely responsible for document security after download.',
-           50, legalY + 36, { width: W - 100 }
-         );
-      doc.fillColor(GRAY).font(FONT_BODY).fontSize(7)
-         .text('EYES Neural Memory OS · Generated on-demand · Not stored', 50, H - 60);
-      footer(8);
-
-      doc.end();
-    });
-
-    const pdfBuffer = Buffer.concat(chunks);
-
-    return new Response(pdfBuffer, {
+    return new Response(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="eyes-audit-${audit.id.slice(0, 8).toUpperCase()}.pdf"`,
+        'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
         'Content-Length': String(pdfBuffer.length),
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
 

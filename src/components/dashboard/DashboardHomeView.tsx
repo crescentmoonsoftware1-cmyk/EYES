@@ -12,6 +12,8 @@ interface PlatformConfig {
   icon?: React.ReactElement;
   description?: string;
   category?: string;
+  comingSoon?: boolean;
+  apiKeyOnly?: boolean;
 }
 
 interface DashboardHomeViewProps {
@@ -30,27 +32,12 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
     ? remainingPlatforms
     : remainingPlatforms.filter(p => (p as PlatformConfig).category === activeCategory);
 
-  // Platforms with a fully-registered & working OAuth app
-  const primaryPlatformIds = [
-    'gmail', 'google-calendar', 'notion', 'slack', 'github', 'discord',
-    'dropbox',
-  ];
-
-  // Platforms that connect via API key — no OAuth redirect
-  const apiKeyPlatformIds = ['vercel', 'trello'];
-
-  // OAuth redirect URL not yet registered on platform — show as Coming Soon (non-clickable)
-  const comingSoonIds = [
-    'asana', 'clickup', 'netlify', 'webflow', 'canva', 'reddit',
-    'twitter', 'linear', 'sentry', 'strava', 'fitbit', 'withings',
-  ];
-  
-  const primaryRemaining   = filteredRemaining.filter(p => primaryPlatformIds.includes(p.id));
-  const apiKeyRemaining    = filteredRemaining.filter(p => apiKeyPlatformIds.includes(p.id));
-  const comingSoonPlatforms = filteredRemaining.filter(p => comingSoonIds.includes(p.id));
+  const primaryRemaining   = filteredRemaining.filter(p => !(p as PlatformConfig).comingSoon && !(p as PlatformConfig).apiKeyOnly);
+  const apiKeyRemaining    = filteredRemaining.filter(p => !(p as PlatformConfig).comingSoon && (p as PlatformConfig).apiKeyOnly);
+  const comingSoonPlatforms = filteredRemaining.filter(p => (p as PlatformConfig).comingSoon);
 
   const renderPlatformCard = (p: PlatformConfig) => {
-    const isApiKey = apiKeyPlatformIds.includes(p.id);
+    const isApiKey = Boolean(p.apiKeyOnly);
 
     const startAuth = () => {
       if (isApiKey) {
@@ -164,7 +151,7 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
 
       {/* Discovery Hub Layout */}
       <div className={styles.readinessSection}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
           <h3 className={styles.subHeader} style={{ marginBottom: 0 }}>● PRIMARY CONNECTORS</h3>
           
           <div className={styles.filterBar} style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>

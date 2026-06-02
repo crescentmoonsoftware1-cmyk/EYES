@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { processMessageForAcuteAlert } from '../gmail/route';
+import { waitUntil } from '@vercel/functions';
+import { extractForUser } from '../../actions/extract/route';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -34,11 +36,13 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient(SERVICE_URL, SERVICE_KEY, { auth: { persistSession: false } }) as any;
 
-  const { data: tokenRow } = await supabase
+  const { data } = await supabase
     .from('oauth_tokens')
     .select('user_id')
     .eq('platform', 'slack')
-    .maybeSingle();
+    .limit(1);
+
+  const tokenRow = data?.[0];
 
   if (!tokenRow?.user_id) return NextResponse.json({ received: true });
 
@@ -57,6 +61,11 @@ export async function POST(request: Request) {
   await processMessageForAcuteAlert(supabase, userId, message, 'slack').catch((err) => {
     console.error('[Slack Webhook] processMessageForAcuteAlert failed:', err);
   });
+
+  // Trigger Action Queue extraction immediately in the background
+  waitUntil(extractForUser(userId, supabase).catch(err => 
+    console.error('[Slack Webhook] Background extraction failed:', err)
+  ));
 
   return NextResponse.json({ received: true });
 }

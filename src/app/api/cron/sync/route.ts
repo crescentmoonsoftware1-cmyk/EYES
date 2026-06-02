@@ -173,14 +173,12 @@ const SUPPORTED_PLATFORMS = new Set([
   // Original 7
   'github', 'gmail', 'google_calendar', 'notion', 'reddit', 'slack', 'discord',
   // Expanded — all OAuth platforms added in later sessions
-  'dropbox', 'asana', 'linear', 'clickup', 'netlify', 'webflow', 'canva',
+  'dropbox', 'asana', 'clickup', 'netlify', 'webflow', 'canva',
   'strava', 'fitbit', 'withings', 'sentry', 'twitter',
 ]);
 // Direct API-key platforms (no oauth_tokens row) — always included if env key set
 const DIRECT_KEY_PLATFORMS: Array<{ platform: string; envKey: string }> = [
   { platform: 'vercel', envKey: 'VERCEL_API_TOKEN' },
-  { platform: 'trello', envKey: 'TRELLO_API_KEY' },
-  { platform: 'posthog', envKey: 'POSTHOG_API_KEY' },
   { platform: 'devin', envKey: 'DEVIN_API_KEY' },
   { platform: 'cursor', envKey: 'CURSOR_API_KEY' },
 ];

@@ -3,10 +3,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { encryptToken } from '@/services/auth/tokens';
 
-function appBaseUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -16,14 +12,14 @@ export async function GET(request: Request) {
   const clientSecret = process.env.DROPBOX_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=missing_env', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=missing_env', url.origin));
   }
 
   const cookieStore = await cookies();
   const expectedState = cookieStore.get('dropbox_oauth_state')?.value;
 
   if (!expectedState || expectedState !== state) {
-    return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=invalid_state', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=invalid_state', url.origin));
   }
 
   cookieStore.delete('dropbox_oauth_state');
@@ -31,7 +27,7 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) {
-    return NextResponse.redirect(new URL('/login', appBaseUrl()));
+    return NextResponse.redirect(new URL('/login', url.origin));
   }
 
   const tokenResponse = await fetch('https://api.dropboxapi.com/oauth2/token', {
@@ -41,13 +37,13 @@ export async function GET(request: Request) {
       code: code!,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: new URL('/api/connect/dropbox/callback', appBaseUrl()).toString(),
+      redirect_uri: new URL('/api/connect/dropbox/callback', url.origin).toString(),
       grant_type: 'authorization_code',
     }),
   });
 
   if (!tokenResponse.ok) {
-    return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=token_exchange_failed', appBaseUrl()));
+    return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=token_exchange_failed', url.origin));
   }
 
   const tokenBody = await tokenResponse.json();
@@ -73,5 +69,5 @@ export async function GET(request: Request) {
     }, { onConflict: 'user_id,platform' })
   ]);
 
-  return NextResponse.redirect(new URL('/connect/dropbox?oauth=success', appBaseUrl()));
+  return NextResponse.redirect(new URL('/connect/dropbox?oauth=success', url.origin));
 }

@@ -14,11 +14,13 @@ export default function SettingsPage() {
   const [riskSensitivity, setRiskSensitivity] = useState('MEDIUM');
   const [syncDepth, setSyncDepth] = useState('balanced');
   const [excludedSenders, setExcludedSenders] = useState<string[]>([]);
+  const [gdprConsent, setGdprConsent] = useState(true);
   const [newSender, setNewSender] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [settingsSaved, setSettingsSaved] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (user?.name) setDisplayName(user.name);
@@ -32,6 +34,7 @@ export default function SettingsPage() {
         if (!data) return;
         if (data.riskSensitivity) setRiskSensitivity(data.riskSensitivity);
         if (data.syncDepth) setSyncDepth(data.syncDepth);
+        if (data.gdprConsent !== undefined) setGdprConsent(data.gdprConsent);
         if (Array.isArray(data.excludedSenders)) setExcludedSenders(data.excludedSenders);
       })
       .catch(() => {});
@@ -43,7 +46,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/user/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ riskSensitivity, syncDepth, excludedSenders }),
+        body: JSON.stringify({ riskSensitivity, syncDepth, excludedSenders, gdprConsent }),
       });
       setSettingsSaved(res.ok ? 'Settings saved!' : 'Failed to save.');
     } catch {
@@ -203,17 +206,7 @@ export default function SettingsPage() {
                         <button
                           key={level}
                           onClick={() => setRiskSensitivity(level)}
-                          style={{
-                            flex: 1,
-                            padding: '12px',
-                            background: riskSensitivity === level ? 'var(--text-primary)' : 'var(--bg-secondary)',
-                            color: riskSensitivity === level ? 'var(--bg-primary)' : 'var(--text-primary)',
-                            border: '1px solid var(--border-primary)',
-                            borderRadius: '8px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
+                          className={`${styles.levelBtn} ${riskSensitivity === level ? styles.levelBtnActive : ''}`}
                         >
                           {level}
                         </button>
@@ -224,15 +217,22 @@ export default function SettingsPage() {
 
                   <div className={styles.fieldGroup}>
                     <label>SYNC DEPTH</label>
-                    <select
-                      className={styles.select}
-                      value={syncDepth}
-                      onChange={(e) => setSyncDepth(e.target.value)}
-                    >
-                      <option value="shallow">Shallow (Last 30 Days)</option>
-                      <option value="balanced">Balanced (Last 6 Months)</option>
-                      <option value="deep">Deep (Full History)</option>
-                    </select>
+                    <div className={styles.customSelectWrapper}>
+                      <div 
+                        className={styles.customSelectValue} 
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      >
+                        {syncDepth === 'shallow' ? 'Shallow (Last 30 Days)' : syncDepth === 'balanced' ? 'Balanced (Last 6 Months)' : 'Deep (Full History)'}
+                        <span style={{ fontSize: '10px' }}>▼</span>
+                      </div>
+                      {isDropdownOpen && (
+                        <div className={styles.customSelectMenu}>
+                          <div className={styles.customOption} onClick={() => { setSyncDepth('shallow'); setIsDropdownOpen(false); }}>Shallow (Last 30 Days)</div>
+                          <div className={styles.customOption} onClick={() => { setSyncDepth('balanced'); setIsDropdownOpen(false); }}>Balanced (Last 6 Months)</div>
+                          <div className={styles.customOption} onClick={() => { setSyncDepth('deep'); setIsDropdownOpen(false); }}>Deep (Full History)</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {settingsSaved && activeTab === 'tuning' && (
@@ -293,6 +293,44 @@ export default function SettingsPage() {
                       >
                         Add
                       </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.divider} style={{ margin: '32px 0' }} />
+
+                  <div className={styles.fieldGroup}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <label>GDPR DATA COLLECTION (MISTRAL FINE-TUNING)</label>
+                        <p className={styles.fieldDesc} style={{ maxWidth: '80%' }}>
+                          Allow EYES to anonymously log your AI queries (prompts, completions, latency) to improve future Mistral models. No PII is collected.
+                        </p>
+                      </div>
+                      <div 
+                        onClick={() => setGdprConsent(!gdprConsent)}
+                        style={{
+                          width: '40px',
+                          height: '24px',
+                          background: gdprConsent ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '12px',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s',
+                          flexShrink: 0
+                        }}
+                      >
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          background: '#fff',
+                          borderRadius: '50%',
+                          position: 'absolute',
+                          top: '3px',
+                          left: gdprConsent ? '19px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </div>
                     </div>
                   </div>
 

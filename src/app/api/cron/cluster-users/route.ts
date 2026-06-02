@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient(SERVICE_URL, SERVICE_KEY, { auth: { persistSession: false } }) as any;
 
-  // Get all users with ≥21 state vectors (minimum for meaningful clustering)
+  // Get all users with ≥3 state vectors (lowered from 21 for early-stage users)
   const { data: vectorCounts, error: countErr } = await supabase
     .from('state_vectors')
     .select('user_id')
@@ -62,10 +62,10 @@ export async function GET(request: Request) {
     userCounts[row.user_id] = (userCounts[row.user_id] ?? 0) + 1;
   }
   const eligibleUsers = Object.entries(userCounts)
-    .filter(([, count]) => count >= 21)
+    .filter(([, count]) => count >= 3)
     .map(([userId]) => userId);
 
-  console.log(`[Clustering] ${eligibleUsers.length} users eligible (≥21 state vectors)`);
+  console.log(`[Clustering] ${eligibleUsers.length} users eligible (≥3 state vectors)`);
 
   const results: Record<string, unknown> = {};
 
@@ -136,7 +136,7 @@ async function runClusteringForUser(supabase: SupabaseAdminClient, userId: strin
     .order('date', { ascending: true })
     .limit(90);
 
-  if (error || !vectors || vectors.length < 21) return 0;
+  if (error || !vectors || vectors.length < 3) return 0;
 
   const typedVectors = vectors as StateVector[];
 
@@ -314,7 +314,7 @@ async function runLoopDetectionForUser(supabase: SupabaseAdminClient, userId: st
     .not('cluster_id', 'is', null)
     .order('date', { ascending: true });
 
-  if (error || !vectors || vectors.length < 21) return 0;
+  if (error || !vectors || vectors.length < 3) return 0;
 
   // Group into contiguous runs per cluster
   type Run = { cluster_id: string; start: string; end: string; duration_days: number };

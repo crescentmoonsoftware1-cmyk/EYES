@@ -12,8 +12,14 @@ import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 import * as dotenv from "dotenv";
 
 
-// Load environment variables for local execution
-dotenv.config();
+import * as fs from "fs";
+
+// Load environment variables for local execution (Next.js typically uses .env.local)
+if (fs.existsSync(".env.local")) {
+  dotenv.config({ path: ".env.local" });
+} else {
+  dotenv.config();
+}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -124,6 +130,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["method"],
         },
       },
+      {
+        name: "get_recent_commitments",
+        description: "Retrieve the latest unfulfilled commitments detected from the user's memories.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            limit: { type: "number", description: "Number of tasks to return (default: 5)" },
+          },
+        },
+      },
+      {
+        name: "get_recent_memories",
+        description: "Fetch the most recent memories across all connected platforms.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            limit: { type: "number", description: "Number of memories to return (default: 10)" },
+            platform: { type: "string", description: "Optional platform filter (e.g. github, gmail, slack)" },
+          },
+        },
+      },
     ],
   };
 });
@@ -213,6 +240,81 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const errMsg = err instanceof Error ? err.message : String(err);
       return {
         content: [{ type: "text", text: `Error managing calendar: ${errMsg}` }],
+        isError: true,
+      };
+    }
+  }
+
+  if (request.params.name === "get_recent_commitments") {
+    const { limit = 5 } = request.params.arguments as { limit?: number };
+    try {
+      const userId = process.env.MCP_DEFAULT_USER_ID;
+      if (!userId) throw new Error("MCP_DEFAULT_USER_ID not configured.");
+
+      const { data, error } = await supabase
+        .from('memories')
+        .select('platform, title, content, timestamp')
+        .eq('user_id', userId)
+        .eq('is_flagged', true)
+        .order('timestamp', { ascending: false })
+        .limit(Math.min(limit, 20));
+
+      if (error) throw error;
+
+      interface MemoryRow { platform: string; title: string | null; content: string | null; timestamp: string; }
+      const text = (!data || data.length === 0)
+        ? 'No flagged commitments found.'
+        : (data as MemoryRow[]).map(c =>
+            `- [${c.platform}] ${c.title ?? 'Untitled'} (${new Date(c.timestamp).toLocaleDateString()}): ${c.content?.slice(0, 150)}`
+          ).join('\n');
+
+      return {
+        content: [{ type: "text", text }],
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{ type: "text", text: `Error fetching commitments: ${errMsg}` }],
+        isError: true,
+      };
+    }
+  }
+
+  if (request.params.name === "get_recent_memories") {
+    const { limit = 10, platform } = request.params.arguments as { limit?: number; platform?: string };
+    try {
+      const userId = process.env.MCP_DEFAULT_USER_ID;
+      if (!userId) throw new Error("MCP_DEFAULT_USER_ID not configured.");
+
+      let query = supabase
+        .from('memories')
+        .select('platform, event_type, title, content, author, timestamp')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false })
+        .limit(Math.min(limit, 50));
+
+      if (platform) {
+        query = query.eq('platform', platform);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      interface MemoryRow2 { platform: string; event_type: string | null; title: string | null; content: string | null; timestamp: string; }
+      const text = (!data || data.length === 0)
+        ? 'No memories found.'
+        : (data as MemoryRow2[]).map(m =>
+            `[${m.platform}] ${new Date(m.timestamp).toLocaleDateString()} — ${m.title ?? m.event_type ?? 'Event'}: ${m.content?.slice(0, 200)}`
+          ).join('\n');
+
+      return {
+        content: [{ type: "text", text }],
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{ type: "text", text: `Error fetching memories: ${errMsg}` }],
         isError: true,
       };
     }

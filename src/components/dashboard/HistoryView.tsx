@@ -46,6 +46,7 @@ export function HistoryView({ onBack, onLoadThread }: { onBack: () => void, onLo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [auditFilter, setAuditFilter] = useState<'all' | 'critical' | 'moderate' | 'optimal'>('all');
 
   const fetchChats = async () => {
     try {
@@ -219,40 +220,80 @@ export function HistoryView({ onBack, onLoadThread }: { onBack: () => void, onLo
       )}
 
       {activeTab === 'audits' && (
-        <div className={styles.threadList}>
-          {loading && <p className={styles.loadingText}>Retrieving audit logs...</p>}
-          {!loading && audits.length === 0 && (
-            <div className={styles.emptyState}>
-              <p>No audits performed yet. Run an audit from the Audit tab.</p>
-            </div>
-          )}
-          {!loading && audits.map((audit) => (
-            <div key={audit.id} className={styles.threadCard} style={{ cursor: 'default' }}>
-              <div className={styles.threadHeader}>
-                <h4 className={styles.threadTitle}>Certificate {audit.id.slice(0, 8).toUpperCase()}</h4>
-                <span className={`${styles.turnBadge} ${audit.status === 'completed' ? styles.statusSuccess : ''}`} style={{ background: audit.status === 'completed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: audit.status === 'completed' ? '#10b981' : '#f59e0b' }}>
-                  {audit.status.toUpperCase()}
-                </span>
+        <>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <button
+              className={`${styles.filterChip} ${auditFilter === 'all' ? styles.filterChipActive : ''}`}
+              onClick={() => setAuditFilter('all')}
+              style={{ fontSize: '11px', padding: '6px 12px' }}
+            >
+              All Audits ({audits.length})
+            </button>
+            <button
+              className={`${styles.filterChip} ${auditFilter === 'critical' ? styles.filterChipActive : ''}`}
+              onClick={() => setAuditFilter('critical')}
+              style={{ fontSize: '11px', padding: '6px 12px' }}
+            >
+              Critical Risk ({audits.filter(a => a.riskScore > 7).length})
+            </button>
+            <button
+              className={`${styles.filterChip} ${auditFilter === 'moderate' ? styles.filterChipActive : ''}`}
+              onClick={() => setAuditFilter('moderate')}
+              style={{ fontSize: '11px', padding: '6px 12px' }}
+            >
+              Moderate Risk ({audits.filter(a => a.riskScore > 4 && a.riskScore <= 7).length})
+            </button>
+            <button
+              className={`${styles.filterChip} ${auditFilter === 'optimal' ? styles.filterChipActive : ''}`}
+              onClick={() => setAuditFilter('optimal')}
+              style={{ fontSize: '11px', padding: '6px 12px' }}
+            >
+              Optimal ({audits.filter(a => a.riskScore <= 4).length})
+            </button>
+          </div>
+
+          <div className={styles.threadList}>
+            {loading && <p className={styles.loadingText}>Retrieving audit logs...</p>}
+            {!loading && audits.length === 0 && (
+              <div className={styles.emptyState}>
+                <p>No audits performed yet. Run an audit from the Audit tab.</p>
               </div>
-              <div className={styles.threadMeta}>Generated {new Date(audit.createdAt).toLocaleString()}</div>
-              
-              <div className={styles.statsGrid} style={{ marginTop: '16px', marginBottom: '0', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                <div className={styles.miniStatCard} style={{ padding: '12px', gap: '4px' }}>
-                  <span className={styles.statLabel} style={{ fontSize: '9px' }}>RISK</span>
-                  <span className={styles.statValue} style={{ fontSize: '20px' }}>{audit.riskScore}/10</span>
+            )}
+            {!loading && audits
+              .filter((audit) => {
+                if (auditFilter === 'critical') return audit.riskScore > 7;
+                if (auditFilter === 'moderate') return audit.riskScore > 4 && audit.riskScore <= 7;
+                if (auditFilter === 'optimal') return audit.riskScore <= 4;
+                return true;
+              })
+              .map((audit) => (
+                <div key={audit.id} className={styles.threadCard} style={{ cursor: 'default' }}>
+                  <div className={styles.threadHeader}>
+                    <h4 className={styles.threadTitle}>Certificate {audit.id.slice(0, 8).toUpperCase()}</h4>
+                    <span className={`${styles.turnBadge} ${audit.status === 'completed' ? styles.statusSuccess : ''}`} style={{ background: audit.status === 'completed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: audit.status === 'completed' ? '#10b981' : '#f59e0b' }}>
+                      {audit.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className={styles.threadMeta}>Generated {new Date(audit.createdAt).toLocaleString()}</div>
+                  
+                  <div className={styles.statsGrid} style={{ marginTop: '16px', marginBottom: '0', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div className={styles.miniStatCard} style={{ padding: '12px', gap: '4px' }}>
+                      <span className={styles.statLabel} style={{ fontSize: '9px' }}>RISK</span>
+                      <span className={styles.statValue} style={{ fontSize: '20px' }}>{audit.riskScore}/10</span>
+                    </div>
+                    <div className={styles.miniStatCard} style={{ padding: '12px', gap: '4px' }}>
+                      <span className={styles.statLabel} style={{ fontSize: '9px' }}>MENTIONS</span>
+                      <span className={styles.statValue} style={{ fontSize: '20px' }}>{audit.mentionsCount}</span>
+                    </div>
+                    <div className={styles.miniStatCard} style={{ padding: '12px', gap: '4px' }}>
+                      <span className={styles.statLabel} style={{ fontSize: '9px' }}>TASKS</span>
+                      <span className={styles.statValue} style={{ fontSize: '20px' }}>{audit.commitmentsCount}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className={styles.miniStatCard} style={{ padding: '12px', gap: '4px' }}>
-                  <span className={styles.statLabel} style={{ fontSize: '9px' }}>MENTIONS</span>
-                  <span className={styles.statValue} style={{ fontSize: '20px' }}>{audit.mentionsCount}</span>
-                </div>
-                <div className={styles.miniStatCard} style={{ padding: '12px', gap: '4px' }}>
-                  <span className={styles.statLabel} style={{ fontSize: '9px' }}>TASKS</span>
-                  <span className={styles.statValue} style={{ fontSize: '20px' }}>{audit.commitmentsCount}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              ))}
+          </div>
+        </>
       )}
 
       {activeTab === 'activity' && (

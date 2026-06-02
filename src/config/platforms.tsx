@@ -49,7 +49,6 @@ export const ALL_POSSIBLE_PLATFORMS = [
   // ─── Social ───────────────────────────────────────────────────────────────
   { id: 'discord',         name: 'Discord',         icon: <DiscordIconOfficial />,  category: 'Social',       description: 'Connect servers and private messaging history.',            color: '#5865f2' },
   { id: 'twitter',         name: 'Twitter (X)',     icon: <XIconOfficial />,        category: 'Social',       description: 'Sync your tweets, mentions, and social footprint.',         color: 'var(--text-primary)' },
-  { id: 'reddit',          name: 'Reddit',          icon: <RedditIconOfficial />,   category: 'Social',       description: 'Index your subreddits, comments, and posts.',              color: '#FF4500' },
 
   // ─── Creative ─────────────────────────────────────────────────────────────
   { id: 'canva',           name: 'Canva',           icon: <CanvaIconOfficial />,    category: 'Creative',     description: 'Sync your Canva designs and creative projects.',            color: '#00C4CC', comingSoon: true },

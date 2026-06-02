@@ -191,8 +191,16 @@ export function AsanaIconOfficial({ size = 40 }: { size?: number }) {
 
 export function TrelloIconOfficial({ size = 40 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#0079BF" d="M18.545 0H5.455C2.442 0 0 2.442 0 5.455v13.09C0 21.558 2.442 24 5.455 24h13.09C21.558 24 24 21.558 24 18.545V5.455C24 2.442 21.558 0 18.545 0zM9.545 16.145c0 1.137-.921 2.059-2.059 2.059H5.182c-1.138 0-2.059-.922-2.059-2.059V5.455c0-1.137.921-2.059 2.059-2.059h2.304c1.138 0 2.059.922-2.059 2.059v10.69zM18.818 11.5c0 1.137-.921 2.059-2.059 2.059h-2.304c-1.138 0-2.059-.922-2.059-2.059V5.455c0-1.137.921-2.059 2.059-2.059h2.304c1.138 0 2.059.922-2.059 2.059V11.5z"/>
+    <svg width={size} height={size} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+      <defs>
+        <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="trello-grad">
+          <stop stopColor="#0091E6" offset="0%"/>
+          <stop stopColor="#0079BF" offset="100%"/>
+        </linearGradient>
+      </defs>
+      <rect fill="url(#trello-grad)" width="256" height="256" rx="25"/>
+      <rect fill="#FFF" x="144.64" y="33.28" width="78.08" height="112" rx="12"/>
+      <rect fill="#FFF" x="33.28" y="33.28" width="78.08" height="176" rx="12"/>
     </svg>
   );
 }
@@ -216,7 +224,7 @@ export function ClickUpIconOfficial({ size = 40 }: { size?: number }) {
 export function VercelIconOfficial({ size = 40 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#000000" d="M24 22.525H0L12 1.475l12 21.05z"/>
+      <path fill="currentColor" d="M24 22.525H0L12 1.475l12 21.05z"/>
     </svg>
   );
 }
@@ -259,9 +267,8 @@ export function PostHogIconOfficial({ size = 40 }: { size?: number }) {
 
 export function WebflowIconOfficial({ size = 40 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#4353FF" d="M0 0h256v256H0z"/>
-      <path fill="#fff" d="M50 50h156v156H50z" opacity="0.2"/>
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#4353FF" d="m24 4.515-7.658 14.97H9.149l3.205-6.204h-.144C9.566 16.713 5.621 18.973 0 19.485v-6.118s3.596-.213 5.71-2.435H0V4.515h6.417v5.278l.144-.001 2.622-5.277h4.854v5.244h.144l2.72-5.244H24Z"/>
     </svg>
   );
 }
@@ -303,8 +310,12 @@ export function GranolaIconOfficial({ size = 40 }: { size?: number }) {
 
 export function StravaIconOfficial({ size = 40 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#FC4C02" d="M153.8 179.9l-31.1-61.4-31.1 61.4h62.2zm44.2-86.4L153.8 0l-44.2 93.5h88.4z"/>
+    <svg width={size} height={size} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 0h16v16H0z" fill="#fc4c02"/>
+      <g fill="#fff" fillRule="evenodd">
+        <path d="M6.9 8.8l2.5 4.5 2.4-4.5h-1.5l-.9 1.7-1-1.7z" opacity=".6"/>
+        <path d="M7.2 2.5l3.1 6.3H4zm0 3.8l1.2 2.5H5.9z"/>
+      </g>
     </svg>
   );
 }

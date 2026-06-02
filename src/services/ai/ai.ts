@@ -13,7 +13,17 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 let anthropicEnabled = Boolean(ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith('sk-ant-'));
 
-// OpenRouter — primary chat provider (free models, OpenAI-compatible)
+// Groq — Ludicrous speed chat generation
+const GROQ_KEYS = [
+  process.env.GROQ_API_KEY,
+  process.env.GROQ_API_KEY_2,
+  process.env.GROQ_API_KEY_3,
+].filter(Boolean) as string[];
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+let currentGroqKeyIndex = 0;
+
+// OpenRouter — secondary chat provider (free models, OpenAI-compatible)
 // Paste your OpenRouter API key in .env.local as OPENROUTER_API_KEY=...
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -22,22 +32,85 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 // The list is tried in order; 404/429 models are skipped automatically.
 const OPENROUTER_FREE_MODELS = [
   'deepseek/deepseek-v4-flash:free',           // DeepSeek V4 Flash — fast & reliable
-  'google/gemma-4-27b-it:free',                // Gemma 4 27B — Google free
-  'google/gemma-4-31b-it:free',                // Gemma 4 31B — Google free (larger)
-  'nvidia/nemotron-3-super-120b-a12b:free',    // Nvidia 120B — strong free model
-  'minimax/minimax-m2.5:free',                 // MiniMax M2.5 — reliable free
+  'google/gemma-3-27b-it:free',                // Gemma 3 27B — Google free (stable)
+  'qwen/qwen3-235b-a22b:free',                 // Qwen3 235B — large context free
+  'microsoft/phi-4-reasoning-plus:free',       // Phi-4 Reasoning — Microsoft free
+  'mistralai/mistral-small-3.2-24b-instruct:free', // Mistral Small — reliable free
   'meta-llama/llama-3.3-70b-instruct:free',   // Llama 3.3 70B — backup
+  'nvidia/llama-3.1-nemotron-nano-8b-v1:free', // Nemotron Nano — lightweight fallback
   'openrouter/free',                            // Last resort: OpenRouter auto-selects any free model
 ];
 
-// Paste your Gemini API key in .env.local as GEMINI_API_KEY=...
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''; 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// ── Model cooldown cache: skip recently-failed models instantly ────────────────
+const modelCooldowns = new Map<string, number>();
+const COOLDOWN_MS = 300_000; // 5 minutes — longer cooldown to avoid hammering exhausted models
+
+function isModelCoolingDown(model: string): boolean {
+  const failedAt = modelCooldowns.get(model);
+  if (!failedAt) return false;
+  if (Date.now() - failedAt > COOLDOWN_MS) {
+    modelCooldowns.delete(model);
+    return false;
+  }
+  return true;
+}
+
+function markModelFailed(model: string): void {
+  modelCooldowns.set(model, Date.now());
+}
+
+// ── Gemini Key Pool for Rate Limit Mitigation ────────────────────────────────
+const GEMINI_KEYS = [
+  process.env.GEMINI_API_KEY,
+  process.env.GEMINI_API_KEY_2,
+  process.env.GEMINI_API_KEY_3,
+].filter(Boolean) as string[];
+
+let currentGeminiKeyIndex = 0;
+
+// NOTE: No global genAI instance — always use rotating key pool via getNextGeminiKey()
+
+function getNextGeminiKey(): string | null {
+  if (GEMINI_KEYS.length === 0) return null;
+  // Randomize selection slightly to avoid predictable patterns
+  if (Math.random() > 0.7 && GEMINI_KEYS.length > 1) {
+      currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % GEMINI_KEYS.length;
+  }
+  return GEMINI_KEYS[currentGeminiKeyIndex];
+}
+
+function rotateGeminiKey() {
+  if (GEMINI_KEYS.length > 1) {
+    currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % GEMINI_KEYS.length;
+    console.log(`[AI] Rotated to Gemini Key ${currentGeminiKeyIndex + 1}`);
+  }
+}
+
+// ── Groq Key Pool for Rate Limit Mitigation ──────────────────────────────────
+function getNextGroqKey(): string | null {
+  if (GROQ_KEYS.length === 0) return null;
+  return GROQ_KEYS[currentGroqKeyIndex];
+}
+
+function rotateGroqKey() {
+  if (GROQ_KEYS.length > 1) {
+    currentGroqKeyIndex = (currentGroqKeyIndex + 1) % GROQ_KEYS.length;
+    console.log(`[AI] Rotated to Groq Key ${currentGroqKeyIndex + 1}`);
+  }
+}
+
+// Helper: Add micro-delay (jitter) to prevent bot detection
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const addJitter = async () => {
+  const jitterMs = Math.floor(Math.random() * 1000) + 500; // 500ms - 1500ms
+  await sleep(jitterMs);
+};
 
 // Gemini — sole embedding provider (gemini-embedding-001, free tier, 1024 dims)
 
 const CLAUDE_MODEL = "claude-3-5-sonnet-20240620";
-const GEMINI_CHAT_MODEL = "gemini-2.0-flash"; // Stable Gemini 2.0 Flash model
+const GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+const GEMINI_CHAT_MODEL_FALLBACK = "gemini-2.0-flash"; // For new projects not yet allowlisted for 2.5-flash
 const EMBED_MODEL = "gemini-embedding-001";
 const EMBED_DIMS = 1024; // Must match vector(1024) column — voyage-context-3 native, Gemini via outputDimensionality
 
@@ -114,26 +187,51 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
  */
 async function handleEmbedding(text: string) {
   const input = text.slice(0, 8000);
+  let attempts = 0;
+  const maxAttempts = GEMINI_KEYS.length > 0 ? GEMINI_KEYS.length : 1;
 
-  if (!GEMINI_API_KEY) {
-    console.error('[AI] GEMINI_API_KEY is not set — cannot generate embeddings.');
-    return null;
-  }
+  while (attempts < maxAttempts) {
+    const key = getNextGeminiKey();
+    if (!key) {
+      console.error('[AI] No GEMINI_API_KEY is set — cannot generate embeddings.');
+      return null;
+    }
 
-  try {
-    const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
-    const result = await model.embedContent({
-      content: { role: 'user', parts: [{ text: input }] },
-      taskType: TaskType.RETRIEVAL_QUERY,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      outputDimensionality: EMBED_DIMS,
-    } as Parameters<typeof model.embedContent>[0]);
-    console.log('[AI] Gemini embedding OK');
-    return { embedding: Array.from(result.embedding.values) };
-  } catch (err: unknown) {
-    console.error('[AI] Gemini embedding failed:', err instanceof Error ? err.message : err);
-    return null;
+    try {
+      const genAI = new GoogleGenerativeAI(key);
+      const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
+      
+      // Inject stealth jitter before request
+      await addJitter();
+
+      const result = await model.embedContent({
+        content: { role: 'user', parts: [{ text: input }] },
+        taskType: TaskType.RETRIEVAL_QUERY,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        outputDimensionality: EMBED_DIMS,
+      } as Parameters<typeof model.embedContent>[0]);
+      
+      console.log(`[AI] Gemini embedding OK (Key ${currentGeminiKeyIndex + 1})`);
+      return { embedding: Array.from(result.embedding.values) };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI] Gemini embedding failed on Key ${currentGeminiKeyIndex + 1}:`, errMsg);
+      
+      if (errMsg.includes('429') || errMsg.toLowerCase().includes('too many requests') || errMsg.includes('403') || errMsg.toLowerCase().includes('forbidden') || errMsg.toLowerCase().includes('denied')) {
+         rotateGeminiKey();
+         attempts++;
+         if (attempts < maxAttempts) {
+           console.log(`[AI] API Error hit (429/403). Retrying with next key...`);
+         }
+      } else {
+        // Break on other non-recoverable errors
+        break;
+      }
+    }
   }
+  
+  console.error('[AI] All Gemini keys exhausted or failed.');
+  return null;
 }
 
 /**
@@ -151,9 +249,96 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
       content: m.content 
     }));
 
-  // ── 1. OpenRouter (PRIMARY) ─────────────────────────────────────────────────
+  // ── 0. GROQ (LUDICROUS SPEED) — with key rotation on 429 ─────────────────
+  if (GROQ_KEYS.length > 0) {
+    let groqAttempts = 0;
+    while (groqAttempts < GROQ_KEYS.length) {
+      const groqKey = getNextGroqKey();
+      if (!groqKey) break;
+      try {
+        const groqMessages = [
+          ...(system && system.trim() ? [{ role: 'system', content: system }] : []),
+          ...history,
+        ];
+
+        // ── Payload size guard: Groq rejects bodies > ~20KB with 413 ──────────
+        // Trim the CONTEXT FROM ARCHIVE section progressively until payload fits.
+        // The instruction rules (top of system prompt) are always preserved.
+        const GROQ_MAX_BYTES = 20_000;
+        const contextMarkers = [
+          'CONTEXT FROM ARCHIVE',
+          'MOST RECENT RECORDS',
+          'RECENT RECORDS',
+        ];
+        let trimmed = false;
+        while (JSON.stringify({ model: GROQ_MODEL, messages: groqMessages, max_tokens: 1024, temperature: 0.1 }).length > GROQ_MAX_BYTES) {
+          const sysMsg = groqMessages.find(m => m.role === 'system');
+          if (!sysMsg) break;
+          // Find the earliest context section and cut 1000 chars from the end of it
+          let cut = false;
+          for (const marker of contextMarkers) {
+            const idx = sysMsg.content.indexOf(marker);
+            if (idx !== -1 && sysMsg.content.length > idx + marker.length + 500) {
+              sysMsg.content = sysMsg.content.slice(0, sysMsg.content.length - 1000);
+              cut = true;
+              trimmed = true;
+              break;
+            }
+          }
+          if (!cut) {
+            // No context section found — hard cap the whole system message
+            sysMsg.content = sysMsg.content.slice(0, 6000);
+            trimmed = true;
+            break;
+          }
+        }
+        if (trimmed) console.log('[AI] Groq payload trimmed to fit 20KB limit.');
+
+        const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: GROQ_MODEL,
+            messages: groqMessages,
+            max_tokens: isClassification ? 500 : 1024,
+            temperature: 0.1,
+          }),
+        });
+        if (res.ok) {
+          const body = await res.json();
+          const message = body?.choices?.[0]?.message;
+          let text = '';
+          if (typeof message === 'string') text = message;
+          else if (message?.content) text = message.content;
+          else if (message && 'text' in message) text = (message as {text: string}).text;
+          if (text) {
+            console.log(`[AI] Groq responded instantly (Key ${currentGroqKeyIndex + 1})`);
+            return text;
+          }
+        } else if (res.status === 429) {
+          // Rate limit — rotate to next key and retry
+          console.warn(`[AI] Groq Key ${currentGroqKeyIndex + 1} rate-limited (429). Rotating...`);
+          rotateGroqKey();
+          groqAttempts++;
+        } else {
+          // Other error — fall through immediately
+          console.warn(`[AI] Groq non-OK (${res.status}), falling back...`);
+          break;
+        }
+      } catch (err) {
+        console.warn(`[AI] Groq fetch failed, falling back:`, err);
+        break;
+      }
+    }
+  }
+
+  // ── 1. OpenRouter (SECONDARY) ─────────────────────────────────────────────────
   if (OPENROUTER_API_KEY) {
     for (const orModel of OPENROUTER_FREE_MODELS) {
+      if (isModelCoolingDown(orModel)) continue; // Skip recently-failed models instantly
       try {
         const openRouterMessages = [
           ...(system && system.trim() ? [{ role: 'system', content: system }] : []),
@@ -202,11 +387,12 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
           const errBody = await res.json().catch(() => ({}));
           const retryAfter = errBody?.error?.metadata?.retry_after_seconds || 0;
           console.warn(`[AI] OpenRouter model ${orModel} rate-limited (retry in ${retryAfter}s), trying next model...`);
-          if (retryAfter > 0 && retryAfter < 30) await new Promise(r => setTimeout(r, retryAfter * 1000));
-          continue; // try next model in rotation
+          markModelFailed(orModel);
+          continue; // try next model in rotation (no delay — skip immediately)
         } else {
           console.warn(`[AI] OpenRouter ${orModel} non-OK (${res.status}), trying next model...`);
-          continue; // 404/503/etc — model unavailable, try next in rotation
+          markModelFailed(orModel);
+          continue; // 400/404/503/etc — model unavailable, try next in rotation
         }
       } catch (err: unknown) {
         console.warn(`[AI] OpenRouter ${orModel} failed:`, err instanceof Error ? err.message : err);
@@ -245,25 +431,40 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
     }
   }
 
-  // ── 3. Gemini Flash (LAST RESORT) ───────────────────────────────────────────
-  try {
-    const model = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-    const contentConfig: GeminiContentConfig = {
-      contents: history.map(h => ({
-        role: h.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: h.content }],
-      })),
-    };
-    // Only set systemInstruction if non-empty (Gemini API requirement)
-    if (system && system.trim()) {
-      contentConfig.systemInstruction = system;
+  // ── 3. Gemini Flash (LAST RESORT) — with key rotation + model fallback ────
+  const maxGeminiAttempts = GEMINI_KEYS.length || 1;
+  for (let attempt = 0; attempt < maxGeminiAttempts; attempt++) {
+    const geminiKey = getNextGeminiKey();
+    if (!geminiKey) break;
+    // Try primary model first, fall back to 2.0-flash if project not allowlisted for 2.5
+    for (const chatModel of [GEMINI_CHAT_MODEL, GEMINI_CHAT_MODEL_FALLBACK]) {
+      try {
+        const rotatingGenAI = new GoogleGenerativeAI(geminiKey);
+        const model = rotatingGenAI.getGenerativeModel({ model: chatModel });
+        const contentConfig: GeminiContentConfig = {
+          contents: history.map(h => ({
+            role: h.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: h.content }],
+          })),
+        };
+        if (system && system.trim()) {
+          contentConfig.systemInstruction = system;
+        }
+        const result = await model.generateContent(contentConfig);
+        console.log(`[AI] Gemini chat OK (Key ${currentGeminiKeyIndex + 1}, model: ${chatModel})`);
+        return result.response.text();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const isDenied = msg.includes('403') || msg.toLowerCase().includes('denied');
+        console.warn(`[AI] Gemini ${chatModel} Key ${currentGeminiKeyIndex + 1} failed: ${msg.slice(0, 80)}`);
+        if (!isDenied) break; // Non-403 error (e.g. quota) — skip model fallback, rotate key
+        // 403 = project not allowlisted for this model — try fallback model
+      }
     }
-    const result = await model.generateContent(contentConfig);
-    return result.response.text();
-  } catch (err) {
-    console.error('[AI Abstraction] All real-world models failed in handleChat:', err);
-    return null; // Return null to indicate failure (No Demo)
+    rotateGeminiKey();
   }
+  console.error('[AI Abstraction] All real-world models failed in handleChat.');
+  return null;
 }
 
 /**
@@ -280,9 +481,101 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
       content: m.content 
     }));
 
-  // ── 1. OpenRouter Stream (PRIMARY) ──────────────────────────────────────────
+  // ── 0. GROQ Stream (LUDICROUS SPEED) ────────────────────────────────────────
+  if (GROQ_KEYS.length > 0) {
+    let groqAttempts = 0;
+    while (groqAttempts < GROQ_KEYS.length) {
+      const groqKey = getNextGroqKey();
+      if (!groqKey) break;
+      try {
+        const groqMessages = [
+          ...(system && system.trim() ? [{ role: 'system', content: system }] : []),
+          ...history,
+        ];
+
+        // Payload size guard — same 20KB limit as non-stream path
+        const GROQ_MAX_BYTES = 20_000;
+        const contextMarkers = ['CONTEXT FROM ARCHIVE', 'MOST RECENT RECORDS', 'RECENT RECORDS'];
+        let trimmed = false;
+        while (JSON.stringify({ model: GROQ_MODEL, messages: groqMessages, max_tokens: 1024, temperature: 0.1, stream: true }).length > GROQ_MAX_BYTES) {
+          const sysMsg = groqMessages.find(m => m.role === 'system');
+          if (!sysMsg) break;
+          let cut = false;
+          for (const marker of contextMarkers) {
+            const idx = sysMsg.content.indexOf(marker);
+            if (idx !== -1 && sysMsg.content.length > idx + marker.length + 500) {
+              sysMsg.content = sysMsg.content.slice(0, sysMsg.content.length - 1000);
+              cut = true; trimmed = true; break;
+            }
+          }
+          if (!cut) { sysMsg.content = sysMsg.content.slice(0, 6000); trimmed = true; break; }
+        }
+        if (trimmed) console.log('[AI Stream] Groq payload trimmed to fit 20KB limit.');
+
+        const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: GROQ_MODEL,
+            messages: groqMessages,
+            max_tokens: 1024,
+            temperature: 0.1,
+            stream: true,
+          }),
+        });
+
+        if (res.ok && res.body) {
+          console.log(`[AI Stream] Groq streaming (${GROQ_MODEL}) (Key ${currentGroqKeyIndex + 1})`);
+          return new ReadableStream({
+            async start(controller) {
+              const reader = res.body!.getReader();
+              const decoder = new TextDecoder();
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  const chunk = decoder.decode(value, { stream: true });
+                  for (const line of chunk.split('\n')) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine.startsWith('data:')) continue;
+                    const data = trimmedLine.slice(5).trim();
+                    if (data === '[DONE]') break;
+                    try {
+                      const parsed = JSON.parse(data);
+                      const delta = parsed?.choices?.[0]?.delta?.content;
+                      if (delta) controller.enqueue(encoder.encode(delta));
+                    } catch { /* skip malformed SSE lines */ }
+                  }
+                }
+              } catch (streamErr) {
+                console.warn(`[AI Stream] Groq stream error:`, streamErr);
+              } finally {
+                controller.close();
+              }
+            }
+          });
+        } else if (res.status === 429) {
+          console.warn(`[AI Stream] Groq Key ${currentGroqKeyIndex + 1} rate-limited (429). Rotating...`);
+          rotateGroqKey();
+          groqAttempts++;
+        } else {
+          console.warn(`[AI Stream] Groq non-OK (${res.status}), falling back...`);
+          break;
+        }
+      } catch (err) {
+        console.warn(`[AI Stream] Groq fetch failed, falling back:`, err);
+        break;
+      }
+    }
+  }
+
+  // ── 1. OpenRouter Stream (SECONDARY) ──────────────────────────────────────────
   if (OPENROUTER_API_KEY) {
     for (const orModel of OPENROUTER_FREE_MODELS) {
+      if (isModelCoolingDown(orModel)) continue; // Skip recently-failed models instantly
       try {
         const openRouterMessages = [
           ...(system && system.trim() ? [{ role: 'system', content: system }] : []),
@@ -340,11 +633,12 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
           const errBody = await res.json().catch(() => ({}));
           const retryAfter = errBody?.error?.metadata?.retry_after_seconds || 0;
           console.warn(`[AI Stream] OpenRouter ${orModel} rate-limited (retry in ${retryAfter}s), trying next model...`);
-          if (retryAfter > 0 && retryAfter < 30) await new Promise(r => setTimeout(r, retryAfter * 1000));
-          continue;
+          markModelFailed(orModel);
+          continue; // Skip immediately (no delay — cooldown cache handles future skips)
         } else {
           console.warn(`[AI Stream] OpenRouter ${orModel} non-OK (${res.status}), trying next model...`);
-          continue; // 404/503/etc — model unavailable, try next in rotation
+          markModelFailed(orModel);
+          continue; // 400/404/503/etc — model unavailable, try next in rotation
         }
       } catch (err: unknown) {
         console.warn(`[AI Stream] OpenRouter ${orModel} fetch failed:`, err instanceof Error ? err.message : err);
@@ -378,15 +672,20 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
             // If Claude failed mid-stream (e.g. 400 credit error), pipe Gemini output instead
             if (!wroteAnything) {
               try {
-                const gModel = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-                const cfg: GeminiContentConfig = {
-                  contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
-                };
-                if (system && system.trim()) cfg.systemInstruction = system;
-                const result = await gModel.generateContent(cfg);
-                controller.enqueue(encoder.encode(result.response.text()));
+                const fbKey = getNextGeminiKey();
+                if (fbKey) {
+                  const fbGenAI = new GoogleGenerativeAI(fbKey);
+                  const gModel = fbGenAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
+                  const cfg: GeminiContentConfig = {
+                    contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
+                  };
+                  if (system && system.trim()) cfg.systemInstruction = system;
+                  const result = await gModel.generateContent(cfg);
+                  controller.enqueue(encoder.encode(result.response.text()));
+                }
               } catch (geminiErr) {
                 console.error('[AI Stream] Gemini fallback also failed:', geminiErr);
+                controller.enqueue(encoder.encode('\n\n[SYSTEM] All AI pathways are currently overwhelmed (Rate Limit Exceeded). Please wait a moment for the neural cooldown before trying again.'));
               }
             }
           } finally {
@@ -399,30 +698,38 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
     }
   }
 
-  // Gemini Fallback Stream
+  // Gemini Fallback Stream — with key rotation
   return new ReadableStream({
     async start(controller) {
-      try {
-        const model = genAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
-        const contentConfig: GeminiContentConfig = {
-          contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
-        };
-        if (system && system.trim()) {
-          contentConfig.systemInstruction = system;
+      const maxAttempts = GEMINI_KEYS.length || 1;
+      let succeeded = false;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const geminiKey = getNextGeminiKey();
+        if (!geminiKey) break;
+        try {
+          const rotatingGenAI = new GoogleGenerativeAI(geminiKey);
+          const model = rotatingGenAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
+          const contentConfig: GeminiContentConfig = {
+            contents: history.map(h => ({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.content }] })),
+          };
+          if (system && system.trim()) contentConfig.systemInstruction = system;
+          const result = await model.generateContent(contentConfig);
+          controller.enqueue(encoder.encode(result.response.text()));
+          succeeded = true;
+          break;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`[AI Stream] Gemini Key ${currentGeminiKeyIndex + 1} failed: ${msg.slice(0,80)}`);
+          rotateGeminiKey();
         }
-        const result = await model.generateContent(contentConfig);
-        controller.enqueue(encoder.encode(result.response.text()));
-      } catch (err) {
-        console.error('[AI Stream] Gemini fallback failed:', err);
-        // Enqueue a visible error so the chat bubble shows something instead of blank
-        controller.enqueue(encoder.encode(
-          'I\'m having trouble connecting to my AI providers right now. ' +
-          'Please check that GEMINI_API_KEY, OPENROUTER_API_KEY, or ANTHROPIC_API_KEY ' +
-          'is set in your Vercel environment variables and try again.'
-        ));
-      } finally {
-        controller.close();
       }
+      if (!succeeded) {
+        console.error('[AI Stream] All Gemini keys failed.');
+        controller.enqueue(encoder.encode(
+          '\n\n[SYSTEM] All AI pathways are currently overwhelmed (Rate Limit Exceeded). Please wait a moment for the neural cooldown before trying again.'
+        ));
+      }
+      controller.close();
     }
   });
 }

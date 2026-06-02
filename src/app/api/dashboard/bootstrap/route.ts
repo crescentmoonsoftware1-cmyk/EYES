@@ -89,8 +89,8 @@ function buildComparisonData(totalMemories: number, flaggedCount: number, latest
   ];
 }
 
-function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[]): AuditSummary {
-  const totalMemories = syncRows.reduce((sum, row) => sum + (row.total_items ?? 0), 0);
+function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[], actualMemoryCount: number): AuditSummary {
+  const totalMemories = actualMemoryCount;
   const latestTimestamp = syncRows.reduce<string | null>((latest, row) => {
     if (!row.last_sync_at) return latest;
     if (!latest) return row.last_sync_at;
@@ -173,7 +173,7 @@ export async function GET() {
       );
     }
 
-    const [syncStatusResult, rawEventsResult] = await Promise.all([
+    const [syncStatusResult, rawEventsResult, memoriesCountResult] = await Promise.all([
       supabase
         .from('sync_status')
         .select('platform,status,sync_progress,total_items,last_sync_at,error_message')
@@ -185,6 +185,10 @@ export async function GET() {
         .not('content', 'is', null)
         .order('timestamp', { ascending: false })
         .limit(300),
+      supabase
+        .from('memories')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
     ]);
 
     if (syncStatusResult.error) throw syncStatusResult.error;
@@ -193,14 +197,15 @@ export async function GET() {
     const syncRows = (syncStatusResult.data ?? []) as SyncStatusRow[];
     const rawRows = (rawEventsResult.data ?? []) as RawEventRow[];
     const flaggedRows = rawRows.filter((row) => Boolean(row.is_flagged));
+    // Use actual row count — NOT sync_status.total_items which resets on OAuth reconnection
+    const memoriesIndexed = memoriesCountResult.count ?? 0;
 
     const isSyncing = syncRows.some(r => r.status === 'syncing');
     const activeSyncs = syncRows.filter(r => r.status === 'syncing').map(r => r.platform);
-    const memoriesIndexed = syncRows.reduce((sum, r) => sum + (r.total_items ?? 0), 0);
 
     const response = NextResponse.json(
       {
-        summary: mapSummary(syncRows, flaggedRows),
+        summary: mapSummary(syncRows, flaggedRows, memoriesIndexed),
         platforms: mapPlatforms(syncRows),
         feedEvents: mapFeed(rawRows),
         syncStatus: { isSyncing, activeSyncs, memoriesIndexed },

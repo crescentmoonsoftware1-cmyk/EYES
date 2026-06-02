@@ -54,6 +54,23 @@
   opacity: 0;
 }
 
+.scrollArea {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  margin-right: -8px;
+  padding-right: 8px;
+}
+
+/* Custom scrollbar for sidebar */
+.scrollArea::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollArea::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 4px;
+}
+
 .section {
   display: flex;
   flex-direction: column;

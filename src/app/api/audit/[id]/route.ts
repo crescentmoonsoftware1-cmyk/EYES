@@ -17,12 +17,19 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: audit, error: fetchError } = await supabase
+    const cleanId = id.trim().toLowerCase();
+    let query = supabase
       .from('reputation_audits')
       .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
+
+    if (cleanId.length === 8) {
+      query = query.like('id', `${cleanId}%`);
+    } else {
+      query = query.eq('id', cleanId);
+    }
+
+    const { data: audit, error: fetchError } = await query.maybeSingle();
 
     if (fetchError || !audit) {
       return NextResponse.json({ error: 'Audit not found or access denied.' }, { status: 404 });

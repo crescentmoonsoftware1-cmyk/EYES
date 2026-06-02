@@ -8,22 +8,14 @@ import {
   type ProviderRevocationResult,
 } from '@/services/auth/provider-revocation';
 import { createClient } from '@/utils/supabase/server';
-
-const SUPPORTED_PLATFORMS = new Set([
-  'github', 'gmail', 'google-calendar', 'google_calendar', 'reddit', 'notion', 
-  'discord', 'slack', 'twitter', 'dropbox', 'asana', 'trello', 
-  'linear', 'clickup', 'vercel', 'netlify', 'supabase', 'sentry', 'posthog', 
-  'webflow', 'devin', 'cursor', 'canva', 'strava', 'fitbit', 
-  'withings', 'ramp',
-]);
-
+import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 
 function toDbPlatform(platform: string) {
-  return platform === 'google-calendar' ? 'google_calendar' : platform;
+  return platform === 'google-calendar' ? 'google_calendar' : platform.replace(/-/g, '_');
 }
 
 function toRoutePlatform(platform: string) {
-  return platform === 'google_calendar' ? 'google-calendar' : platform;
+  return platform === 'google_calendar' ? 'google-calendar' : platform.replace(/_/g, '-');
 }
 
 function toGoogleSibling(platform: string) {
@@ -66,8 +58,8 @@ export async function DELETE(
   try {
     const { platform: routePlatform } = await params;
 
-    if (!routePlatform || !SUPPORTED_PLATFORMS.has(routePlatform)) {
-      return NextResponse.json({ error: 'Unsupported platform.' }, { status: 400 });
+    if (!routePlatform) {
+      return NextResponse.json({ error: 'Platform required.' }, { status: 400 });
     }
 
     const platform = toDbPlatform(routePlatform);
