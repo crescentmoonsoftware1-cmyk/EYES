@@ -48,6 +48,9 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ riskSensitivity, syncDepth, excludedSenders, gdprConsent }),
       });
+      if (res.ok) {
+        updateUser({ behaviorLoggingConsent: gdprConsent });
+      }
       setSettingsSaved(res.ok ? 'Settings saved!' : 'Failed to save.');
     } catch {
       setSettingsSaved('Error saving settings.');

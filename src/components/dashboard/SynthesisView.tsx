@@ -646,8 +646,12 @@ function CitationDock({ citations, setView }: { citations: any[], setView: (v: V
             key={i}
             title={`${c.title || c.snippet?.slice(0, 40)}...`}
             onClick={() => {
-              setView('feed');
-              setTimeout(() => document.getElementById('memory-' + c.memoryId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+              if (c.sourceUrl) {
+                window.open(c.sourceUrl, '_blank');
+              } else {
+                setView('feed');
+                setTimeout(() => document.getElementById('memory-' + c.memoryId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+              }
             }}
             style={{
               width: '24px', height: '24px', borderRadius: '12px',

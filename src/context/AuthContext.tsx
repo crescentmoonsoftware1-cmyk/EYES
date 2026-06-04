@@ -20,6 +20,7 @@ export interface User {
   plan: string;
   joinedDate: string;
   memoriesIndexed: number;
+  behaviorLoggingConsent: boolean;
 }
 
 export type AuthResult = {
@@ -51,6 +52,7 @@ type UserProfileRow = {
   plan: string | null;
   joined_date: string | null;
   memories_indexed: number | null;
+  behavior_logging_consent: boolean | null;
 };
 
 type DBResult<T> = {
@@ -155,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan: loadCachedProfile()?.plan || 'Private Beta',   // M1: use cached plan while sync completes
         joinedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
         memoriesIndexed: 0,
+        behaviorLoggingConsent: loadCachedProfile()?.behaviorLoggingConsent ?? true,
       };
     }
 
@@ -174,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
             supabase
               .from('user_profiles')
-              .select('name,avatar,plan,joined_date,memories_indexed')
+              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
               .eq('user_id', authUser.id)
               .maybeSingle()
               .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -190,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               plan: fetchResult.data.plan || 'Private Beta',
               joinedDate: fetchResult.data.joined_date || joinedDate,
               memoriesIndexed: fetchResult.data.memories_indexed || 0,
+              behaviorLoggingConsent: fetchResult.data.behavior_logging_consent ?? true,
             };
             saveCachedProfile(fresh);
             setUser(fresh); // M2: update live UI with fresh data (was only updating cache)
@@ -204,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
-          .select('name,avatar,plan,joined_date,memories_indexed')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
           .eq('user_id', authUser.id)
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -225,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: profile.plan || 'Private Beta',   // ← read from DB, fallback only if null
           joinedDate: profile.joined_date || joinedDate,
           memoriesIndexed: profile.memories_indexed || 0,
+          behaviorLoggingConsent: profile.behavior_logging_consent ?? true,
         };
         saveCachedProfile(result); // ← persist for instant load next time
         return result;
@@ -244,6 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: cached?.plan || 'Private Beta',
           joinedDate: joinedDate,
           memoriesIndexed: cached?.memoriesIndexed || 0,
+          behaviorLoggingConsent: cached?.behaviorLoggingConsent ?? true,
         };
       }
 
@@ -256,13 +262,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan: 'Private Beta',
         joined_date: joinedDate,
         memories_indexed: 0,
+        behavior_logging_consent: true,
       };
 
       const { data: inserted } = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
           .upsert(newProfile, { onConflict: 'user_id' })
-          .select('name,avatar,plan,joined_date,memories_indexed')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
         5000,
@@ -279,6 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan: final.plan || 'Private Beta',   // ← read from DB even on new profile creation
         joinedDate: joinedDate,
         memoriesIndexed: 0,
+        behaviorLoggingConsent: final.behavior_logging_consent ?? true,
       };
     } catch (err) {
       syncInProgressRef.current = false;
@@ -292,6 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan: 'Private Beta',
         joinedDate: joinedDate,
         memoriesIndexed: 0,
+        behaviorLoggingConsent: true,
       };
     }
   }, [supabase]);
@@ -578,12 +587,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return { success: false, message: 'Not authenticated' };
 
     try {
-      const dbUpdates: { name?: string; avatar?: string } = {};
+      const dbUpdates: { name?: string; avatar?: string; behavior_logging_consent?: boolean } = {};
       const authUpdates: { name?: string } = {};
 
       if (updates.name) {
         dbUpdates.name = updates.name;
         authUpdates.name = updates.name;
+      }
+
+      if (updates.behaviorLoggingConsent !== undefined) {
+        dbUpdates.behavior_logging_consent = updates.behaviorLoggingConsent;
       }
       
       // If current avatar is just an initial, update it to match the new name's initial
@@ -592,17 +605,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // 1. Update Auth Metadata first to ensure identity is consistent
-      const { error: authError } = await supabase.auth.updateUser({
-        data: authUpdates
-      });
-      if (authError) throw authError;
+      if (updates.name) {
+        const { error: authError } = await supabase.auth.updateUser({
+          data: authUpdates
+        });
+        if (authError) throw authError;
+      }
 
       // 2. Update Database and GET the confirmed record back
       const { data: confirmed, error: dbError } = await supabase
         .from('user_profiles')
         .update(dbUpdates)
         .eq('user_id', user.id)
-        .select('name,avatar,plan,joined_date,memories_indexed')
+        .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
         .single();
 
       if (dbError) throw dbError;
@@ -614,7 +629,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: confirmed.name,
           avatar: confirmed.avatar || confirmed.name.charAt(0).toUpperCase(),
           plan: confirmed.plan || prev.plan,
-          memoriesIndexed: confirmed.memories_indexed || prev.memoriesIndexed
+          memoriesIndexed: confirmed.memories_indexed || prev.memoriesIndexed,
+          behaviorLoggingConsent: confirmed.behavior_logging_consent ?? prev.behaviorLoggingConsent,
         } : null);
       }
       

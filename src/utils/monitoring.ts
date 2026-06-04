@@ -223,6 +223,7 @@ export async function getRecoverableFailedJobs(
       .from('async_job_failures')
       .select('job_id,job_type,user_id,platform,error_message,is_retriable,created_at')
       .eq('is_retriable', true)
+      .eq('recovery_status', 'pending')
       .lt('recovery_attempts', 3) // Only items with < 3 recovery attempts
       .order('created_at', { ascending: true })
       .limit(limit);
@@ -267,8 +268,8 @@ export async function markJobAsRecovered(
     const { error } = await supabase
       .from('async_job_failures')
       .update({
-        is_recovered: true,
-        recovered_at: new Date().toISOString(),
+        recovery_status: 'succeeded',
+        updated_at: new Date().toISOString(),
       })
       .eq('job_id', jobId);
 

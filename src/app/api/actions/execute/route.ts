@@ -244,7 +244,31 @@ async function executeLinearTicketAction(supabase: Awaited<ReturnType<typeof cre
     return NextResponse.json({ error: 'Linear is not connected' }, { status: 400 });
   }
 
-  const teamId = body.teamId || process.env.LINEAR_DEFAULT_TEAM_ID;
+  let teamId = body.teamId || process.env.LINEAR_DEFAULT_TEAM_ID;
+  if (!teamId) {
+    try {
+      const teamsRes = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Authorization': accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: `query { teams { nodes { id } } }`
+        })
+      });
+      if (teamsRes.ok) {
+        const teamsData = await teamsRes.json();
+        const firstTeam = teamsData?.data?.teams?.nodes?.[0];
+        if (firstTeam?.id) {
+          teamId = firstTeam.id;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to auto-fetch Linear team:', e);
+    }
+  }
+
   if (!teamId) {
     return NextResponse.json({ error: 'Missing Linear teamId. Pass teamId or set LINEAR_DEFAULT_TEAM_ID.' }, { status: 400 });
   }
@@ -297,12 +321,40 @@ async function executeSlackReplyAction(supabase: Awaited<ReturnType<typeof creat
     return NextResponse.json({ error: 'Slack is not connected' }, { status: 400 });
   }
 
-  const channel = body.channelId || process.env.SLACK_DEFAULT_CHANNEL_ID;
+  let channel = body.channelId;
+  let threadTs = body.threadTs;
+
+  const messageId = body.eventId || body.memoryId || (body as any).memory_id;
+  if (messageId && !channel) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(messageId)) {
+      const { data: memory } = await supabase
+        .from('memories')
+        .select('metadata')
+        .eq('id', messageId)
+        .maybeSingle();
+
+      if (memory?.metadata) {
+        const meta = memory.metadata as any;
+        if (meta.channel_id) {
+          channel = meta.channel_id;
+        }
+        if (meta.ts && !threadTs) {
+          threadTs = meta.ts;
+        }
+      }
+    }
+  }
+
+  if (!channel) {
+    channel = process.env.SLACK_DEFAULT_CHANNEL_ID;
+  }
+
   if (!channel) {
     return NextResponse.json({ error: 'Missing Slack channelId. Pass channelId or set SLACK_DEFAULT_CHANNEL_ID.' }, { status: 400 });
   }
 
-  const text = body.text || body.description || body.suggestedAction || body.title;
+  const text = body.text || body.suggestedAction || (body as any).suggested_action || body.description || body.title;
   if (!text) {
     return NextResponse.json({ error: 'Missing Slack reply text.' }, { status: 400 });
   }
@@ -316,7 +368,7 @@ async function executeSlackReplyAction(supabase: Awaited<ReturnType<typeof creat
     body: JSON.stringify({
       channel,
       text,
-      thread_ts: body.threadTs || undefined,
+      thread_ts: threadTs || undefined,
     }),
   });
 

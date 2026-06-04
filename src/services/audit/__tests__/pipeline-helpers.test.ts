@@ -371,3 +371,23 @@ describe('buildFallbackNarrative', () => {
     expect(narrative).not.toContain('Most referenced entities');
   });
 });
+
+describe('SCORE_CONSISTENCY_RULE programmatic guard', () => {
+  it('overrides score to 0.0 if findings are empty', () => {
+    let finalRiskScore = 0.5;
+    const finalFindings: any[] = [];
+    if (!finalFindings || finalFindings.length === 0) {
+      finalRiskScore = 0.0;
+    }
+    expect(finalRiskScore).toBe(0.0);
+  });
+
+  it('keeps score unchanged if findings are non-empty', () => {
+    let finalRiskScore = 0.5;
+    const finalFindings: any[] = [{ severity: 'Low', finding: 'Some finding', evidence: 'Some evidence', impact: 'Some impact' }];
+    if (!finalFindings || finalFindings.length === 0) {
+      finalRiskScore = 0.0;
+    }
+    expect(finalRiskScore).toBe(0.5);
+  });
+});

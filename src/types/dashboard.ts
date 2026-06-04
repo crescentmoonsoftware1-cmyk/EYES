@@ -67,6 +67,7 @@ export interface Citation {
   timestamp?: string | null;
   similarity?: number;
   rerankScore?: number;
+  sourceUrl?: string | null;
 }
 
 export interface Message {
@@ -99,6 +100,7 @@ export interface ReputationAudit {
   reportUrl: string | null;
   createdAt: string;
   metadata: {
+    audit_type?: string;
     subjectName?: string;
     sentimentBalance: number;
     unfulfilledCommitments: number;

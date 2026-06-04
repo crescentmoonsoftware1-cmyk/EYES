@@ -208,20 +208,20 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
           {/* SPECIALIZED ACTIONS */}
           <div className={styles.secondaryAuditGrid}>
-            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('privacy')}>
-              <div className={styles.miniIcon}><PrivacyEyeIcon size={24} /></div>
-              <h4>Privacy Leak Scan</h4>
-              <p>Detect leaked PII or sensitive identifiers.</p>
+            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('reputation')}>
+              <div className={styles.miniIcon}><ShieldIcon size={24} /></div>
+              <h4>Investor / Reputation</h4>
+              <p>"What will someone find when they run diligence on me?" Cold, clinical analysis of unfulfilled commitments, contradictions, and external risks.</p>
             </div>
-            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('commitment')}>
+            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('behavioral')}>
               <div className={styles.miniIcon}><OperationalLinkIcon size={24} /></div>
-              <h4>Operational Audit</h4>
-              <p>Index unfulfilled promises and tasks.</p>
+              <h4>Behavioral / Self</h4>
+              <p>"What did I actually accomplish, and what slipped?" Analysis of follow-through, task loops, drift, and dropped commitments.</p>
             </div>
-            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('sentiment')}>
+            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('hiring')}>
               <div className={styles.miniIcon}><SentimentChartIcon size={24} /></div>
-              <h4>Sentiment Pulse</h4>
-              <p>Track real-time emotional variance.</p>
+              <h4>Hiring / Professional</h4>
+              <p>"What does a recruiter or employer see?" Analysis of reliability, stakeholder communication quality, and professional red flags.</p>
             </div>
           </div>
         </div>
@@ -593,7 +593,14 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
       <div className={styles.auditContainer}>
         <header className={styles.auditHeader}>
           <div>
-            <h1 className={styles.auditTitle}>Audit Certificate</h1>
+            <h1 className={styles.auditTitle}>
+              Audit Certificate: {
+                activeAudit.metadata?.audit_type === 'reputation' ? 'Investor / Reputation' :
+                activeAudit.metadata?.audit_type === 'behavioral' ? 'Behavioral / Self' :
+                activeAudit.metadata?.audit_type === 'hiring' ? 'Hiring / Professional' :
+                'Full Reputation'
+              }
+            </h1>
             <div className={styles.auditMeta}>
               ID: {activeAudit.id.slice(0, 8).toUpperCase()} <span className={styles.metaDivider}>•</span> {new Date(activeAudit.createdAt).toUTCString()}
             </div>
@@ -708,15 +715,15 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               
               return (
                 <div className={styles.dialContainer}>
-                  <svg width="90" height="90" viewBox="0 0 100 100" className={styles.dialSvg}>
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="6" />
+                  <svg width="115" height="115" viewBox="0 0 100 100" className={styles.dialSvg}>
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="4" />
                     <circle
                       cx="50"
                       cy="50"
                       r="40"
                       fill="none"
                       stroke={riskColor}
-                      strokeWidth="7"
+                      strokeWidth="5"
                       strokeDasharray="251.2"
                       strokeDashoffset={strokeDashoffset}
                       strokeLinecap="round"
@@ -724,10 +731,10 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                       className={styles.dialStroke}
                       style={{ filter: `drop-shadow(0 0 4px ${riskColor}80)` }}
                     />
-                    <text x="50" y="44" textAnchor="middle" dominantBaseline="middle" className={styles.dialValue} fill="var(--text-primary)">
+                    <text x="50" y="46" textAnchor="middle" dominantBaseline="middle" className={styles.dialValue} fill="var(--text-primary)">
                       {activeAudit.riskScore}
                     </text>
-                    <text x="50" y="65" textAnchor="middle" dominantBaseline="middle" className={styles.dialLabel} fill={riskColor}>
+                    <text x="50" y="70" textAnchor="middle" dominantBaseline="middle" className={styles.dialLabel} fill={riskColor}>
                       {isCritical ? 'CRITICAL' : isModerate ? 'MODERATE' : 'OPTIMAL'}
                     </text>
                   </svg>

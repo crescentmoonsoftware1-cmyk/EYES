@@ -114,6 +114,7 @@ type ChatCitation = {
   similarity: number;
   rerankScore: number;
   snippet: string;
+  sourceUrl: string | null;
 };
 
 type ChatDiagnostics = {
@@ -179,6 +180,7 @@ function citationsHeaderValue(citations: ChatCitation[]) {
     similarity: citation.similarity,
     rerankScore: citation.rerankScore,
     timestamp: citation.timestamp,
+    sourceUrl: citation.sourceUrl,
   }));
   return Buffer.from(JSON.stringify(compact), 'utf8').toString('base64url');
 }
@@ -206,10 +208,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch cognitive context AND (conditionally) audit commitments in parallel
-    const isTaskQuery = /work|task|pending|commitment|promise|deadline/i.test(message);
-    const cognitiveContextPromise = fetchCognitiveContext(supabase as unknown as import('@supabase/supabase-js').SupabaseClient, user.id);
-    const auditCommitmentsPromise = isTaskQuery
+    // 0. Query routing / Caching classification
+    let needsRetrieval = true;
+    if (history && history.length > 0) {
+      try {
+        const classificationRaw = await invokeModel({
+          capability: 'chat',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an AI query router. Analyze the user's latest message and conversation history. Determine if answering requires retrieving new/different matching records from their digital archive (emails, calendar, commits, notion, chats) or if it can be fully answered using ONLY the existing conversation history (such as greetings, simple follow-up analysis of already discussed items, or clarification requests).
+Return JSON only:
+{ "needsRetrieval": true | false }`
+            },
+            ...normalizeHistory(history).slice(-4),
+            { role: 'user', content: message }
+          ],
+          preference: 'auto'
+        });
+
+        const classificationStr = typeof classificationRaw === 'string' ? classificationRaw : '';
+        const match = classificationStr.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (parsed && typeof parsed.needsRetrieval === 'boolean') {
+            needsRetrieval = parsed.needsRetrieval;
+          }
+        }
+      } catch (err) {
+        console.warn('[Chat Routing] Classification failed, defaulting to database search:', err);
+      }
+    }
+
+    // Fetch cognitive context AND (conditionally) audit commitments in parallel (only if retrieval is needed)
+    const isTaskQuery = needsRetrieval && /work|task|pending|commitment|promise|deadline/i.test(message);
+    const cognitiveContextPromise = needsRetrieval
+      ? fetchCognitiveContext(supabase as unknown as import('@supabase/supabase-js').SupabaseClient, user.id)
+      : Promise.resolve(null);
+    const auditCommitmentsPromise = (needsRetrieval && isTaskQuery)
       ? supabase
           .from('reputation_audits')
           .select('metadata')
@@ -220,19 +256,20 @@ export async function POST(request: Request) {
           .single()
       : Promise.resolve({ data: null });
 
-    // 1. Generate real-world embedding (via abstraction)
     const retrievalStartedAt = Date.now();
-    const queryResult = await invokeModel({
-      capability: 'embed',
-      messages: [{ role: 'user', content: message }]
-    });
-    
     let context = '';
     let citations: ChatCitation[] = [];
     let retrievalError: string | null = null;
 
-    if (queryResult && typeof queryResult === 'object' && 'embedding' in queryResult) {
-      console.log(`[Chat] Embedding OK — dim=${queryResult.embedding.length}, user=${user.id.slice(0,8)}`);
+    if (needsRetrieval) {
+      // 1. Generate real-world embedding (via abstraction)
+      const queryResult = await invokeModel({
+        capability: 'embed',
+        messages: [{ role: 'user', content: message }]
+      });
+      
+      if (queryResult && typeof queryResult === 'object' && 'embedding' in queryResult) {
+        console.log(`[Chat] Embedding OK — dim=${queryResult.embedding.length}, user=${user.id.slice(0,8)}`);
       // 2. Real Hybrid Similarity Search
       const { data: matches, error: matchError } = await supabase.rpc('hybrid_search', {
         query_text: message,
@@ -263,6 +300,7 @@ export async function POST(request: Request) {
           similarity: Number((match.similarity ?? 0).toFixed(4)),
           rerankScore: Number((match.combined_score ?? 0).toFixed(4)),
           snippet: maskPII((match.content || '').slice(0, 420)),
+          sourceUrl: match.source_url ?? null,
         }));
 
         context = citations
@@ -322,7 +360,7 @@ export async function POST(request: Request) {
 
         let temporalQuery = supabase
           .from('memories')
-          .select('id, platform, title, content, author, timestamp')
+          .select('id, platform, title, content, author, timestamp, source_url')
           .eq('user_id', user.id)
           .gte('timestamp', since.toISOString())
           .order('timestamp', { ascending: false })
@@ -361,6 +399,7 @@ export async function POST(request: Request) {
               similarity: 1.0,
               rerankScore: 1.0,
               snippet: maskPII(`${r.title || ''}: ${r.content || ''}`.slice(0, 420)),
+              sourceUrl: r.source_url ?? null,
             }));
             
             citations = [...temporalCitations, ...citations];
@@ -376,7 +415,7 @@ export async function POST(request: Request) {
 
           let fallbackQuery = supabase
             .from('memories')
-            .select('id, platform, title, content, author, timestamp')
+            .select('id, platform, title, content, author, timestamp, source_url')
             .eq('user_id', user.id)
             .order('timestamp', { ascending: false })
             .limit(10);
@@ -414,6 +453,7 @@ export async function POST(request: Request) {
                 similarity: 0.8,
                 rerankScore: 0.8,
                 snippet: maskPII(`${r.title || ''}: ${r.content || ''}`.slice(0, 420)),
+                sourceUrl: r.source_url ?? null,
               }));
 
               citations = [...fallbackCitations, ...citations];
@@ -423,6 +463,9 @@ export async function POST(request: Request) {
         }
       }
     }
+  } else {
+    console.log(`[Chat] Query routing: Skipping database retrieval for conversational message: "${message.slice(0, 50)}..."`);
+  }
 
     const cognitiveContext = await cognitiveContextPromise;
 
@@ -432,7 +475,7 @@ export async function POST(request: Request) {
       confidenceScore: toConfidenceScore(citations),
       groundedScore: toGroundedScore(citations),
       rerankApplied: citations.length > 1,
-      retrievalStatus: retrievalError ? 'error' : (citations.length > 0 ? 'success' : 'empty'),
+      retrievalStatus: retrievalError ? 'error' : (citations.length > 0 ? 'success' : (needsRetrieval ? 'empty' : 'skipped')),
       retrievalError,
     };
 

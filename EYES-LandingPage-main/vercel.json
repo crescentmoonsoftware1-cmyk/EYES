@@ -1,0 +1,27 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"crons": [
+		{
+			"path": "/api/cron/sync",
+			"schedule": "0 2 * * *"
+		},
+		{
+			"path": "/api/cron/state-vectors",
+			"schedule": "0 3 * * *"
+		},
+		{
+			"path": "/api/cron/cluster-users",
+			"schedule": "0 4 * * 0"
+		},
+		{
+			"path": "/api/cron/embeddings",
+			"schedule": "*/5 * * * *"
+		},
+		{
+			"path": "/api/cron/retry-remediation",
+			"schedule": "0 5 * * *"
+		}
+	]
+}
+
+

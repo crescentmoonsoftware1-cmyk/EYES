@@ -768,6 +768,17 @@ async function captureBehavioralData(data: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // GDPR Requirement: Only log if consent is true
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('behavior_logging_consent')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (profile && profile.behavior_logging_consent === false) {
+      return;
+    }
+
     // GDPR Requirement: SHA-256 of user_id + salt
     const salt = process.env.BEHAVIOR_SALT || 'eyes-neural-moat';
     const userHash = crypto.createHash('sha256').update(user.id + salt).digest('hex');

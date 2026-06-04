@@ -11,24 +11,33 @@ export async function GET() {
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data, error } = await supabase
-    .from('connector_settings')
-    .select('data_types')
-    .eq('user_id', user.id)
-    .eq('platform', 'user_global')
-    .maybeSingle();
+  const [settingsResult, profileResult] = await Promise.all([
+    supabase
+      .from('connector_settings')
+      .select('data_types')
+      .eq('user_id', user.id)
+      .eq('platform', 'user_global')
+      .maybeSingle(),
+    supabase
+      .from('user_profiles')
+      .select('behavior_logging_consent')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ]);
 
-  if (error && error.code !== 'PGRST116') {
-    console.error('[UserSettings] GET failed:', error);
+  if (settingsResult.error && settingsResult.error.code !== 'PGRST116') {
+    console.error('[UserSettings] GET failed:', settingsResult.error);
     return NextResponse.json({ error: 'Failed to load settings.' }, { status: 500 });
   }
 
   // data_types is repurposed here as a JSON blob stored as string array with one entry
-  const raw = data?.data_types?.[0];
-  let settings = { riskSensitivity: 'MEDIUM', syncDepth: 'balanced', excludedSenders: [] as string[] };
+  const raw = settingsResult.data?.data_types?.[0];
+  let settings = { riskSensitivity: 'MEDIUM', syncDepth: 'balanced', excludedSenders: [] as string[], gdprConsent: true };
   if (raw) {
     try { settings = { ...settings, ...JSON.parse(raw) }; } catch {}
   }
+
+  settings.gdprConsent = profileResult.data?.behavior_logging_consent ?? true;
 
   return NextResponse.json(settings);
 }
@@ -47,20 +56,35 @@ export async function PUT(req: NextRequest) {
     excludedSenders: Array.isArray(body.excludedSenders) ? body.excludedSenders : [],
   };
 
-  const { error } = await supabase
-    .from('connector_settings')
-    .upsert({
-      user_id: user.id,
-      platform: 'user_global',
-      data_types: [JSON.stringify(settings)],
-      sync_enabled: true,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,platform' });
+  const promises: Promise<any>[] = [
+    supabase
+      .from('connector_settings')
+      .upsert({
+        user_id: user.id,
+        platform: 'user_global',
+        data_types: [JSON.stringify(settings)],
+        sync_enabled: true,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,platform' }),
+  ];
 
-  if (error) {
-    console.error('[UserSettings] PUT failed:', error);
+  if (body.gdprConsent !== undefined) {
+    promises.push(
+      supabase
+        .from('user_profiles')
+        .update({ behavior_logging_consent: body.gdprConsent })
+        .eq('user_id', user.id)
+    );
+  }
+
+  const results = await Promise.all(promises);
+  const settingsError = results[0].error;
+  const profileError = results[1]?.error;
+
+  if (settingsError || profileError) {
+    console.error('[UserSettings] PUT failed:', settingsError || profileError);
     return NextResponse.json({ error: 'Failed to save settings.' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, settings });
+  return NextResponse.json({ ok: true, settings: { ...settings, gdprConsent: body.gdprConsent } });
 }
