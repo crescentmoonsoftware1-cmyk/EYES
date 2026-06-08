@@ -146,7 +146,7 @@ export function useAuthSession(
           throw sessionError;
         }
 
-        if (session?.user && mounted && lastSyncedUserIdRef.current !== session.user.id) {
+        if (session?.user && mounted) {
           lastSyncedUserIdRef.current = session.user.id;
           const profile = await syncProfile({
             id: session.user.id,
