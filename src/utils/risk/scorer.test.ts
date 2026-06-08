@@ -246,7 +246,7 @@ describe('Risk Scorer — Discord', () => {
 describe('Risk Scorer — Notion', () => {
   it('flags document with "password" in title', async () => {
     const result = await scoreNotionEvent({
-      title: 'Password Vault — Private',
+      title: 'Password Sanctum — Private',
       content: 'All credentials stored here',
     });
     expect(result.score).toBeGreaterThan(5); // has title exposure + keywords

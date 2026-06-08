@@ -59,7 +59,7 @@ For inquiries, rights requests, or feedback regarding your personal data privacy
 *Effective Date: June 3, 2026 | Last Updated: June 3, 2026*
 
 ### 1. Introduction
-This Cookie Policy explains how The EYES ("we", "us", "our") uses cookies, pixel tags, local storage, and similar technologies on the-eyes.com to manage security session states and render user interface settings. We are dedicated to providing a private digital vault experience, which means our use of storage technologies is highly restricted and privacy-focused.
+This Cookie Policy explains how The EYES ("we", "us", "our") uses cookies, pixel tags, local storage, and similar technologies on the-eyes.com to manage security session states and render user interface settings. We are dedicated to providing a private digital sanctum experience, which means our use of storage technologies is highly restricted and privacy-focused.
 
 ### 2. What are Cookies and Local Storage?
 Cookies are small text files placed on your computer or mobile device by websites that you visit. Local storage is a standard web technology that allows websites to store data on your computer or mobile device. These tools are used to recognize your browser, remember choices, and secure logins.
@@ -102,7 +102,7 @@ If you have any questions about this Cookie Policy, please contact our team at: 
 *Effective Date: June 3, 2026 | Last Updated: June 3, 2026*
 
 ### 1. Our Commitment
-The EYES ("we", "us", "our") is committed to ensuring that our digital vault, memory timelines, and chat interfaces are accessible and usable by individuals with disabilities. We believe that everyone has a right to access their own digital footprint with dignity, equality, and independence, and we continually audit our code to meet these standards.
+The EYES ("we", "us", "our") is committed to ensuring that our digital sanctum, memory timelines, and chat interfaces are accessible and usable by individuals with disabilities. We believe that everyone has a right to access their own digital footprint with dignity, equality, and independence, and we continually audit our code to meet these standards.
 
 ### 2. Standards & Target Conformance
 We aim to conform to the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA requirements. These guidelines outline how to make web content more accessible for people with sensory, cognitive, physical, and developmental needs.
@@ -177,7 +177,7 @@ Because EYES aggregates, processes, and vectorizes historical chat and email com
 - **Encryption at Rest:** All databases, message indices, transaction tables, and vector embeddings are encrypted at rest using AES-256 cryptographic standards. Database storage blocks are protected with individual, rotated encryption keys.
 
 ### 3. API Token and Credentials Protection
-We retrieve connection information strictly using secure, standardized OAuth 2.0 authorization flows. We follow the principle of least privilege, requesting read-only scopes necessary to compile your digital vault.
+We retrieve connection information strictly using secure, standardized OAuth 2.0 authorization flows. We follow the principle of least privilege, requesting read-only scopes necessary to compile your digital sanctum.
 
 User secrets, including client IDs, refresh tokens, and authentication cookies, are encrypted before being saved in our relational databases using asymmetric key wrapping. Credentials are never sent in plain text and are isolated from normal logging files.
 

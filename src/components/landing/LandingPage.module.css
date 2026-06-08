@@ -427,13 +427,13 @@
   opacity: 0.7 !important;
 }
 
-.vaultInterface {
+.sanctumInterface {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-.vaultSidebar {
+.sanctumSidebar {
   width: 180px;
   background: rgba(0, 0, 0, 0.06);
   border-right: 1px solid var(--border-subtle);
@@ -443,7 +443,7 @@
   gap: 16px;
 }
 
-[data-theme='light'] .vaultSidebar {
+[data-theme='light'] .sanctumSidebar {
   background: rgba(0, 0, 0, 0.01);
 }
 
@@ -459,14 +459,14 @@
   opacity: 0.65;
 }
 
-.vaultMain {
+.sanctumMain {
   flex: 1;
   position: relative;
   padding: 24px;
   overflow-y: auto;
 }
 
-.vaultVideoOverlay {
+.sanctumVideoOverlay {
   position: absolute;
   inset: 0;
   opacity: 0.05;
@@ -475,17 +475,17 @@
   z-index: 0;
 }
 
-[data-theme='light'] .vaultVideoOverlay {
+[data-theme='light'] .sanctumVideoOverlay {
   opacity: 0.02;
 }
 
-.vaultBgVideo {
+.sanctumBgVideo {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.vaultGrid {
+.sanctumGrid {
   position: relative;
   z-index: 2;
   display: grid;
@@ -634,7 +634,7 @@
   .floatingContextWrapper {
     display: none;
   }
-  .vaultGrid {
+  .sanctumGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -667,10 +667,10 @@
   .consoleBody {
     height: 480px;
   }
-  .vaultSidebar {
+  .sanctumSidebar {
     display: none;
   }
-  .vaultGrid {
+  .sanctumGrid {
     grid-template-columns: 1fr;
   }
   .mockupSandbox {

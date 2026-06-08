@@ -195,7 +195,7 @@ export default function PrivacyPolicy() {
         return (
           <div className="space-y-8">
             <p className="text-lg md:text-xl text-[var(--text-secondary)]">
-              Processing operations are strictly limited to the execution of digital vault indexes.
+              Processing operations are strictly limited to the execution of digital sanctum indexes.
             </p>
             
             <div className="space-y-6">

@@ -235,7 +235,7 @@ export default function ScrollyTelling() {
 
       {/* HERO */}
       <section className="st-hero" ref={heroRef}>
-        <h1 className="st-hero-title" ref={titleRef}>Your Vault comes <br /> to life <em>in 3 steps</em></h1>
+        <h1 className="st-hero-title" ref={titleRef}>Your Sanctum comes <br /> to life <em>in 3 steps</em></h1>
         <p className="st-hero-sub" ref={subRef}>{"We've replaced tedious prompting with an intuitive background process. EYES learns who you are across your digital life."}</p>
       </section>
 

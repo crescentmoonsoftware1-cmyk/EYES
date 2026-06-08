@@ -169,7 +169,7 @@ export default function LandingPage() {
           
           <div className={styles.navLinks} onMouseLeave={() => setHoveredLink(null)}>
             {[
-              { name: 'Vault', href: '#vault', id: 'vault' },
+              { name: 'Sanctum', href: '#sanctum', id: 'sanctum' },
               { name: 'Integrations', href: '#integrations', id: 'integrations' },
               { name: 'Process', href: '#process', id: 'process' }
             ].map((link) => (
@@ -223,7 +223,7 @@ export default function LandingPage() {
       </div>
 
       {/* Hero Section */}
-      <section className={styles.heroSection} id="vault">
+      <section className={styles.heroSection} id="sanctum">
         <motion.div 
           className={styles.heroContainer}
           initial="hidden"
@@ -266,7 +266,7 @@ export default function LandingPage() {
                   <span />
                   <span />
                 </div>
-                <div className={styles.consoleTitle}>EYES Vault Console</div>
+                <div className={styles.consoleTitle}>EYES Sanctum Console</div>
                 <div className={styles.consoleStatus}>
                   <span className={styles.statusDot} />
                   Active Curation
@@ -293,9 +293,9 @@ export default function LandingPage() {
                 </div>
 
                 {/* Dashboard Grid & Sidebar Mock */}
-                <div className={styles.vaultInterface}>
+                <div className={styles.sanctumInterface}>
                   {/* Left Sidebar Mock */}
-                  <div className={styles.vaultSidebar}>
+                  <div className={styles.sanctumSidebar}>
                     <div className={`${styles.sidebarItem} ${styles.sidebarItemActive}`} style={{ width: '80%' }} />
                     <div className={styles.sidebarItem} style={{ width: '60%' }} />
                     <div className={styles.sidebarItem} style={{ width: '70%' }} />
@@ -303,8 +303,8 @@ export default function LandingPage() {
                   </div>
 
                   {/* Main Grid showing Dynamic Card Curation */}
-                  <div className={styles.vaultMain}>
-                    <div className={styles.vaultGrid}>
+                  <div className={styles.sanctumMain}>
+                    <div className={styles.sanctumGrid}>
                       <AnimatePresence mode="popLayout">
                         {filteredCards.slice(0, 6).map((card) => (
                           <motion.div 

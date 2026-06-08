@@ -405,7 +405,7 @@ export default function LoginPage() {
                   color: "#E06A3B",
                 }}
               >
-                vault
+                sanctum
               </em>
             </>
           )}
@@ -615,8 +615,8 @@ export default function LoginPage() {
               }}
             >
               {isLoading 
-                ? (isForgotPasswordMode ? "Sending Link..." : "Accessing Vault...") 
-                : (isForgotPasswordMode ? "Send Reset Link" : "Sign In to Vault")}
+                ? (isForgotPasswordMode ? "Sending Link..." : "Accessing Sanctum...") 
+                : (isForgotPasswordMode ? "Send Reset Link" : "Sign In to Sanctum")}
               {!isLoading && (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
@@ -735,7 +735,7 @@ export default function LoginPage() {
         zIndex: 5,
       }}>
         <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e" }} />
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#555", letterSpacing: "0.1em" }}>VAULT SECURE</span>
+        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#555", letterSpacing: "0.1em" }}>SANCTUM SECURE</span>
       </div>
     </div>
   );

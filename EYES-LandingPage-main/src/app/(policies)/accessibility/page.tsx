@@ -9,13 +9,13 @@ export default function AccessibilityDeclaration() {
       id: "commitment",
       title: "1. Our Commitment",
       tldr: {
-        summary: "We are committed to delivering an accessible digital vault and timeline interface that respects individual dignity.",
+        summary: "We are committed to delivering an accessible digital sanctum and timeline interface that respects individual dignity.",
         badge: "Commitment",
-        points: ["Accessible digital vaults", "Equality and independence", "Regular code accessibility audits"]
+        points: ["Accessible digital sanctums", "Equality and independence", "Regular code accessibility audits"]
       },
       content: (
         <Paragraph>
-          The EYES (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is committed to ensuring that our digital vault, memory timelines, and chat interfaces are accessible and usable by individuals with disabilities. We believe that everyone has a right to access their own digital footprint with dignity, equality, and independence, and we continually audit our code to meet these standards.
+          The EYES (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is committed to ensuring that our digital sanctum, memory timelines, and chat interfaces are accessible and usable by individuals with disabilities. We believe that everyone has a right to access their own digital footprint with dignity, equality, and independence, and we continually audit our code to meet these standards.
         </Paragraph>
       )
     },

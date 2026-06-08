@@ -235,7 +235,7 @@
   border: 1px solid rgba(239, 68, 68, 0.1);
 }
 
-/* ─── Right Section (Digital Vault Mockup) ─── */
+/* ─── Right Section (Digital Sanctum Mockup) ─── */
 .visualSection {
   flex: 1.2;
   display: flex;
@@ -261,7 +261,7 @@
   object-fit: cover;
 }
 
-.vaultWindow {
+.sanctumWindow {
   width: 100%;
   max-width: 680px;
   height: clamp(320px, 45vh, 520px);
@@ -277,7 +277,7 @@
   animation: float 8s ease-in-out infinite;
 }
 
-.vaultSidebar {
+.sanctumSidebar {
   width: 180px;
   background: #FFFFFF;
   border-right: 1px solid #D4D4D4;
@@ -298,7 +298,7 @@
   opacity: 0.2;
 }
 
-.vaultMain {
+.sanctumMain {
   flex: 1;
   padding: 32px;
   display: flex;
@@ -308,7 +308,7 @@
   overflow: hidden;
 }
 
-.vaultVideoOverlay {
+.sanctumVideoOverlay {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -317,19 +317,19 @@
   filter: drop-shadow(0 0 20px rgba(0, 209, 255, 0.15)); /* Holographic glow */
 }
 
-.vaultBgVideo {
+.sanctumBgVideo {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.vaultHeader {
+.sanctumHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.vaultSearch {
+.sanctumSearch {
   width: 240px;
   height: 32px;
   background: white;
@@ -337,13 +337,13 @@
   border-radius: 8px;
 }
 
-.vaultGrid {
+.sanctumGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.vaultCard {
+.sanctumCard {
   aspect-ratio: 1;
   background: white;
   border: 1px solid rgba(0, 0, 0, 0.03);
@@ -355,7 +355,7 @@
   transition: transform 0.3s;
 }
 
-.vaultCardIcon {
+.sanctumCardIcon {
   width: 32px;
   height: 32px;
   background: rgba(0, 98, 114, 0.1);
@@ -368,21 +368,21 @@
   50% { background: rgba(0, 98, 114, 0.3); box-shadow: 0 0 15px rgba(0, 98, 114, 0.2); }
 }
 
-.vaultCardLines {
+.sanctumCardLines {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.vaultLine {
+.sanctumLine {
   height: 4px;
   background: rgba(0, 0, 0, 0.05);
   border-radius: 2px;
 }
 
-.vaultLineShort { width: 60%; }
+.sanctumLineShort { width: 60%; }
 
-.vaultBadge {
+.sanctumBadge {
   position: absolute;
   bottom: 40px;
   right: 40px;

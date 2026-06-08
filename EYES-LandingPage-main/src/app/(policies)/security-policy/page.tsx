@@ -45,7 +45,7 @@ export default function SecurityPolicy() {
       content: (
         <>
           <Paragraph>
-            We retrieve connection information strictly using secure, standardized OAuth 2.0 authorization flows. We follow the principle of least privilege, requesting read-only scopes necessary to compile your digital vault.
+            We retrieve connection information strictly using secure, standardized OAuth 2.0 authorization flows. We follow the principle of least privilege, requesting read-only scopes necessary to compile your digital sanctum.
           </Paragraph>
           <Paragraph>
             User secrets, including client IDs, refresh tokens, and authentication cookies, are encrypted before being saved in our relational databases using asymmetric key wrapping. Credentials are never sent in plain text and are isolated from normal logging files.

@@ -370,7 +370,7 @@ export default function SignupPage() {
               color: "#E06A3B",
             }}
           >
-            vault
+            sanctum
           </em>
         </h1>
 
@@ -663,7 +663,7 @@ export default function SignupPage() {
         zIndex: 5,
       }}>
         <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e" }} />
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#555", letterSpacing: "0.1em" }}>VAULT SECURE</span>
+        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#555", letterSpacing: "0.1em" }}>SANCTUM SECURE</span>
       </div>
     </div>
   );

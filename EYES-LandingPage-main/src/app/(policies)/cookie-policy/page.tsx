@@ -15,7 +15,7 @@ export default function CookiePolicy() {
       },
       content: (
         <Paragraph>
-          This Cookie Policy explains how The EYES (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) uses cookies, pixel tags, local storage, and similar technologies on the-eyes.com to manage security session states and render user interface settings. We are dedicated to providing a private digital vault experience, which means our use of storage technologies is highly restricted and privacy-focused.
+          This Cookie Policy explains how The EYES (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) uses cookies, pixel tags, local storage, and similar technologies on the-eyes.com to manage security session states and render user interface settings. We are dedicated to providing a private digital sanctum experience, which means our use of storage technologies is highly restricted and privacy-focused.
         </Paragraph>
       )
     },
