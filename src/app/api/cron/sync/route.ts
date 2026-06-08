@@ -13,8 +13,6 @@ import { POST as syncEmbeddings } from '@/app/api/sync/embeddings/route';
 import { logCronMetrics, logAsyncJobFailure } from '@/utils/monitoring';
 import type { EmbeddingOutcome } from '@/services/sync/embeddings-sync';
 
-export const maxDuration = 60; // Max allowed for Vercel Hobby plan
-
 type TokenRow = {
   user_id: string;
   platform: string;

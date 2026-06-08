@@ -13,8 +13,6 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { generateEmbedding } from '@/services/ai/ai';
 
-export const maxDuration = 60; // Max allowed for Vercel Hobby plan
-
 /** Max memories to embed per cron tick (across all users). Keep ≤100 on free tier. */
 const BATCH_SIZE = Number(process.env.EMBEDDING_QUEUE_BATCH_SIZE || 50);
 
@@ -86,9 +84,9 @@ export async function POST(request: Request) {
     let consecutiveFailures = 0;
 
     for (const memory of memories) {
-      // Vercel Hobby CPU Guard: Stop if approaching 60s timeout
-      if (Date.now() - startedAt > 45000) {
-        console.warn('[Cron Embeddings] Vercel 60s CPU limit approaching — pausing batch safely to avoid timeout.');
+      // Vercel Hobby CPU Guard: Stop if approaching 10s default timeout
+      if (Date.now() - startedAt > 8000) {
+        console.warn('[Cron Embeddings] Vercel 10s CPU limit approaching — pausing batch safely to avoid timeout.');
         break;
       }
 
