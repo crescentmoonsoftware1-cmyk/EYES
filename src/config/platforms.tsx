@@ -24,7 +24,14 @@ import {
   FitbitIconOfficial,
   WithingsIconOfficial,
   RedditIconOfficial,
-  LinkedInIconOfficial
+  LinkedInIconOfficial,
+  GoogleDocsIcon,
+  GoogleSheetsIcon,
+  GoogleSlidesIcon,
+  GoogleMeetIcon,
+  GoogleChatIcon,
+  GoogleMapsIcon,
+  YouTubeIconOfficial
 } from '../components/common/icons/PlatformIcons';
 
 export const ALL_POSSIBLE_PLATFORMS = [
@@ -64,4 +71,15 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'devin',           name: 'Devin',           icon: <DevinIconOfficial />,    category: 'Development',  description: 'Monitor autonomous AI engineering agents.',               color: '#1A1A1A', comingSoon: true },
   { id: 'cursor',          name: 'Cursor',          icon: <CursorIconOfficial />,   category: 'Development',  description: 'Sync your AI-assisted code evolution history.',            color: 'var(--text-primary)', comingSoon: true },
   { id: 'linkedin',        name: 'LinkedIn',        icon: <LinkedInIconOfficial />, category: 'Social',       description: 'Index professional networking and careers communications.', color: '#0077b5', comingSoon: true },
+
+  // ─── Workspace & Maps (Coming Soon) ───────────────────────────────────────────
+  { id: 'google-docs',     name: 'Google Docs',     icon: <GoogleDocsIcon />,       category: 'Productivity', description: 'Read documents, generate reports, and meeting notes.',       color: '#4285F4', comingSoon: true },
+  { id: 'google-sheets',   name: 'Google Sheets',   icon: <GoogleSheetsIcon />,     category: 'Productivity', description: 'Sync personal data, habits, expenses, and analytics.',       color: '#0F9D58', comingSoon: true },
+  { id: 'google-slides',   name: 'Google Slides',   icon: <GoogleSlidesIcon />,     category: 'Productivity', description: 'Index presentation generation and AI-created reports.',      color: '#F4B400', comingSoon: true },
+  { id: 'google-meet',     name: 'Google Meet',     icon: <GoogleMeetIcon />,       category: 'Productivity', description: 'Sync meeting data and AI-generated meeting summaries.',      color: '#00832d', comingSoon: true },
+  { id: 'google-chat',     name: 'Google Chat',     icon: <GoogleChatIcon />,       category: 'Productivity', description: 'Index team communication and perform message analysis.',     color: '#00ac47', comingSoon: true },
+  { id: 'google-maps',     name: 'Google Maps',     icon: <GoogleMapsIcon />,       category: 'Social',       description: 'Save travel memories, places, and location insights.',       color: '#4285F4', comingSoon: true },
+
+  // ─── Media (Coming Soon) ───────────────────────────────────────────
+  { id: 'youtube',         name: 'YouTube',         icon: <YouTubeIconOfficial />,  category: 'Creative',     description: 'Index saved videos, watch history, and learning.',           color: '#FF0000', comingSoon: true },
 ];
