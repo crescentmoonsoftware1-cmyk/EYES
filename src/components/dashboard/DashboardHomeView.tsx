@@ -46,7 +46,7 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
         return;
       }
       let startUrl = `/api/connect/${p.id}/start`;
-      if (p.id === 'gmail' || p.id === 'google-calendar') {
+      if (p.id.startsWith('google') || p.id === 'gmail' || p.id === 'youtube') {
         startUrl = `/api/connect/google/start?platform=${p.id}`;
       }
       window.location.href = startUrl;

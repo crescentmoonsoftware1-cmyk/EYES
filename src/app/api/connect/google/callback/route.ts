@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   const oauthError = url.searchParams.get('error');
 
   const [requestedPlatformFromState] = (state || '').split(':');
-  const platformFromState = requestedPlatformFromState === 'google-calendar' ? 'google-calendar' : 'gmail';
+  const platformFromState = requestedPlatformFromState || 'gmail';
 
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     cookieStore.delete('google_oauth_state');
 
     const [requestedPlatform] = state.split(':');
-    const platform = requestedPlatform === 'google-calendar' ? 'google-calendar' : 'gmail';
+    const platform = requestedPlatform || 'gmail';
 
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
@@ -125,7 +125,11 @@ export async function GET(request: Request) {
     const accessToken = encryptToken(tokenBody.access_token);
     const refreshToken = tokenBody.refresh_token ? encryptToken(tokenBody.refresh_token) : null;
 
-    const platforms = ['gmail', 'google_calendar'];
+    const platforms = [
+      'gmail', 'google-calendar', 'youtube',
+      'google-docs', 'google-sheets', 'google-slides',
+      'google-meet', 'google-chat', 'google-maps'
+    ];
 
     console.log('[Google OAuth] Persisting to Supabase...');
     const tokenUpserts = platforms.map((dbPlatform) =>

@@ -73,13 +73,13 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'linkedin',        name: 'LinkedIn',        icon: <LinkedInIconOfficial />, category: 'Social',       description: 'Index professional networking and careers communications.', color: '#0077b5', comingSoon: true },
 
   // ─── Workspace & Maps (Coming Soon) ───────────────────────────────────────────
-  { id: 'google-docs',     name: 'Google Docs',     icon: <GoogleDocsIcon />,       category: 'Productivity', description: 'Read documents, generate reports, and meeting notes.',       color: '#4285F4', comingSoon: true },
-  { id: 'google-sheets',   name: 'Google Sheets',   icon: <GoogleSheetsIcon />,     category: 'Productivity', description: 'Sync personal data, habits, expenses, and analytics.',       color: '#0F9D58', comingSoon: true },
-  { id: 'google-slides',   name: 'Google Slides',   icon: <GoogleSlidesIcon />,     category: 'Productivity', description: 'Index presentation generation and AI-created reports.',      color: '#F4B400', comingSoon: true },
-  { id: 'google-meet',     name: 'Google Meet',     icon: <GoogleMeetIcon />,       category: 'Productivity', description: 'Sync meeting data and AI-generated meeting summaries.',      color: '#00832d', comingSoon: true },
-  { id: 'google-chat',     name: 'Google Chat',     icon: <GoogleChatIcon />,       category: 'Productivity', description: 'Index team communication and perform message analysis.',     color: '#00ac47', comingSoon: true },
-  { id: 'google-maps',     name: 'Google Maps',     icon: <GoogleMapsIcon />,       category: 'Social',       description: 'Save travel memories, places, and location insights.',       color: '#4285F4', comingSoon: true },
+  { id: 'google-docs',     name: 'Google Docs',     icon: <GoogleDocsIcon />,       category: 'Productivity', description: 'Read documents, generate reports, and meeting notes.',       color: '#4285F4' },
+  { id: 'google-sheets',   name: 'Google Sheets',   icon: <GoogleSheetsIcon />,     category: 'Productivity', description: 'Sync personal data, habits, expenses, and analytics.',       color: '#0F9D58' },
+  { id: 'google-slides',   name: 'Google Slides',   icon: <GoogleSlidesIcon />,     category: 'Productivity', description: 'Index presentation generation and AI-created reports.',      color: '#F4B400' },
+  { id: 'google-meet',     name: 'Google Meet',     icon: <GoogleMeetIcon />,       category: 'Productivity', description: 'Sync meeting data and AI-generated meeting summaries.',      color: '#00832d' },
+  { id: 'google-chat',     name: 'Google Chat',     icon: <GoogleChatIcon />,       category: 'Productivity', description: 'Index team communication and perform message analysis.',     color: '#00ac47' },
+  { id: 'google-maps',     name: 'Google Maps',     icon: <GoogleMapsIcon />,       category: 'Social',       description: 'Save travel memories, places, and location insights.',       color: '#4285F4' },
 
   // ─── Media (Coming Soon) ───────────────────────────────────────────
-  { id: 'youtube',         name: 'YouTube',         icon: <YouTubeIconOfficial />,  category: 'Creative',     description: 'Index saved videos, watch history, and learning.',           color: '#FF0000', comingSoon: true },
+  { id: 'youtube',         name: 'YouTube',         icon: <YouTubeIconOfficial />,  category: 'Creative',     description: 'Index saved videos, watch history, and learning.',           color: '#FF0000' },
 ];
