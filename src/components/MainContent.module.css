@@ -1,6 +1,6 @@
 .main {
-  height: 100%;
-  padding: 40px;
+  min-height: 100%;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
@@ -10,6 +10,40 @@
 /* Audit-only: tighter padding so header gap is removed */
 .auditMain {
   padding: 16px 24px 24px 24px;
+}
+
+/* ── Previously-missing classes referenced in TSX ─────────────────────────── */
+.pageHeroTitle {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.subHeader {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.availStatusText {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.platformDesc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* SOLO VIEWS (Feed, History, Timeline, etc.) */
@@ -32,7 +66,7 @@
 
 .soloTitle {
   font-family: var(--font-serif);
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text-primary);
@@ -117,19 +151,19 @@
 /* CHAT MESSAGES STYLES */
 .chatOutput {
   width: 100%;
-  max-width: 800px;
-  margin: 40px auto 0;
+  max-width: 720px;
+  margin: 24px auto 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding-bottom: 100px;
+  gap: 20px;
+  padding-bottom: 90px;
 }
 
 .chatMessage {
-  padding: 20px 24px;
+  padding: 14px 18px;
   border-radius: var(--radius-lg);
-  max-width: 90%;
-  font-size: 15px;
+  max-width: 88%;
+  font-size: 14px;
   line-height: 1.6;
   transition: var(--transition-main);
   animation: fadeInUp 0.3s ease-out;
@@ -162,7 +196,7 @@
 .markdownContent {
   word-break: break-word;
   line-height: 1.7;
-  font-size: 15px;
+  font-size: 14px;
 }
 .markdownContent p {
   margin: 0 0 8px 0;
@@ -198,10 +232,10 @@
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   transition: var(--transition-main);
   box-shadow: var(--shadow-sm);
 }
@@ -215,7 +249,7 @@
 }
 
 .statValue {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
   color: var(--text-primary);
   font-family: var(--font-mono);
@@ -233,7 +267,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px;
   transition: var(--transition-main);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
@@ -253,7 +287,7 @@
 }
 
 .threadTitle {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -282,8 +316,8 @@
 .threadPreview {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   background: var(--bg-secondary);
   border-radius: 12px;
 }
@@ -327,12 +361,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  max-width: 1000px;
+  max-width: 800px;
   margin: 0 auto;
   width: 100%;
-  height: calc(100vh - 64px); 
-  padding-bottom: 64px;
-  background-color: var(--bg-primary); /* Balanced Base */
+  height: calc(100vh - var(--header-height));
+  padding-bottom: 40px;
+  background-color: var(--bg-primary);
 }
 
 .heroContent {
@@ -344,21 +378,21 @@
 }
 
 .brandDisplayTitle {
-  font-size: 64px;
+  font-size: 44px;
   font-weight: 800;
-  letter-spacing: -2px;
-  margin-bottom: 32px; /* Increased margin below title */
+  letter-spacing: -1.5px;
+  margin-bottom: 20px;
   color: var(--text-primary);
   font-family: var(--font-serif);
 }
 
 .heroSummary {
   display: flex;
-  flex-direction: row; /* Horizontal layout */
+  flex-direction: row;
   align-items: center;
-  gap: 12px; /* Spacing between icon and text */
-  margin-bottom: 48px;
-  font-size: 14px;
+  gap: 8px;
+  margin-bottom: 28px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -371,7 +405,7 @@
 
 .commandContainer {
   width: 100%;
-  max-width: 680px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
@@ -425,19 +459,20 @@
 
 .quickActions {
   display: flex;
-  gap: 16px;
-  margin-top: 64px;
+  gap: 10px;
+  margin-top: 32px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .actionCard {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  padding: 16px 32px;
+  padding: 11px 22px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   transition: all var(--transition-main);
   box-shadow: var(--shadow-md);
   display: flex;
@@ -788,10 +823,10 @@
 
 .actionTitle {
   margin: 0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 
 .confidenceBadge {
@@ -807,17 +842,17 @@
 
 .actionDescription {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.6;
-  margin: 0 0 24px 0;
+  margin: 0 0 16px 0;
 }
 
 .proposedActionBox {
-  background: rgba(0, 209, 255, 0.05); /* Tinted with accent instead of cement */
-  padding: 20px;
-  border-radius: 12px;
+  background: rgba(0, 209, 255, 0.05);
+  padding: 14px;
+  border-radius: 10px;
   border-left: 4px solid var(--accent-green);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   border: 1px solid rgba(0, 209, 255, 0.1);
 }
 
@@ -834,7 +869,7 @@
 .proposedText {
   color: var(--text-primary);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .actionButtons {
@@ -846,10 +881,10 @@
   background: var(--text-primary);
   color: var(--bg-primary);
   border: none;
-  padding: 12px 28px;
-  border-radius: 10px;
+  padding: 9px 20px;
+  border-radius: 9px;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: var(--transition-main);
 }
@@ -864,10 +899,10 @@
   background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
-  padding: 12px 28px;
-  border-radius: 10px;
+  padding: 9px 20px;
+  border-radius: 9px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: var(--transition-main);
 }
@@ -892,37 +927,37 @@
 }
 
 
-/* EMPTY STATES (Action Queue, etc.) */
+/* EMPTY STATES (History, Feed, Action Queue) */
 .emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
+  padding: 48px 20px;
   text-align: center;
   background: var(--bg-card);
   border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-xl);
-  margin-top: 40px;
+  margin-top: 24px;
 }
 
 .emptyIcon {
-  font-size: 48px;
-  margin-bottom: 24px;
+  font-size: 36px;
+  margin-bottom: 16px;
   display: block;
 }
 
 .emptyTitle {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-primary);
-  margin: 0 0 12px 0;
-  letter-spacing: -0.5px;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
 }
 
 .emptyDescription {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 13px;
   max-width: 400px;
   line-height: 1.6;
   margin: 0;
@@ -1012,4 +1047,21 @@
   letter-spacing: 0.5px;
 }
 
+/* ── Ember theme overrides ── */
+/* Orange bg elements → white text */
+[data-theme='ember'] .filterChipActive { 
+  background: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+  color: #FFFFFF !important; 
+}
+[data-theme='ember'] .commandSendBtn { color: #FFFFFF; }
+[data-theme='ember'] .miniSyncBtn { color: #FFFFFF; }
+[data-theme='ember'] .readinessCard:hover .addIndicator { color: #FFFFFF; }
+
+/* Hardcoded cyan → orange */
+[data-theme='ember'] .proposedActionBox {
+  background: rgba(224, 106, 59, 0.05);
+  border-color: rgba(224, 106, 59, 0.15);
+  border-left-color: var(--accent-primary);
+}
 

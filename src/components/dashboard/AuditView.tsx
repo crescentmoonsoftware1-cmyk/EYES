@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import styles from './AuditView.module.css';
 import type { ReputationAudit, AuditSummary } from '@/types/dashboard';
+import { AnimatedNumber } from '../common/AnimatedNumber';
 import {
   ShieldIcon,
   PrivacyEyeIcon,
@@ -192,7 +193,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
         <div className={styles.auditGrid}>
           {/* PRIMARY ACTION */}
-          <div className={styles.mainAuditCard} onClick={() => handleStartAudit('full')}>
+          <div className={`${styles.mainAuditCard} magnetic-card stagger-2`} onClick={() => handleStartAudit('full')}>
             <div className={styles.cardHeader}>
               <div className={styles.cardBadge}>RECOMMENDED</div>
               <div className={styles.cardIcon}><ShieldIcon size={32} /></div>
@@ -201,24 +202,24 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               <h3>Full Reputation Audit</h3>
               <p>A comprehensive 360° scan of all connected platforms to detect sentiment shifts, commitments, and privacy leaks.</p>
             </div>
-            <button className={styles.primaryAuditBtn} disabled={isInitiating}>
+            <button className={`${styles.primaryAuditBtn} liquid-hover`} disabled={isInitiating}>
               {isInitiating ? 'INITIALIZING...' : 'START FULL SCAN'}
             </button>
           </div>
 
           {/* SPECIALIZED ACTIONS */}
-          <div className={styles.secondaryAuditGrid}>
-            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('reputation')}>
+          <div className={`${styles.secondaryAuditGrid} stagger-3`}>
+            <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('reputation')}>
               <div className={styles.miniIcon}><ShieldIcon size={24} /></div>
               <h4>Investor / Reputation</h4>
               <p>"What will someone find when they run diligence on me?" Cold, clinical analysis of unfulfilled commitments, contradictions, and external risks.</p>
             </div>
-            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('behavioral')}>
+            <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('behavioral')}>
               <div className={styles.miniIcon}><OperationalLinkIcon size={24} /></div>
               <h4>Behavioral / Self</h4>
               <p>"What did I actually accomplish, and what slipped?" Analysis of follow-through, task loops, drift, and dropped commitments.</p>
             </div>
-            <div className={styles.miniAuditCard} onClick={() => handleStartAudit('hiring')}>
+            <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('hiring')}>
               <div className={styles.miniIcon}><SentimentChartIcon size={24} /></div>
               <h4>Hiring / Professional</h4>
               <p>"What does a recruiter or employer see?" Analysis of reliability, stakeholder communication quality, and professional red flags.</p>
@@ -226,7 +227,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </div>
         </div>
 
-        <div className={styles.readinessFooter}>
+        <div className={`${styles.readinessFooter} stagger-4`}>
           <div className={styles.readinessStatus}>
             <span className={styles.statusDot} />
             {summary
@@ -619,36 +620,42 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         </header>
 
         {/* 1. Horizontal Bento Metrics Bar */}
-        <div className={styles.metricsGrid}>
-          <div className={styles.metricCard}>
+        <div className={`${styles.metricsGrid} stagger-1`}>
+          <div className={`${styles.metricCard} magnetic-card`}>
             <div className={styles.metricHeader}>
               <span className={styles.metricLabel}>Total Footprint</span>
               <span className={styles.metricIcon}>🌐</span>
             </div>
-            <div className={styles.metricValue}>{activeAudit.mentionsCount || 0}</div>
+            <div className={styles.metricValue}>
+              <AnimatedNumber value={activeAudit.mentionsCount || 0} />
+            </div>
             <div className={styles.metricSubText}>Aggregated indexed mentions</div>
           </div>
-          <div className={styles.metricCard}>
+          <div className={`${styles.metricCard} magnetic-card`}>
             <div className={styles.metricHeader}>
               <span className={styles.metricLabel}>Sentiment Balance</span>
               <span className={styles.metricIcon} style={{ color: '#06b6d4' }}>🎭</span>
             </div>
-            <div className={styles.metricValue}>{((activeAudit.metadata?.sentimentBalance || 0) * 100).toFixed(0)}%</div>
+            <div className={styles.metricValue}>
+              <AnimatedNumber value={((activeAudit.metadata?.sentimentBalance || 0) * 100)} />%
+            </div>
             <div className={styles.metricSubText}>Positive linguistic alignment</div>
           </div>
-          <div className={styles.metricCard}>
+          <div className={`${styles.metricCard} magnetic-card`}>
             <div className={styles.metricHeader}>
               <span className={styles.metricLabel}>Extracted Promises</span>
               <span className={styles.metricIcon} style={{ color: '#10b981' }}>🤝</span>
             </div>
-            <div className={styles.metricValue}>{activeAudit.commitmentsCount || 0}</div>
+            <div className={styles.metricValue}>
+              <AnimatedNumber value={activeAudit.commitmentsCount || 0} />
+            </div>
             <div className={styles.metricSubText}>Identified active commitments</div>
           </div>
         </div>
 
         {/* 2. Main Two-Column Layout */}
         <div className={styles.grid}>
-          <div className={styles.mainContent}>
+          <div className={`${styles.mainContent} stagger-2`}>
             <section className={styles.summaryBox}>
               <div className={styles.summaryHeader}>
                 <h2 className={styles.sectionHeading}>Executive Summary</h2>
@@ -664,28 +671,28 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
               {/* Key Observations Grid */}
               <div className={styles.obsGrid}>
-                <div className={styles.obsCard}>
+                <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Compliance Rate</div>
                   <div className={styles.obsValue}>
                     {activeAudit.metadata?.complianceRate || `${(100 - activeAudit.riskScore * 6.5).toFixed(1)}%`}
                   </div>
                 </div>
-                <div className={styles.obsCard}>
+                <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Linguistic Trajectory</div>
                   <div className={styles.obsValue} style={{ textTransform: 'capitalize' }}>
                     {activeAudit.metadata?.trajectory || (activeAudit.riskScore > 6 ? 'attention required' : activeAudit.riskScore > 3 ? 'stable' : 'optimal')}
                   </div>
                 </div>
-                <div className={styles.obsCard}>
+                <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Tracked Signals</div>
                   <div className={styles.obsValue}>
-                    {activeAudit.metadata?.riskFindings?.length || (activeAudit.riskScore > 0 ? activeAudit.riskScore * 2 + 1 : 0)} Identified
+                    <AnimatedNumber value={activeAudit.metadata?.riskFindings?.length || (activeAudit.riskScore > 0 ? activeAudit.riskScore * 2 + 1 : 0)} /> Identified
                   </div>
                 </div>
-                <div className={styles.obsCard}>
+                <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Behavioral Footprint</div>
                   <div className={styles.obsValue}>
-                    {(activeAudit.mentionsCount || 0).toLocaleString()} Scanned
+                    <AnimatedNumber value={activeAudit.mentionsCount || 0} /> Scanned
                   </div>
                 </div>
               </div>
@@ -703,7 +710,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             </section>
           </div>
 
-          <aside className={styles.sidebarCard}>
+          <aside className={`${styles.sidebarCard} stagger-3`}>
             <div className={styles.sidebarSectionTitle}>RISK PROFILE</div>
             {/* Animated Risk Dial SVG */}
             {(() => {

@@ -22,6 +22,25 @@ export async function POST(request: Request) {
 
     console.log(`[Audit API] Authenticated User: ${user.id}`);
 
+    // 1b. Payment gate — set AUDIT_REQUIRE_PAYMENT=true when Stripe is live.
+    // Until then, leave it unset (or false) to keep audits open during development.
+    if (process.env.AUDIT_REQUIRE_PAYMENT === 'true') {
+      const { data: profile } = await userClient
+        .from('user_profiles')
+        .select('plan')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const hasPaidPlan = profile?.plan && profile.plan !== 'free';
+      if (!hasPaidPlan) {
+        console.warn(`[Audit API] Payment required — user ${user.id.slice(0, 8)} on free plan.`);
+        return NextResponse.json(
+          { error: 'Payment required. Please upgrade your plan to generate a Reputation Audit.' },
+          { status: 402 }
+        );
+      }
+    }
+
     // 2. Switch to Admin Client for database operations (RLS bypass)
     const supabase = await createAdminClient();
 

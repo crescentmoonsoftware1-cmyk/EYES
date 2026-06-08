@@ -148,10 +148,16 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
       }
 
       if (table === 'raw_events' || table === 'memories') {
+        const queryChain: any = {
+          eq: vi.fn(() => queryChain),
+          in: vi.fn(() => queryChain),
+          not: vi.fn(() => queryChain),
+          order: vi.fn(() => queryChain),
+          limit: vi.fn(() => queryChain),
+          then: (resolve: any) => resolve({ count: totalMemories, data: [], error: null }),
+        };
         return {
-          select: vi.fn(() => ({
-            eq: vi.fn(async () => ({ count: totalMemories, error: null })),
-          })),
+          select: vi.fn(() => queryChain),
         };
       }
 
@@ -162,6 +168,17 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
               eq: vi.fn(async () => ({ data: [], error: null })),
             })),
           })),
+        };
+      }
+
+      if (table === 'action_extraction_log') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+            })),
+          })),
+          upsert: vi.fn(async () => ({ error: null })),
         };
       }
 

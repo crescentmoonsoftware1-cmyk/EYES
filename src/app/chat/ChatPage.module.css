@@ -41,16 +41,16 @@
   position: relative;
   max-width: 900px;
   margin: 0 auto;
-  padding: 0 40px;
+  padding: 0 24px;
 }
 
 .messageList {
   flex: 1;
   overflow-y: auto;
-  padding: 40px 0 140px 0;
+  padding: 24px 0 100px 0;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 20px;
 }
 
 .messageList::-webkit-scrollbar {
@@ -79,9 +79,9 @@
 
 .messageBubble {
   max-width: 85%;
-  padding: 20px 24px;
+  padding: 14px 18px;
   border-radius: var(--radius-lg);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   position: relative;
   animation: fadeInUp 0.3s ease-out;
@@ -123,8 +123,8 @@
 /* Rendered markdown inside AI messages */
 .markdownContent {
   word-break: break-word;
-  line-height: 1.75;
-  font-size: 15px;
+  line-height: 1.7;
+  font-size: 14px;
 }
 
 .markdownContent p {
@@ -173,7 +173,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 40px;
+  padding: 24px;
   background: linear-gradient(to top, var(--bg-primary) 60%, transparent);
   z-index: 10;
 }
@@ -236,10 +236,10 @@
 }
 
 .brandTitle {
-  font-size: 48px;
+  font-size: 32px;
   font-weight: 800;
-  letter-spacing: -2px;
-  margin-bottom: 12px;
+  letter-spacing: -1.2px;
+  margin-bottom: 8px;
   color: var(--text-primary);
   font-family: var(--font-serif);
 }

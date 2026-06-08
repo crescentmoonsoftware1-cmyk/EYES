@@ -56,24 +56,28 @@ export async function PUT(req: NextRequest) {
     excludedSenders: Array.isArray(body.excludedSenders) ? body.excludedSenders : [],
   };
 
-  const promises: Promise<any>[] = [
-    supabase
-      .from('connector_settings')
-      .upsert({
-        user_id: user.id,
-        platform: 'user_global',
-        data_types: [JSON.stringify(settings)],
-        sync_enabled: true,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,platform' }),
+  const promises: Promise<{ error: unknown }>[] = [
+    Promise.resolve(
+      supabase
+        .from('connector_settings')
+        .upsert({
+          user_id: user.id,
+          platform: 'user_global',
+          data_types: [JSON.stringify(settings)],
+          sync_enabled: true,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,platform' })
+    ),
   ];
 
   if (body.gdprConsent !== undefined) {
     promises.push(
-      supabase
-        .from('user_profiles')
-        .update({ behavior_logging_consent: body.gdprConsent })
-        .eq('user_id', user.id)
+      Promise.resolve(
+        supabase
+          .from('user_profiles')
+          .update({ behavior_logging_consent: body.gdprConsent })
+          .eq('user_id', user.id)
+      )
     );
   }
 

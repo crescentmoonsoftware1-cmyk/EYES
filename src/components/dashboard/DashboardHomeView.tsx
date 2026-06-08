@@ -4,6 +4,7 @@ import React from 'react';
 import styles from '../MainContent.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { PlatformStatus } from '@/types/dashboard';
+import { AnimatedNumber } from '../common/AnimatedNumber';
 
 interface PlatformConfig {
   id: string;
@@ -52,7 +53,7 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
     };
 
     return (
-      <div key={p.id} className={styles.readinessCard} onClick={startAuth} style={{ cursor: 'pointer' }}>
+      <div key={p.id} className={`${styles.readinessCard} magnetic-card`} onClick={startAuth} style={{ cursor: 'pointer' }}>
         <div className={styles.cardHeader}>
           <div
             className={styles.readinessIcon}
@@ -129,28 +130,23 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
   return (
     <div className={styles.readinessContainer}>
       {/* High-Contrast Live Indexing Counter Hero */}
-      <div style={{ marginBottom: '48px', paddingBottom: '32px', borderBottom: '1px solid var(--border-subtle)' }}>
-        <h1 className={styles.pageHeroTitle} style={{ textAlign: 'left', marginBottom: '24px' }}>Neural Archive</h1>
-        <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ padding: '20px 32px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-             <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Total Memories Indexed</span>
-             <div style={{ fontSize: '42px', fontWeight: '900', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1 }}>
-               {liveStatus ? liveStatus.memoriesIndexed.toLocaleString() : '---'}
+      <div style={{ marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <h1 className={styles.pageHeroTitle} style={{ textAlign: 'left', marginBottom: '16px' }}>Neural Archive</h1>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="stagger-1" style={{ padding: '14px 22px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+             <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Total Memories Indexed</span>
+             <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1 }}>
+               {liveStatus ? <AnimatedNumber value={liveStatus.memoriesIndexed} /> : '---'}
              </div>
           </div>
           
-          {liveStatus?.isSyncing && (
-             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 24px', borderRadius: '99px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--text-primary)', fontSize: '14px', fontWeight: '700', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-               <span className={styles.typingCursor} style={{ background: '#10b981', width: '10px', height: '10px', borderRadius: '50%' }}></span>
-               Engine Active: Syncing {liveStatus.activeSyncs.length} stream(s)...
-             </div>
-          )}
+
         </div>
       </div>
 
 
       {/* Discovery Hub Layout */}
-      <div className={styles.readinessSection}>
+      <div className={`${styles.readinessSection} stagger-3`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
           <h3 className={styles.subHeader} style={{ marginBottom: 0 }}>● PRIMARY CONNECTORS</h3>
           

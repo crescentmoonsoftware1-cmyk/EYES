@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 24px 16px;
   animation: fadeInUp 0.4s ease-out;
 }
 
@@ -10,8 +10,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 48px;
-  padding-bottom: 32px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -42,7 +42,7 @@
 
 .mainTitle {
   font-family: var(--font-serif);
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
@@ -50,8 +50,8 @@
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 15px;
-  margin-top: 8px;
+  font-size: 13px;
+  margin-top: 6px;
 }
 
 .refreshBtn {
@@ -539,7 +539,7 @@
 
 .emptyTitle {
   font-family: var(--font-serif);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 4px;
@@ -680,4 +680,27 @@
   .filterChips {
     flex-wrap: wrap;
   }
+}
+
+/* ── Ember theme overrides ── */
+/* Hardcoded cyan → orange */
+[data-theme='ember'] .neuralPulseRing { background: rgba(224, 106, 59, 0.08); }
+[data-theme='ember'] .neuralPulseRing::after { border-color: rgba(224, 106, 59, 0.25); }
+[data-theme='ember'] .scanRing { border-color: rgba(224, 106, 59, 0.2); }
+[data-theme='ember'] .scanRingInner { border-color: rgba(224, 106, 59, 0.4); }
+[data-theme='ember'] .scanRingPulse { background: rgba(224, 106, 59, 0.15); }
+[data-theme='ember'] .confidence {
+  background: rgba(224, 106, 59, 0.12);
+  border-color: rgba(224, 106, 59, 0.25);
+}
+[data-theme='ember'] .approveBtn:hover:not(:disabled) {
+  background: var(--accent-primary);
+  color: #FFFFFF;
+  box-shadow: 0 4px 15px rgba(224, 106, 59, 0.35);
+}
+/* Active chip in ActionQueue */
+[data-theme='ember'] .chipActive { 
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #FFFFFF; 
 }

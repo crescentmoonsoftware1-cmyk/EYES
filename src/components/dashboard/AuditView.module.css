@@ -8,9 +8,6 @@
   justify-content: flex-start;
   gap: 12px;
   animation: fadeInUp 0.4s ease-out;
-  height: 100%;
-  max-height: 100%;
-  overflow-y: auto;
 }
 
 .auditHeader {
@@ -65,11 +62,11 @@
 
 .auditTitle {
   font-family: var(--font-serif);
-  font-size: 38px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
-  letter-spacing: -1.2px;
+  letter-spacing: -0.8px;
 }
 
 .auditMeta {
@@ -148,10 +145,10 @@
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 32px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   cursor: pointer;
   transition: all var(--transition-main);
   box-shadow: var(--shadow-sm);
@@ -183,18 +180,24 @@
 
 .cardIcon {
   font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
 }
 
 .cardBody h3 {
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 800;
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   color: var(--text-primary);
 }
 
 .cardBody p {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--text-secondary);
   margin: 0;
 }
@@ -204,11 +207,11 @@
   background: var(--text-primary);
   color: var(--bg-primary);
   border: none;
-  padding: 16px;
-  border-radius: 12px;
+  padding: 12px;
+  border-radius: 10px;
   font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 1px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: var(--transition-main);
 }
@@ -224,10 +227,10 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   transition: all var(--transition-main);
 }
@@ -269,6 +272,12 @@
 .miniIcon {
   font-size: 20px;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .miniAuditCard h4 {
@@ -559,7 +568,7 @@
 }
 
 .metricValue {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1;
@@ -575,9 +584,8 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 16px;
-  align-items: stretch;
+  align-items: start;
   flex: 1;
-  min-height: 0;
 }
 
 .mainContent {
@@ -585,8 +593,6 @@
   flex-direction: column;
   gap: 0;
   min-width: 0;
-  height: 100%;
-  min-height: 0;
 }
 
 /* RESULT PREVIEW (Summary Box) */
@@ -734,7 +740,6 @@
     0 20px 40px rgba(0, 0, 0, 0.4), 
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   width: 100%;
-  height: 100%;
   min-height: 520px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1711,4 +1716,20 @@
     rgba(255, 255, 255, 0.15) 100%
   );
   mix-blend-mode: overlay;
+}
+
+/* ── Ember theme overrides ── */
+[data-theme='ember'] .downloadBtnPremium {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-soft) 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(224, 106, 59, 0.5);
+  box-shadow: 
+    0 4px 15px rgba(224, 106, 59, 0.3),
+    0 1px 3px rgba(224, 106, 59, 0.3);
+}
+
+[data-theme='ember'] .downloadBtnPremium:hover:not(:disabled) {
+  box-shadow: 
+    0 8px 25px rgba(224, 106, 59, 0.45),
+    0 2px 6px rgba(224, 106, 59, 0.5);
 }

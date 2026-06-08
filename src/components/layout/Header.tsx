@@ -11,9 +11,12 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const toggleTheme = () => {
-    setGlobalTheme(theme === 'dark' ? 'light' : 'dark');
+  const cycleTheme = () => {
+    const next = theme === 'dark' ? 'light' : theme === 'light' ? 'ember' : 'dark';
+    setGlobalTheme(next);
   };
+  void cycleTheme; // kept in case needed later
+
 
   const avatarImageUrl = user?.avatar && user.avatar.length > 2 ? user.avatar : null;
   const avatarInitial = user?.avatar && user.avatar.length <= 2 ? user.avatar : user?.name?.[0] || 'U';
@@ -45,14 +48,32 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       </div>
 
       <div className={styles.right}>
-        <button 
-          className={styles.themeToggleBtn} 
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {theme === 'dark' ? <MoonIcon /> : <SunIcon />}
-        </button>
+        <div className={styles.themeGroup}>
+          <button
+            className={`${styles.themeBtn} ${theme === 'dark' ? styles.themeBtnActive : ''}`}
+            onClick={() => setGlobalTheme('dark')}
+            title="Dark Mode"
+            aria-label="Dark Mode"
+          >
+            <MoonIcon />
+          </button>
+          <button
+            className={`${styles.themeBtn} ${theme === 'light' ? styles.themeBtnActive : ''}`}
+            onClick={() => setGlobalTheme('light')}
+            title="Light Mode"
+            aria-label="Light Mode"
+          >
+            <SunIcon />
+          </button>
+          <button
+            className={`${styles.themeBtn} ${styles.themeBtnEmber} ${theme === 'ember' ? styles.themeBtnActive : ''}`}
+            onClick={() => setGlobalTheme('ember')}
+            title="Ember Mode"
+            aria-label="Ember Mode"
+          >
+            <EmberIcon />
+          </button>
+        </div>
 
         <div className={styles.userMenuContainer} ref={menuRef}>
           <button 
@@ -121,4 +142,13 @@ function SunIcon() {
 
 function LogoutIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+}
+
+function EmberIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" />
+      <path d="M12 6c0 3-2 5-2 7a2 2 0 0 0 4 0c0-2-2-4-2-7z" fill="currentColor" stroke="none" />
+    </svg>
+  );
 }

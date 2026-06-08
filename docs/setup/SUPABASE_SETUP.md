@@ -65,7 +65,7 @@ This creates core tables, RLS policies, and required upsert constraints.
 
 Run `SUPABASE_VECTOR_SEARCH.sql` in the same SQL Editor.
 
-This creates `match_embeddings(...)`, which powers memory retrieval in chat.
+This creates `match_memories(...)` and `hybrid_search(...)`, which power memory retrieval in chat. Note: `match_embeddings` was dropped in migration 030 and replaced by `match_memories`.
 
 ### 3. **Ensure `vector` Extension Is Available**
 
@@ -115,10 +115,10 @@ Then verify vector search function exists:
 ```sql
 SELECT proname
 FROM pg_proc
-WHERE proname = 'match_embeddings';
+WHERE proname IN ('match_memories', 'hybrid_search');
 ```
 
-You should get one row named `match_embeddings`.
+You should get two rows: `match_memories` and `hybrid_search`.
 
 ### 6. **Configure Unattended Scheduler**
 

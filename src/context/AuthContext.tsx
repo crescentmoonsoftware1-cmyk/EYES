@@ -34,12 +34,14 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (name: string, email: string, password: string) => Promise<AuthResult>;
   loginWithGoogle: () => Promise<AuthResult>;
+  loginWithGithub: () => Promise<AuthResult>;
+  loginWithDiscord: () => Promise<AuthResult>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<AuthResult>;
   supabase: ReturnType<typeof createClient>;
   updateUser: (updates: Partial<User>) => Promise<AuthResult>;
-  theme: 'dark' | 'light';
-  setGlobalTheme: (theme: 'dark' | 'light') => void;
+  theme: 'dark' | 'light' | 'ember';
+  setGlobalTheme: (theme: 'dark' | 'light' | 'ember') => void;
 }
 
 type AuthMetadata = {
@@ -131,12 +133,25 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+const PUBLIC_ROUTES = [
+  '/',
+  '/login',
+  '/signup',
+  '/privacy',
+  '/cookie-policy',
+  '/security',
+  '/disclaimer',
+  '/accessibility',
+  '/terms',
+  '/california-notice'
+];
 
+const GUEST_ONLY_ROUTES = ['/login', '/signup'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light' | 'ember'>('dark');
   const [showAuthFallback, setShowAuthFallback] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -314,7 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Theme init — sole purpose of this effect after hook extraction
   useEffect(() => {
     let mounted = true;
-    const savedTheme = localStorage.getItem('eyes-theme') as 'dark' | 'light';
+    const savedTheme = localStorage.getItem('eyes-theme') as 'dark' | 'light' | 'ember';
     if (savedTheme && mounted) {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -340,7 +355,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    const isPublic = ['/login', '/signup'].includes(pathname);
+    const isPublic = PUBLIC_ROUTES.includes(pathname);
     const isOAuthCallback = pathname.includes('/connect') || pathname.startsWith('/auth'); // M8: /auth/callback was missing
     const justSuccess =
       typeof window !== 'undefined' &&
@@ -389,7 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           router.replace('/login');
         }
       }, delay);
-    } else if (isPublic) {
+    } else if (isPublic && pathname !== '/') {
       router.replace('/');
     }
 
@@ -569,6 +584,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   }, [supabase]);
 
+  const loginWithGithub = useCallback(async (): Promise<AuthResult> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+      }
+    });
+    if (error) return { success: false, message: error.message };
+    return { success: true };
+  }, [supabase]);
+
+  const loginWithDiscord = useCallback(async (): Promise<AuthResult> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+      }
+    });
+    if (error) return { success: false, message: error.message };
+    return { success: true };
+  }, [supabase]);
+
   const resetPassword = useCallback(async (email: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined,  // M6: SSR guard
@@ -641,7 +678,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, user]);
 
-  const setGlobalTheme = useCallback((newTheme: 'dark' | 'light') => {
+  const setGlobalTheme = useCallback((newTheme: 'dark' | 'light' | 'ember') => {
     setTheme(newTheme);
     if (typeof document !== 'undefined') document.documentElement.setAttribute('data-theme', newTheme); // L9: SSR guard
     localStorage.setItem('eyes-theme', newTheme);
@@ -659,12 +696,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (isLoading) return null;
 
-  const isPublic = ['/login', '/signup'].includes(pathname);
+  const isPublic = PUBLIC_ROUTES.includes(pathname);
   if (!user && !isPublic) return null;
-  if (user && isPublic) return null;
+
+  const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
+  if (user && isGuestOnly) return null;
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, loginWithGoogle, logout, resetPassword, supabase, updateUser, theme, setGlobalTheme }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, loginWithGoogle, loginWithGithub, loginWithDiscord, logout, resetPassword, supabase, updateUser, theme, setGlobalTheme }}>
       {children}
     </AuthContext.Provider>
   );

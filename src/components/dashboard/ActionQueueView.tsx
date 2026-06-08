@@ -442,7 +442,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
               {/* Recently handled section removed as requested */}
             </div>
           ) : (
-            <div className={styles.cardList}>
+            <div className={`${styles.cardList} stagger-1`}>
               {filtered.map(action => {
                 const platformObj = ALL_POSSIBLE_PLATFORMS.find(p => p.id === action.platform.toLowerCase());
                 const isProcessing = processingId === action.id;
@@ -454,7 +454,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                   <div 
                     key={action.id} 
                     id={action.id}
-                    className={`${styles.actionCard} ${isExpanded ? styles.expanded : ''}`}
+                    className={`${styles.actionCard} magnetic-card stagger-2 ${isExpanded ? styles.expanded : ''}`}
                     onClick={(e) => {
                       // Prevent toggling if they are interacting with buttons or inputs
                       if ((e.target as HTMLElement).closest('button, input, textarea')) return;

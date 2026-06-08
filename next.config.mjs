@@ -2,9 +2,6 @@ import { withSentryConfig } from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: ['127.0.0.1', '10.94.213.159', '192.168.1.15', 'localhost'],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   // pdfkit uses __dirname to resolve .afm font files at runtime.
   // Bundling it breaks that resolution — mark it as external so Node
   // requires it natively in the Vercel serverless environment.

@@ -11,7 +11,9 @@ import crypto from 'crypto';
 // Paste your Anthropic API key in .env.local as ANTHROPIC_API_KEY=...
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
-let anthropicEnabled = Boolean(ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith('sk-ant-'));
+// anthropicEnabled is a per-invocation const — no module-level mutation so it
+// is safe on Vercel serverless where every cold start resets module state.
+const anthropicEnabled = Boolean(ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.startsWith('sk-ant-'));
 
 // Groq — Ludicrous speed chat generation
 const GROQ_KEYS = [
@@ -21,7 +23,6 @@ const GROQ_KEYS = [
 ].filter(Boolean) as string[];
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
-let currentGroqKeyIndex = 0;
 
 // OpenRouter — secondary chat provider (free models, OpenAI-compatible)
 // Paste your OpenRouter API key in .env.local as OPENROUTER_API_KEY=...
@@ -42,8 +43,10 @@ const OPENROUTER_FREE_MODELS = [
 ];
 
 // ── Model cooldown cache: skip recently-failed models instantly ────────────────
+// NOTE: This is in-process memory. On Vercel, each cold start resets it.
+// It is still effective within a single function execution (serial requests).
 const modelCooldowns = new Map<string, number>();
-const COOLDOWN_MS = 300_000; // 5 minutes — longer cooldown to avoid hammering exhausted models
+const COOLDOWN_MS = 300_000; // 5 minutes
 
 function isModelCoolingDown(model: string): boolean {
   const failedAt = modelCooldowns.get(model);
@@ -59,52 +62,30 @@ function markModelFailed(model: string): void {
   modelCooldowns.set(model, Date.now());
 }
 
-// ── Gemini Key Pool for Rate Limit Mitigation ────────────────────────────────
+// ── Gemini Key Pool ────────────────────────────────────────────────────────────
 const GEMINI_KEYS = [
   process.env.GEMINI_API_KEY,
   process.env.GEMINI_API_KEY_2,
   process.env.GEMINI_API_KEY_3,
 ].filter(Boolean) as string[];
 
-let currentGeminiKeyIndex = 0;
+// Key selection is stateless (random per call) — safe across Vercel cold starts.
+// No module-level index variable is mutated.
 
-// NOTE: No global genAI instance — always use rotating key pool via getNextGeminiKey()
-
-function getNextGeminiKey(): string | null {
+/** Returns a random Gemini key from the pool (stateless — safe on serverless). */
+function pickGeminiKey(): string | null {
   if (GEMINI_KEYS.length === 0) return null;
-  // Randomize selection slightly to avoid predictable patterns
-  if (Math.random() > 0.7 && GEMINI_KEYS.length > 1) {
-      currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % GEMINI_KEYS.length;
-  }
-  return GEMINI_KEYS[currentGeminiKeyIndex];
+  return GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)];
 }
 
-function rotateGeminiKey() {
-  if (GEMINI_KEYS.length > 1) {
-    currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % GEMINI_KEYS.length;
-    console.log(`[AI] Rotated to Gemini Key ${currentGeminiKeyIndex + 1}`);
-  }
-}
-
-// ── Groq Key Pool for Rate Limit Mitigation ──────────────────────────────────
-function getNextGroqKey(): string | null {
+/** Returns a random Groq key from the pool (stateless — safe on serverless). */
+function pickGroqKey(): string | null {
   if (GROQ_KEYS.length === 0) return null;
-  return GROQ_KEYS[currentGroqKeyIndex];
+  return GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)];
 }
 
-function rotateGroqKey() {
-  if (GROQ_KEYS.length > 1) {
-    currentGroqKeyIndex = (currentGroqKeyIndex + 1) % GROQ_KEYS.length;
-    console.log(`[AI] Rotated to Groq Key ${currentGroqKeyIndex + 1}`);
-  }
-}
-
-// Helper: Add micro-delay (jitter) to prevent bot detection
+// sleep helper — used for REACTIVE jitter only (after a 429 error, not proactively).
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const addJitter = async () => {
-  const jitterMs = Math.floor(Math.random() * 1000) + 500; // 500ms - 1500ms
-  await sleep(jitterMs);
-};
 
 // Gemini — sole embedding provider (gemini-embedding-001, free tier, 1024 dims)
 
@@ -191,7 +172,7 @@ async function handleEmbedding(text: string) {
   const maxAttempts = GEMINI_KEYS.length > 0 ? GEMINI_KEYS.length : 1;
 
   while (attempts < maxAttempts) {
-    const key = getNextGeminiKey();
+    const key = pickGeminiKey();
     if (!key) {
       console.error('[AI] No GEMINI_API_KEY is set — cannot generate embeddings.');
       return null;
@@ -200,9 +181,6 @@ async function handleEmbedding(text: string) {
     try {
       const genAI = new GoogleGenerativeAI(key);
       const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
-      
-      // Inject stealth jitter before request
-      await addJitter();
 
       const result = await model.embedContent({
         content: { role: 'user', parts: [{ text: input }] },
@@ -210,36 +188,37 @@ async function handleEmbedding(text: string) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         outputDimensionality: EMBED_DIMS,
       } as Parameters<typeof model.embedContent>[0]);
-      
-      console.log(`[AI] Gemini embedding OK (Key ${currentGeminiKeyIndex + 1})`);
+
+      console.log('[AI] Gemini embedding OK');
       return { embedding: Array.from(result.embedding.values) };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn(`[AI] Gemini embedding failed on Key ${currentGeminiKeyIndex + 1}:`, errMsg);
-      
+      console.warn('[AI] Gemini embedding failed:', errMsg);
+
       if (errMsg.includes('429') || errMsg.toLowerCase().includes('too many requests') || errMsg.includes('403') || errMsg.toLowerCase().includes('forbidden') || errMsg.toLowerCase().includes('denied')) {
-         rotateGeminiKey();
-         attempts++;
-         if (attempts < maxAttempts) {
-           console.log(`[AI] API Error hit (429/403). Retrying with next key...`);
-         }
+        // Reactive jitter — only after a rate-limit hit, not proactively
+        attempts++;
+        if (attempts < maxAttempts) {
+          const jitterMs = Math.floor(Math.random() * 1000) + 500;
+          console.log(`[AI] Rate limit hit. Jitter ${jitterMs}ms then retrying...`);
+          await sleep(jitterMs);
+        }
       } else {
         // Break on other non-recoverable errors
         break;
       }
     }
   }
-  
-  console.error('[AI] All Gemini keys exhausted or failed.');
+
+  console.error('[AI] All Gemini embedding attempts failed.');
   return null;
 }
 
 /**
  * Internal: Handle Chat
- * Priority: 1) OpenRouter (primary, free)  2) Claude (when credits available)  3) Gemini Flash (last resort)
+ * Priority: 1) Groq (fast) 2) OpenRouter (primary, free) 3) Claude (paid) 4) Gemini Flash (last resort)
  */
 async function handleChat(messages: AIHistoryMessage[], system: string, preference: AIPreference) {
-  // L6: 'json' alone was too broad — any chat about JSON would cap tokens at 500
   const isClassification = system.includes('commitment') || system.includes('classify') || system.includes('extract') || /return.*json|json only|valid json/i.test(system);
   
   const history = messages
@@ -249,11 +228,11 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
       content: m.content 
     }));
 
-  // ── 0. GROQ (LUDICROUS SPEED) — with key rotation on 429 ─────────────────
+  // ── 0. GROQ (LUDICROUS SPEED) — stateless key pick with per-invocation retry ───
   if (GROQ_KEYS.length > 0) {
     let groqAttempts = 0;
     while (groqAttempts < GROQ_KEYS.length) {
-      const groqKey = getNextGroqKey();
+      const groqKey = pickGroqKey();
       if (!groqKey) break;
       try {
         const groqMessages = [
@@ -261,9 +240,7 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
           ...history,
         ];
 
-        // ── Payload size guard: Groq rejects bodies > ~20KB with 413 ──────────
-        // Trim the CONTEXT FROM ARCHIVE section progressively until payload fits.
-        // The instruction rules (top of system prompt) are always preserved.
+        // ── Payload size guard: Groq rejects bodies > ~20KB with 413 ──────
         const GROQ_MAX_BYTES = 20_000;
         const contextMarkers = [
           'CONTEXT FROM ARCHIVE',
@@ -274,7 +251,6 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
         while (JSON.stringify({ model: GROQ_MODEL, messages: groqMessages, max_tokens: 1024, temperature: 0.1 }).length > GROQ_MAX_BYTES) {
           const sysMsg = groqMessages.find(m => m.role === 'system');
           if (!sysMsg) break;
-          // Find the earliest context section and cut 1000 chars from the end of it
           let cut = false;
           for (const marker of contextMarkers) {
             const idx = sysMsg.content.indexOf(marker);
@@ -286,7 +262,6 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
             }
           }
           if (!cut) {
-            // No context section found — hard cap the whole system message
             sysMsg.content = sysMsg.content.slice(0, 6000);
             trimmed = true;
             break;
@@ -315,21 +290,18 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
           else if (message?.content) text = message.content;
           else if (message && 'text' in message) text = (message as {text: string}).text;
           if (text) {
-            console.log(`[AI] Groq responded instantly (Key ${currentGroqKeyIndex + 1})`);
+            console.log('[AI] Groq responded instantly');
             return text;
           }
         } else if (res.status === 429) {
-          // Rate limit — rotate to next key and retry
-          console.warn(`[AI] Groq Key ${currentGroqKeyIndex + 1} rate-limited (429). Rotating...`);
-          rotateGroqKey();
+          console.warn('[AI] Groq key rate-limited (429). Retrying with different key...');
           groqAttempts++;
         } else {
-          // Other error — fall through immediately
           console.warn(`[AI] Groq non-OK (${res.status}), falling back...`);
           break;
         }
       } catch (err) {
-        console.warn(`[AI] Groq fetch failed, falling back:`, err);
+        console.warn('[AI] Groq fetch failed, falling back:', err);
         break;
       }
     }
@@ -400,7 +372,7 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
     }
   }
 
-  // ── 2. Claude (SECONDARY — unchanged, activates when credits are restored) ──
+  // ── 2. Claude (activates when credits are available) ─────────────────────
   const targetProvider = (preference === 'auto' || preference === 'claude') ? 'claude' : 'gemini';
 
   if (targetProvider === 'claude' && anthropicEnabled && anthropic) {
@@ -416,27 +388,26 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
       const contentBlock = response.content[0];
       if (contentBlock && contentBlock.type === 'text') return contentBlock.text;
     } catch (err: unknown) {
-      // If Anthropic reports billing/credit errors, disable it for the runtime to avoid noisy failures
       const errObj = err as Record<string, unknown>;
       const msg = String(
         (errObj?.['error'] as Record<string, unknown>)?.['message'] ??
         (err instanceof Error ? err.message : err)
       );
+      // Log the billing error and fall through to the next provider.
+      // anthropicEnabled is now a const — no module-level mutation.
       if (/credit|balance|billing|quota/i.test(msg)) {
-        anthropicEnabled = false;
-        console.warn('[AI Abstraction] Disabling Anthropic (billing/credit issue):', msg);
+        console.warn('[AI Abstraction] Anthropic billing/credit error — falling back:', msg);
       } else {
         console.warn('[AI Abstraction] Claude failed, falling back to Gemini:', msg);
       }
     }
   }
 
-  // ── 3. Gemini Flash (LAST RESORT) — with key rotation + model fallback ────
+  // ── 3. Gemini Flash (LAST RESORT) — stateless key pick + model fallback ───
   const maxGeminiAttempts = GEMINI_KEYS.length || 1;
   for (let attempt = 0; attempt < maxGeminiAttempts; attempt++) {
-    const geminiKey = getNextGeminiKey();
+    const geminiKey = pickGeminiKey();
     if (!geminiKey) break;
-    // Try primary model first, fall back to 2.0-flash if project not allowlisted for 2.5
     for (const chatModel of [GEMINI_CHAT_MODEL, GEMINI_CHAT_MODEL_FALLBACK]) {
       try {
         const rotatingGenAI = new GoogleGenerativeAI(geminiKey);
@@ -451,17 +422,15 @@ async function handleChat(messages: AIHistoryMessage[], system: string, preferen
           contentConfig.systemInstruction = system;
         }
         const result = await model.generateContent(contentConfig);
-        console.log(`[AI] Gemini chat OK (Key ${currentGeminiKeyIndex + 1}, model: ${chatModel})`);
+        console.log(`[AI] Gemini chat OK (model: ${chatModel})`);
         return result.response.text();
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         const isDenied = msg.includes('403') || msg.toLowerCase().includes('denied');
-        console.warn(`[AI] Gemini ${chatModel} Key ${currentGeminiKeyIndex + 1} failed: ${msg.slice(0, 80)}`);
-        if (!isDenied) break; // Non-403 error (e.g. quota) — skip model fallback, rotate key
-        // 403 = project not allowlisted for this model — try fallback model
+        console.warn(`[AI] Gemini ${chatModel} failed: ${msg.slice(0, 80)}`);
+        if (!isDenied) break;
       }
     }
-    rotateGeminiKey();
   }
   console.error('[AI Abstraction] All real-world models failed in handleChat.');
   return null;
@@ -485,7 +454,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
   if (GROQ_KEYS.length > 0) {
     let groqAttempts = 0;
     while (groqAttempts < GROQ_KEYS.length) {
-      const groqKey = getNextGroqKey();
+      const groqKey = pickGroqKey();
       if (!groqKey) break;
       try {
         const groqMessages = [
@@ -528,7 +497,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
         });
 
         if (res.ok && res.body) {
-          console.log(`[AI Stream] Groq streaming (${GROQ_MODEL}) (Key ${currentGroqKeyIndex + 1})`);
+          console.log(`[AI Stream] Groq streaming (${GROQ_MODEL})`);
           return new ReadableStream({
             async start(controller) {
               const reader = res.body!.getReader();
@@ -558,8 +527,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
             }
           });
         } else if (res.status === 429) {
-          console.warn(`[AI Stream] Groq Key ${currentGroqKeyIndex + 1} rate-limited (429). Rotating...`);
-          rotateGroqKey();
+          console.warn('[AI Stream] Groq key rate-limited (429). Retrying with different key...');
           groqAttempts++;
         } else {
           console.warn(`[AI Stream] Groq non-OK (${res.status}), falling back...`);
@@ -672,7 +640,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
             // If Claude failed mid-stream (e.g. 400 credit error), pipe Gemini output instead
             if (!wroteAnything) {
               try {
-                const fbKey = getNextGeminiKey();
+                const fbKey = pickGeminiKey();
                 if (fbKey) {
                   const fbGenAI = new GoogleGenerativeAI(fbKey);
                   const gModel = fbGenAI.getGenerativeModel({ model: GEMINI_CHAT_MODEL });
@@ -704,7 +672,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
       const maxAttempts = GEMINI_KEYS.length || 1;
       let succeeded = false;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const geminiKey = getNextGeminiKey();
+        const geminiKey = pickGeminiKey();
         if (!geminiKey) break;
         try {
           const rotatingGenAI = new GoogleGenerativeAI(geminiKey);
@@ -719,8 +687,7 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
           break;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[AI Stream] Gemini Key ${currentGeminiKeyIndex + 1} failed: ${msg.slice(0,80)}`);
-          rotateGeminiKey();
+          console.warn(`[AI Stream] Gemini fallback failed: ${msg.slice(0,80)}`);
         }
       }
       if (!succeeded) {
@@ -780,18 +747,24 @@ async function captureBehavioralData(data: {
     }
 
     // GDPR Requirement: SHA-256 of user_id + salt
-    const salt = process.env.BEHAVIOR_SALT || 'eyes-neural-moat';
-    const userHash = crypto.createHash('sha256').update(user.id + salt).digest('hex');
+    // BEHAVIOR_SALT must be set as an env var in production to ensure the hash
+    // is not predictable. The fallback is used only in local development.
+    const salt = process.env.BEHAVIOR_SALT;
+    if (!salt && process.env.NODE_ENV === 'production') {
+      console.warn('[AI Behavioral] BEHAVIOR_SALT env var is not set — user hash may be predictable. Set BEHAVIOR_SALT in your environment.');
+    }
+    const userHash = crypto.createHash('sha256').update(user.id + (salt || 'eyes-neural-moat')).digest('hex');
 
     await supabase.from('query_behavior').insert({
       user_hash: userHash,
-      query_text: data.queryText,
+      // Truncated to 50 chars to reduce PII re-identification risk (user_id is already hashed)
+      query_text: data.queryText.slice(0, 50),
       query_type: data.queryType,
       model_used: data.modelUsed,
       latency_ms: data.latencyMs,
       result_count: data.resultCount,
       response_length: data.responseLength,
-      sources_used: [], 
+      sources_used: [],
       coarse_geography: 'unknown',
       coarse_time_bucket: getTimeBucket()
     });

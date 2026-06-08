@@ -1,0 +1,402 @@
+/* --- Base Styles & Layout --- */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #fcfbf9;
+  color: #333;
+  overflow-x: hidden;
+}
+
+.container {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* --- Left Column: Scrolling Text --- */
+.text-column {
+  width: 45%;
+  padding: 0 5%;
+  z-index: 10;
+}
+
+.step {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0.2;
+  transition: opacity 0.6s ease;
+}
+
+.step.is-active {
+  opacity: 1;
+}
+
+.step h2 {
+  color: #df6c3b;
+  font-size: 0.85rem;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+}
+
+.step h1 {
+  font-size: 2.8rem;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.5px;
+}
+
+.step p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #555;
+}
+
+/* --- Right Column: 3D Sticky Visual Stage --- */
+.visual-column {
+  width: 55%;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
+
+.scene {
+  position: relative;
+  width: 450px;
+  height: 450px;
+  transform-style: preserve-3d;
+  transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* --- General Layer Styles --- */
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* --- Bottom Layer: Memory/Storage --- */
+.layer-bottom {
+  z-index: 1;
+  background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
+  opacity: 0;
+}
+
+.grid-pattern {
+  width: 85%;
+  height: 85%;
+  border: 2px dashed #ccc;
+  border-radius: 16px;
+}
+
+/* --- Middle Layer: EYES Core & The 3D Wires --- */
+.layer-mid {
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.core-node {
+  width: 80px;
+  height: 80px;
+  background: #df6c3b;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(223, 108, 59, 0.4);
+  transition: all 1s ease;
+  z-index: 5;
+}
+
+.core-node svg {
+  width: 40px;
+  height: 40px;
+  fill: white;
+}
+
+/* NEW: True 3D Point-to-Point Wires
+   Length is 241px to map the physical hypotenuse between center and elevated apps. */
+.wire {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 241px;
+  height: 3px;
+  background: linear-gradient(90deg, #df6c3b 0%, #f6946d 100%);
+  box-shadow: 0 0 12px rgba(223, 108, 59, 0.6);
+  transform-origin: 0 50%;
+  border-radius: 2px;
+  opacity: 0;
+  transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+  z-index: 1;
+}
+
+/* The Glowing Data Packets moving down the wires */
+.wire::after {
+  content: '';
+  position: absolute;
+  top: -2.5px;
+  left: 100%;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px 4px rgba(255, 255, 255, 0.9), 0 0 20px 8px rgba(223, 108, 59, 1);
+  opacity: 0;
+}
+
+/* --- Top Layer: App Sources --- */
+.layer-top {
+  z-index: 3;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-icon {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  background: #dce0e5;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 1s ease, background 0.3s ease;
+}
+
+.app-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.app-notion {
+  top: 12%;
+  left: 12%;
+}
+
+.app-gmail {
+  top: 12%;
+  right: 12%;
+}
+
+.app-discord {
+  bottom: 12%;
+  left: 12%;
+}
+
+.app-github {
+  bottom: 12%;
+  right: 12%;
+}
+
+/* --- UI Output Cards (State 3) --- */
+.output-card {
+  position: absolute;
+  background: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid #f0f0f0;
+}
+
+/* =========================================
+   ANIMATION STATES (SCROLL TRIGGERED)
+   ========================================= */
+
+/* STATE 1: Flat 2D */
+.scene.state-1 {
+  transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+}
+
+.scene.state-1 .layer-top {
+  transform: translateZ(1px);
+}
+
+.scene.state-1 .layer-mid {
+  transform: translateZ(0px);
+}
+
+.scene.state-1 .layer-bottom {
+  transform: translateZ(-1px);
+  opacity: 0;
+}
+
+/* Hide wires in flat state */
+.scene.state-1 .wire {
+  opacity: 0;
+}
+
+.scene.state-1 .wire-1 {
+  transform: rotateZ(-135deg) rotateY(0deg) scaleX(0);
+}
+
+.scene.state-1 .wire-2 {
+  transform: rotateZ(-45deg) rotateY(0deg) scaleX(0);
+}
+
+.scene.state-1 .wire-3 {
+  transform: rotateZ(135deg) rotateY(0deg) scaleX(0);
+}
+
+.scene.state-1 .wire-4 {
+  transform: rotateZ(45deg) rotateY(0deg) scaleX(0);
+}
+
+/* STATE 2: 3D Exploded View & Wiring Connects */
+.scene.state-2 {
+  transform: rotateX(60deg) rotateZ(-45deg);
+}
+
+/* Spread the layers */
+.scene.state-2 .layer-top {
+  transform: translateZ(140px);
+}
+
+.scene.state-2 .layer-mid {
+  transform: translateZ(0px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+}
+
+.scene.state-2 .layer-bottom {
+  transform: translateZ(-140px);
+  opacity: 1;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.05);
+}
+
+/* Core pulses */
+.scene.state-2 .core-node {
+  box-shadow: 0 0 60px rgba(223, 108, 59, 0.7);
+  transform: scale(1.15);
+}
+
+/* Draw the 3D wires:
+   rotateZ points them at the right corner.
+   rotateY(-35.5deg) pitches them UP in 3D space to perfectly meet the top layer.
+   scaleX(1) animates them drawing outward. */
+.scene.state-2 .wire {
+  opacity: 1;
+}
+
+.scene.state-2 .wire-1 {
+  transform: rotateZ(-135deg) rotateY(-35.5deg) scaleX(1);
+}
+
+.scene.state-2 .wire-2 {
+  transform: rotateZ(-45deg) rotateY(-35.5deg) scaleX(1);
+}
+
+.scene.state-2 .wire-3 {
+  transform: rotateZ(135deg) rotateY(-35.5deg) scaleX(1);
+}
+
+.scene.state-2 .wire-4 {
+  transform: rotateZ(45deg) rotateY(-35.5deg) scaleX(1);
+}
+
+/* Trigger glowing data packet animations (with staggered delays) */
+.scene.state-2 .wire::after {
+  animation: dataFlow 1.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scene.state-2 .wire-1::after {
+  animation-delay: 1.2s;
+}
+
+.scene.state-2 .wire-2::after {
+  animation-delay: 1.6s;
+}
+
+.scene.state-2 .wire-3::after {
+  animation-delay: 1.4s;
+}
+
+.scene.state-2 .wire-4::after {
+  animation-delay: 1.9s;
+}
+
+@keyframes dataFlow {
+  0% {
+    left: 100%;
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  85% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    left: 0%;
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* STATE 3: Interaction & Output */
+.scene.state-3 {
+  transform: rotateX(45deg) rotateZ(-15deg);
+}
+
+/* Compress layers slightly */
+.scene.state-3 .layer-top {
+  transform: translateZ(50px);
+  opacity: 0.1;
+}
+
+.scene.state-3 .layer-mid {
+  transform: translateZ(0px);
+}
+
+.scene.state-3 .layer-bottom {
+  transform: translateZ(-50px);
+  opacity: 0.5;
+}
+
+/* Fade out wires to focus on output cards */
+.scene.state-3 .wire {
+  opacity: 0;
+}
+
+/* Pop out the result cards */
+.scene.state-3 .card-1 {
+  opacity: 1;
+  transform: translate3d(-110px, -90px, 160px) rotateX(-45deg) rotateZ(15deg);
+}
+
+.scene.state-3 .card-2 {
+  opacity: 1;
+  transform: translate3d(90px, 110px, 190px) rotateX(-45deg) rotateZ(15deg);
+}
+
+.scene.state-3 .card-3 {
+  opacity: 1;
+  transform: translate3d(140px, -50px, 130px) rotateX(-45deg) rotateZ(15deg);
+}

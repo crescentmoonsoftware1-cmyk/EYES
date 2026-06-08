@@ -4,24 +4,25 @@
   background-color: var(--bg-secondary);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 16px 12px;
   overflow: hidden;
   border-right: 1px solid var(--border-subtle);
 }
 
 .newChatBtn {
   width: 100%;
-  padding: 14px 24px;
+  padding: 10px 18px;
   background-color: var(--accent-primary);
   color: var(--bg-primary);
   border: none;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 700;
+  font-size: 13px;
   cursor: pointer;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-main);
 }
@@ -74,27 +75,27 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .sectionTitle {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--text-secondary);
   letter-spacing: 2px;
-  margin-bottom: 16px;
-  padding-left: 12px;
+  margin-bottom: 10px;
+  padding-left: 10px;
 }
 
 .item {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 12px 14px;
+  padding: 9px 12px;
   cursor: pointer;
   color: var(--text-secondary);
-  gap: 14px;
+  gap: 10px;
   background-color: transparent;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
@@ -166,16 +167,16 @@
 }
 
 .itemMain { display: flex; flex-direction: column; }
-.itemLabel { font-size: 14px; font-weight: 700; }
-.itemDesc { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.itemLabel { font-size: 13px; font-weight: 700; }
+.itemDesc { font-size: 10px; color: var(--text-secondary); font-weight: 500; }
 
 .footer { margin-top: auto; padding-top: 24px; }
 
 .readinessCard {
-  background: var(--bg-card); /* Changed from secondary to card for contrast */
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-primary); /* Stronger border */
-  padding: 16px;
+  border: 1px solid var(--border-primary);
+  padding: 12px;
   cursor: pointer;
   transition: var(--transition-main);
   box-shadow: var(--shadow-sm);
@@ -191,13 +192,17 @@
 .readinessHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .readinessTitle { font-size: 9px; font-weight: 800; color: var(--text-secondary); letter-spacing: 1.5px; }
 
-.readinessContent { display: flex; align-items: center; gap: 16px; }
-.gaugeWrapper { width: 50px; height: 50px; }
+.readinessContent { display: flex; align-items: center; gap: 12px; }
+.gaugeWrapper { width: 40px; height: 40px; }
 .gaugeBg { fill: none; stroke: var(--bg-secondary); stroke-width: 8; }
 .gaugeFill { fill: none; stroke: var(--accent-green); stroke-width: 8; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.8s ease;}
-.gaugeText { font-size: 22px; font-weight: 800; fill: var(--text-primary); }
+.gaugeText { font-size: 20px; font-weight: 800; fill: var(--text-primary); }
 
 .readinessInfo { display: flex; flex-direction: column; gap: 2px; }
-.platformsCount { font-size: 13px; font-weight: 700; color: var(--text-primary); }
-.reliabilityLabel { font-size: 11px; color: var(--text-secondary); }
+.platformsCount { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.reliabilityLabel { font-size: 10px; color: var(--text-secondary); }
 .reliabilityHigh { color: var(--accent-green); font-weight: 800; }
+
+/* ── Ember theme overrides ── */
+[data-theme='ember'] .newChatBtn { background: var(--accent-primary); color: #FFFFFF; box-shadow: 0 4px 20px rgba(224, 106, 59, 0.4); }
+[data-theme='ember'] .itemActive { background-color: rgba(224, 106, 59, 0.12); border-color: var(--border-primary); }

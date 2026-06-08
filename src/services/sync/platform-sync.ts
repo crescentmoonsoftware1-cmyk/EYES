@@ -109,35 +109,30 @@ export async function runPlatformSyncViaHttp(
 /**
  * Run platform sync directly (used by cron to avoid HTTP overhead)
  * Priority 2 optimization: Direct call instead of HTTP fetch
+ *
+ * NOTE: This function is NOT YET IMPLEMENTED. It is a reserved stub for
+ * Priority 2 work. It intentionally returns success=false so that if it is
+ * accidentally wired into the cron path it fails loudly rather than silently
+ * reporting success while doing nothing. Use runPlatformSyncViaHttp() instead.
  */
 export async function runPlatformSyncDirect(
   supabase: SupabaseClient,
   platform: string,
   _userId: string  // Reserved for Priority 2 direct-call implementation
 ): Promise<PlatformOutcome> {
-  void supabase; // Referenced by future direct sync implementation
+  void supabase; // Will be used by the direct sync implementation
   const routePlatform = toSyncRoutePlatform(platform);
   const startedAt = Date.now();
 
-  // Priority 2 stub: will directly invoke platform service modules
-  // eliminating the HTTP sub-request overhead in the cron runner.
-  try {
-    return {
-      platform,
-      routePlatform,
-      success: true,
-      status: 200,
-      durationMs: Date.now() - startedAt,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      platform,
-      routePlatform,
-      success: false,
-      status: null,
-      durationMs: Date.now() - startedAt,
-      error: message,
-    };
-  }
+  // Priority 2 stub — direct platform invocation not yet implemented.
+  // Do NOT return success=true here: the caller must use runPlatformSyncViaHttp().
+  console.error(`[PlatformSync] runPlatformSyncDirect() called for '${platform}' but is not implemented. Use runPlatformSyncViaHttp() instead.`);
+  return {
+    platform,
+    routePlatform,
+    success: false,
+    status: null,
+    durationMs: Date.now() - startedAt,
+    error: 'runPlatformSyncDirect() is not yet implemented. Use runPlatformSyncViaHttp().',
+  };
 }

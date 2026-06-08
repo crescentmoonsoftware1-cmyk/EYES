@@ -1,5 +1,5 @@
 .header {
-  height: 64px;
+  height: 52px;
   background: rgba(255, 255, 255, 0.02);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 20px;
   position: relative;
   z-index: 1002;
 }
@@ -20,19 +20,19 @@
 }
 
 .eyeIcon {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .logoText {
   font-family: var(--font-serif);
   font-weight: 800;
-  font-size: 20px;
+  font-size: 17px;
   letter-spacing: 2px;
   color: var(--text-primary);
 }
@@ -107,9 +107,9 @@
   background: none;
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -121,6 +121,53 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border-color: var(--border-primary);
+}
+
+/* ── 3-button theme group ── */
+.themeGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.themeBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.themeBtn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.themeBtnActive {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.themeBtnEmber.themeBtnActive {
+  color: #E06A3B;
+  border-color: rgba(224, 106, 59, 0.4);
+  box-shadow: 0 1px 6px rgba(224, 106, 59, 0.2);
+}
+
+.themeBtnEmber:hover {
+  color: #E06A3B;
 }
 
 .userMenuContainer {
@@ -142,10 +189,10 @@
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: var(--text-primary); /* Bold High-Contrast Profile */
+  background-color: var(--text-primary);
   background-size: cover;
   background-position: center;
   border: 1px solid var(--border-primary);
@@ -164,7 +211,7 @@
 
 .avatarInitial {
   font-weight: 800;
-  font-size: 16px;
+  font-size: 13px;
   color: var(--bg-primary);
   text-transform: uppercase;
 }

@@ -7,7 +7,7 @@
   --platform-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   min-height: 100vh;
   background: var(--bg-primary);
-  padding: 24px 48px 600px; /* Restored large bottom padding for scroll feel */
+  padding: 20px 32px 300px;
   max-width: 960px;
   margin: 0 auto;
   animation: pageIn 0.4s ease-out;
@@ -116,15 +116,15 @@
 .hero {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 32px;
+  gap: 20px;
+  padding: 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   border-radius: 16px;
   position: relative;
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .heroGlow {
@@ -135,9 +135,9 @@
 }
 
 .heroIcon {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
   border: 1px solid;
   background: var(--platform-color-soft);
   border-color: var(--platform-color-border);
@@ -164,7 +164,7 @@
 }
 
 .heroTitle {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
   font-family: var(--font-mono);
@@ -237,11 +237,11 @@
 
 /* ─── Connection Flow ─── */
 .connectionFlow {
-  padding: 32px;
+  padding: 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
   animation: fadeInUp 0.4s ease-out;
 }
@@ -572,11 +572,11 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 32px;
+  padding: 10px 24px;
   border: none;
   border-radius: 12px;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s;
@@ -594,11 +594,11 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 9px 18px;
   border: 1px solid;
   border-radius: 12px;
   background: transparent;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -613,12 +613,12 @@
 }
 
 .disconnectBtn {
-  padding: 12px 24px;
+  padding: 9px 18px;
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 12px;
   background: transparent;
   color: #ef4444;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
