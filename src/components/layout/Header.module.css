@@ -232,7 +232,7 @@
   top: 50px;
   right: 0;
   width: 200px;
-  background: var(--bg-card);
+  background: var(--bg-primary);
   -webkit-backdrop-filter: blur(25px);
   backdrop-filter: blur(25px);
   border: 1px solid var(--border-primary);
