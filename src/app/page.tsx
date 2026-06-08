@@ -6,6 +6,7 @@ import LandingPage from '@/components/landing/LandingPage';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import MainContent from '@/components/MainContent';
+import SmoothScroll from '@/components/SmoothScroll';
 import styles from './page.module.css';
 
 export default function Home() {
@@ -71,7 +72,11 @@ export default function Home() {
 
   // If not authenticated, render the Landing Page
   if (!user) {
-    return <LandingPage />;
+    return (
+      <SmoothScroll>
+        <LandingPage />
+      </SmoothScroll>
+    );
   }
 
   // If authenticated, render the Dashboard

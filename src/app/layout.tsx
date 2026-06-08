@@ -46,9 +46,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <SmoothScroll>
-            {children}
-          </SmoothScroll>
+          {children}
         </AuthProvider>
       </body>
     </html>
