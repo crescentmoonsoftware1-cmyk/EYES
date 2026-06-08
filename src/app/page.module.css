@@ -18,6 +18,7 @@
 
 .headerWrapper {
   grid-area: header;
+  z-index: 10;
 }
 
 .mainWrapper {
