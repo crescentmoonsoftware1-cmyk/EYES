@@ -1733,3 +1733,316 @@
     0 8px 25px rgba(224, 106, 59, 0.45),
     0 2px 6px rgba(224, 106, 59, 0.5);
 }
+
+/* ─── AgenticTerminal Styles ─────────────────────────────────────────────── */
+.agentTerminalWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100vh - 140px);
+  min-height: 500px;
+  background: #080b10;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  animation: fadeInUp 0.4s ease-out;
+}
+
+:global([data-theme='light']) .agentTerminalWrapper {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.agentTerminalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+:global([data-theme='light']) .agentTerminalHeader {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.agentHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agentPulseDot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseAlpha 1.5s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.agentHeaderTitle {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.agentHeaderDivider {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+}
+
+:global([data-theme='light']) .agentHeaderDivider {
+  color: rgba(0, 0, 0, 0.15);
+}
+
+.agentHeaderPhase {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #10b981;
+  text-transform: uppercase;
+}
+
+.agentHeaderRight {
+  display: flex;
+  align-items: center;
+}
+
+.agentTimer {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.agentBadgeError {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ef4444;
+  text-transform: uppercase;
+}
+
+.agentErrorText {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+  font-family: var(--font-sans);
+}
+
+/* Terminal scrollable body */
+.agentTerminalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.agentTerminalBody::-webkit-scrollbar {
+  width: 4px;
+}
+
+.agentTerminalBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.agentTerminalBody::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+/* Each step row */
+.agentStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  animation: agentStepIn 0.35s ease-out both;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+@keyframes agentStepIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.agentStepRunning {
+  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.12);
+}
+
+.agentStepDone {
+  opacity: 0.55;
+}
+
+.agentPhaseTag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  min-width: 80px;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.agentStepStatusIcon {
+  font-size: 11px;
+  font-weight: 800;
+  color: #10b981;
+  min-width: 16px;
+  text-align: center;
+  padding-top: 2px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.agentSpinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgba(16, 185, 129, 0.3);
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: spinnerSpin 0.8s linear infinite;
+}
+
+@keyframes spinnerSpin {
+  to { transform: rotate(360deg); }
+}
+
+.agentStepContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.agentStepIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.agentStepTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agentStepText {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  transition: color 0.3s ease;
+}
+
+.agentStepSubtext {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  animation: agentStepIn 0.3s ease-out both;
+}
+
+/* Blinking cursor */
+.agentCursor {
+  padding: 4px 12px;
+  margin-top: 4px;
+}
+
+.agentCursorBlink {
+  font-size: 14px;
+  color: #10b981;
+  animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Footer progress */
+.agentTerminalFooter {
+  padding: 14px 20px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+:global([data-theme='light']) .agentTerminalFooter {
+  border-top-color: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.agentProgressRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.agentProgressLabel {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.agentProgressPct {
+  font-size: 11px;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: 0.5px;
+}
+
+.agentProgressBarBg {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+:global([data-theme='light']) .agentProgressBarBg {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.agentProgressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  border-radius: 2px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.agentProgressSubtext {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  letter-spacing: 0.3px;
+  font-family: var(--font-sans);
+}
