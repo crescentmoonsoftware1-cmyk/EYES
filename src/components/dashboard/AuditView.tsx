@@ -538,7 +538,84 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   return null;
 }
 
-// ─── AgenticTerminal Component ───────────────────────────────────────────────
+// ─── AgenticTerminal — Claude-style Tool Use UI ───────────────────────────────
+
+interface ToolStep {
+  id: string;
+  icon: string;
+  label: string;
+  result: string;
+  appearsAt: number;
+  completeAt: number;
+}
+
+interface ToolBlock {
+  id: string;
+  title: string;
+  steps: ToolStep[];
+  appearsAt: number;
+  completeAt: number;
+  streamText: string;   // text streamed below the block once it's done
+  streamAt: number;     // when streaming of text begins
+}
+
+const TOOL_BLOCKS: ToolBlock[] = [
+  {
+    id: 'b1',
+    title: 'Searching connected platforms',
+    appearsAt: 0,
+    completeAt: 16,
+    streamAt: 17,
+    streamText: 'Found 1,247 messages across Gmail, 84 calendar events, 312 Slack threads, and 156 GitHub commits. Extracting commitment signals and behavioral patterns from cross-platform data...',
+    steps: [
+      { id: 'b1s1', icon: '📧', label: 'Querying Gmail — scanning inbox & sent mail', result: '{ "threads": 423, "commitments_found": 38, "sentiment": "neutral" }', appearsAt: 1,  completeAt: 5  },
+      { id: 'b1s2', icon: '📅', label: 'Scanning Google Calendar — extracting events', result: '{ "events": 84, "missed": 3, "promises_mapped": 12 }',                appearsAt: 4,  completeAt: 8  },
+      { id: 'b1s3', icon: '💬', label: 'Pulling Slack — reading channel history',      result: '{ "messages": 312, "reactions": 89, "commitments": 21 }',              appearsAt: 7,  completeAt: 11 },
+      { id: 'b1s4', icon: '🗒️', label: 'Fetching Notion — indexing pages & databases', result: '{ "pages": 67, "tasks": 134, "completed": 118 }',                      appearsAt: 9,  completeAt: 13 },
+      { id: 'b1s5', icon: '🐙', label: 'Connecting to GitHub — scanning commits & PRs', result: '{ "commits": 156, "prs": 14, "merged": 11, "open": 3 }',               appearsAt: 11, completeAt: 15 },
+      { id: 'b1s6', icon: '🎮', label: 'Reading Discord — extracting server messages',  result: '{ "messages": 290, "servers": 4, "tone": "professional" }',             appearsAt: 13, completeAt: 16 },
+    ]
+  },
+  {
+    id: 'b2',
+    title: 'Planning & Setup — Building context map',
+    appearsAt: 17,
+    completeAt: 26,
+    streamAt: 27,
+    streamText: 'Identified 47 unique commitment signals. Behavioral model detected 3 recurring patterns of dropped follow-through. Cross-referencing with calendar timeline...',
+    steps: [
+      { id: 'b2s1', icon: '🧠', label: 'EYES Audit Agent activated — building context map', result: '{ "entities": 47, "platforms_correlated": 6, "patterns": 3 }',  appearsAt: 18, completeAt: 21 },
+      { id: 'b2s2', icon: '🔗', label: 'Clustering related entities & topics',             result: '{ "clusters": 8, "top_topic": "project deadlines", "links": 134 }', appearsAt: 20, completeAt: 23 },
+      { id: 'b2s3', icon: '⚡', label: 'Behavioral Analytics running linguistic scan',      result: '{ "sentiment_balance": 0.74, "tone_drift": false, "anomalies": 2 }', appearsAt: 22, completeAt: 26 },
+    ]
+  },
+  {
+    id: 'b3',
+    title: 'Executing forensic analysis & risk scoring',
+    appearsAt: 27,
+    completeAt: 40,
+    streamAt: 41,
+    streamText: 'Risk score computed at 3.2/10 — OPTIMAL range. Promise reliability at 94%. Generating executive summary narrative...',
+    steps: [
+      { id: 'b3s1', icon: '🛡️', label: 'Risk Evaluator assigning behavioral risk scores',         result: '{ "risk_score": 3.2, "risk_level": "OPTIMAL", "flags": 2 }',      appearsAt: 28, completeAt: 32 },
+      { id: 'b3s2', icon: '🗓️', label: 'Calendar Matcher — cross-referencing promises vs events', result: '{ "matched": 11, "unmatched": 1, "compliance_rate": "91.7%" }',  appearsAt: 31, completeAt: 35 },
+      { id: 'b3s3', icon: '📊', label: 'Generating executive summary narrative',                   result: '{ "words": 312, "findings": 6, "opportunities": 3 }',            appearsAt: 34, completeAt: 39 },
+    ]
+  },
+  {
+    id: 'b4',
+    title: 'Final Output — Compiling audit certificate',
+    appearsAt: 41,
+    completeAt: 50,
+    streamAt: 51,
+    streamText: '✅ Audit complete. Your cryptographic PDF report has been compiled with a verification hash. Loading your Reputation Certificate dashboard...',
+    steps: [
+      { id: 'b4s1', icon: '📄', label: 'Compiling cryptographic PDF report',            result: '{ "pages": 8, "hash": "a3f7c2d9...", "size": "1.2MB" }', appearsAt: 42, completeAt: 47 },
+      { id: 'b4s2', icon: '✅', label: 'Audit complete — certificate ready for review', result: '{ "status": "COMPLETE", "certificate_id": "AUD-2026-0608" }', appearsAt: 46, completeAt: 50 },
+    ]
+  }
+];
+
 interface AgenticTerminalProps {
   elapsedSeconds: number;
   errorMessage: string | null;
@@ -546,62 +623,62 @@ interface AgenticTerminalProps {
   onReturnToDashboard: () => void;
 }
 
-type StepStatus = 'pending' | 'running' | 'done';
-
-interface TerminalStep {
-  id: string;
-  phase: string;
-  icon: string;
-  text: string;
-  subtext?: string;
-  color: string;
-  appearsAt: number;   // seconds at which step appears
-  completeAt: number;  // seconds at which step becomes 'done'
-}
-
-const TERMINAL_STEPS: TerminalStep[] = [
-  // ── Phase 1: Searching ────────────────────────────────────────────────────
-  { id: 's1',  phase: 'SEARCHING',  icon: '🔍', color: '#06b6d4', appearsAt: 0,  completeAt: 3,  text: 'Initializing audit pipeline...', subtext: 'Authenticating platform sessions' },
-  { id: 's2',  phase: 'SEARCHING',  icon: '📧', color: '#ea4335', appearsAt: 2,  completeAt: 6,  text: 'Querying Gmail — scanning inbox & sent mail...', subtext: 'Indexing subject lines, commitments & keywords' },
-  { id: 's3',  phase: 'SEARCHING',  icon: '📅', color: '#4285f4', appearsAt: 4,  completeAt: 8,  text: 'Scanning Google Calendar — extracting events...', subtext: 'Mapping meetings, deadlines & promises to timeline' },
-  { id: 's4',  phase: 'SEARCHING',  icon: '💬', color: '#e01e5a', appearsAt: 6,  completeAt: 10, text: 'Pulling Slack — reading channel history...', subtext: 'Extracting messages, reactions & commitment signals' },
-  { id: 's5',  phase: 'SEARCHING',  icon: '🗒️', color: '#ffffff', appearsAt: 8,  completeAt: 12, text: 'Fetching Notion workspace — indexing pages...', subtext: 'Processing documents, tasks & databases' },
-  { id: 's6',  phase: 'SEARCHING',  icon: '🐙', color: '#ffffff', appearsAt: 10, completeAt: 14, text: 'Connecting to GitHub — scanning commit history...', subtext: 'Analyzing PRs, code velocity & contribution patterns' },
-  { id: 's7',  phase: 'SEARCHING',  icon: '🎮', color: '#5865f2', appearsAt: 12, completeAt: 16, text: 'Reading Discord servers — extracting messages...', subtext: 'Processing community activity & communication style' },
-
-  // ── Phase 2: Planning ─────────────────────────────────────────────────────
-  { id: 'p1',  phase: 'PLANNING',   icon: '🧠', color: '#a855f7', appearsAt: 17, completeAt: 21, text: 'EYES Audit Agent activated — building context map...', subtext: 'Correlating cross-platform signals & behavioral patterns' },
-  { id: 'p2',  phase: 'PLANNING',   icon: '🔗', color: '#a855f7', appearsAt: 19, completeAt: 23, text: 'Clustering related entities & topics...', subtext: 'Grouping recurring names, projects & commitments' },
-  { id: 'p3',  phase: 'PLANNING',   icon: '⚡', color: '#ec4899', appearsAt: 21, completeAt: 25, text: 'Behavioral Analytics model running linguistic scan...', subtext: 'Detecting tone shifts, promises & sentiment drift' },
-
-  // ── Phase 3: Execution ────────────────────────────────────────────────────
-  { id: 'e1',  phase: 'EXECUTION',  icon: '🛡️', color: '#eab308', appearsAt: 26, completeAt: 30, text: 'Risk Evaluator assigning behavioral risk scores...', subtext: 'Weighting unfulfilled commitments & red flag signals' },
-  { id: 'e2',  phase: 'EXECUTION',  icon: '🗓️', color: '#10b981', appearsAt: 28, completeAt: 33, text: 'Calendar Matcher cross-referencing promises vs events...', subtext: 'Validating whether scheduled actions were completed' },
-  { id: 'e3',  phase: 'EXECUTION',  icon: '📊', color: '#6366f1', appearsAt: 31, completeAt: 36, text: 'Generating executive summary narrative...', subtext: 'Synthesizing findings into readable audit report' },
-
-  // ── Phase 4: Final Output ─────────────────────────────────────────────────
-  { id: 'f1',  phase: 'FINALIZING', icon: '📄', color: '#10b981', appearsAt: 37, completeAt: 42, text: 'Compiling cryptographic PDF report...', subtext: 'Embedding audit hash & verification seal' },
-  { id: 'f2',  phase: 'FINALIZING', icon: '✅', color: '#10b981', appearsAt: 43, completeAt: 48, text: 'Audit complete — preparing certificate...', subtext: 'Loading dashboard with full findings' },
-];
-
 function AgenticTerminal({ elapsedSeconds, errorMessage, backendCompleted, onReturnToDashboard }: AgenticTerminalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({ b1: true });
+  const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({});
+  const [streamedChars, setStreamedChars] = useState<Record<string, number>>({});
 
-  // Auto-scroll to bottom as new steps appear
+  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+  }, [elapsedSeconds, streamedChars]);
+
+  // Streaming text effect: for each visible block that has passed streamAt, stream its text
+  useEffect(() => {
+    const visibleBlocks = TOOL_BLOCKS.filter(b => elapsedSeconds >= b.streamAt);
+    visibleBlocks.forEach(block => {
+      const current = streamedChars[block.id] ?? 0;
+      if (current < block.streamText.length) {
+        const timer = setTimeout(() => {
+          setStreamedChars(prev => ({
+            ...prev,
+            [block.id]: Math.min((prev[block.id] ?? 0) + 4, block.streamText.length)
+          }));
+        }, 30);
+        return () => clearTimeout(timer);
+      }
+    });
+  }, [elapsedSeconds, streamedChars]);
+
+  // Auto-expand the currently active block and collapse previous ones
+  useEffect(() => {
+    const activeBlock = [...TOOL_BLOCKS].reverse().find(b => elapsedSeconds >= b.appearsAt && elapsedSeconds < b.completeAt);
+    const justCompleted = [...TOOL_BLOCKS].reverse().find(b => elapsedSeconds >= b.completeAt && elapsedSeconds < b.completeAt + 3);
+    if (activeBlock) {
+      setExpandedBlocks(prev => ({ ...prev, [activeBlock.id]: true }));
+    }
+    if (justCompleted) {
+      // Collapse block shortly after completion
+      setExpandedBlocks(prev => ({ ...prev, [justCompleted.id]: false }));
+    }
   }, [elapsedSeconds]);
 
-  // Compute progress
+  const toggleBlock = (id: string) => setExpandedBlocks(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleResult = (id: string) => setExpandedResults(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Progress
   let progress = 0;
-  if (elapsedSeconds < 5) progress = Math.round((elapsedSeconds / 5) * 10);
+  if (elapsedSeconds < 5)  progress = Math.round((elapsedSeconds / 5) * 10);
   else if (elapsedSeconds < 16) progress = 10 + Math.round(((elapsedSeconds - 5) / 11) * 25);
-  else if (elapsedSeconds < 26) progress = 35 + Math.round(((elapsedSeconds - 16) / 10) * 20);
-  else if (elapsedSeconds < 37) progress = 55 + Math.round(((elapsedSeconds - 26) / 11) * 25);
-  else if (elapsedSeconds < 48) progress = 80 + Math.round(((elapsedSeconds - 37) / 11) * 15);
+  else if (elapsedSeconds < 27) progress = 35 + Math.round(((elapsedSeconds - 16) / 11) * 20);
+  else if (elapsedSeconds < 41) progress = 55 + Math.round(((elapsedSeconds - 27) / 14) * 25);
+  else if (elapsedSeconds < 52) progress = 80 + Math.round(((elapsedSeconds - 41) / 11) * 15);
   else progress = 95;
+
+  const visibleBlocks = TOOL_BLOCKS.filter(b => elapsedSeconds >= b.appearsAt);
 
   if (errorMessage) {
     return (
@@ -611,96 +688,141 @@ function AgenticTerminal({ elapsedSeconds, errorMessage, backendCompleted, onRet
         </div>
         <div className={styles.agentTerminalBody}>
           <p className={styles.agentErrorText}>{errorMessage}</p>
-          <button className={styles.rerunBtn} onClick={onReturnToDashboard}>
-            RETURN TO CONTROL CENTER
-          </button>
+          <button className={styles.rerunBtn} onClick={onReturnToDashboard}>RETURN TO CONTROL CENTER</button>
         </div>
       </div>
     );
   }
 
-  // Current running phase label
-  const currentPhase = (() => {
-    const activeSteps = TERMINAL_STEPS.filter(s => elapsedSeconds >= s.appearsAt && elapsedSeconds < s.completeAt);
-    return activeSteps.length > 0 ? activeSteps[activeSteps.length - 1].phase : (elapsedSeconds >= 43 ? 'FINALIZING' : 'SEARCHING');
-  })();
-
-  const visibleSteps = TERMINAL_STEPS.filter(s => elapsedSeconds >= s.appearsAt);
-
   return (
     <div className={styles.agentTerminalWrapper}>
-      {/* Header */}
+      {/* Header bar */}
       <div className={styles.agentTerminalHeader}>
         <div className={styles.agentHeaderLeft}>
           <span className={styles.agentPulseDot} />
           <span className={styles.agentHeaderTitle}>EYES AUDIT AGENT</span>
           <span className={styles.agentHeaderDivider}>|</span>
-          <span className={styles.agentHeaderPhase}>{currentPhase}</span>
+          <span className={styles.agentHeaderPhase}>NEURAL ANALYSIS RUNNING</span>
         </div>
         <div className={styles.agentHeaderRight}>
-          <span className={styles.agentTimer}>{String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}</span>
+          <span className={styles.agentTimer}>
+            {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}
+          </span>
         </div>
       </div>
 
-      {/* Terminal Body */}
+      {/* Scrollable body */}
       <div className={styles.agentTerminalBody} ref={scrollRef}>
-        {visibleSteps.map((step, i) => {
-          const isDone = elapsedSeconds >= step.completeAt;
-          const isRunning = !isDone && elapsedSeconds >= step.appearsAt;
+        {visibleBlocks.map((block) => {
+          const isBlockRunning = elapsedSeconds >= block.appearsAt && elapsedSeconds < block.completeAt;
+          const isBlockDone    = elapsedSeconds >= block.completeAt;
+          const isExpanded     = expandedBlocks[block.id] ?? false;
+          const streamText     = block.streamText.slice(0, streamedChars[block.id] ?? 0);
+          const visibleSteps   = block.steps.filter(s => elapsedSeconds >= s.appearsAt);
+
           return (
-            <div
-              key={step.id}
-              className={`${styles.agentStep} ${isDone ? styles.agentStepDone : ''} ${isRunning ? styles.agentStepRunning : ''}`}
-              style={{ animationDelay: `${i * 0.05}s` }}
-            >
-              {/* Phase tag */}
-              <span className={styles.agentPhaseTag} style={{ color: step.color }}>
-                [{step.phase}]
-              </span>
-              {/* Status icon */}
-              <span className={styles.agentStepStatusIcon}>
-                {isDone ? '✓' : isRunning ? <span className={styles.agentSpinner} /> : '·'}
-              </span>
-              {/* Content */}
-              <div className={styles.agentStepContent}>
-                <span className={styles.agentStepIcon}>{step.icon}</span>
-                <div className={styles.agentStepTexts}>
-                  <span className={styles.agentStepText} style={{ color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-                    {step.text}
-                  </span>
-                  {step.subtext && isRunning && (
-                    <span className={styles.agentStepSubtext}>{step.subtext}</span>
+            <div key={block.id} className={styles.claudeBlock}>
+              {/* ── Collapsible Status Bar ── */}
+              <button
+                className={`${styles.claudeStatusBar} ${isBlockRunning ? styles.claudeStatusRunning : ''} ${isBlockDone ? styles.claudeStatusDone : ''}`}
+                onClick={() => toggleBlock(block.id)}
+              >
+                <div className={styles.claudeStatusLeft}>
+                  {isBlockRunning
+                    ? <span className={styles.claudeSpinner} />
+                    : <span className={styles.claudeCheckIcon}>✓</span>
+                  }
+                  <span className={styles.claudeStatusText}>{block.title}</span>
+                </div>
+                <span className={`${styles.claudeChevron} ${isExpanded ? styles.claudeChevronDown : ''}`}>›</span>
+              </button>
+
+              {/* ── Expanded Steps (Timeline) ── */}
+              {isExpanded && (
+                <div className={styles.claudeTimeline}>
+                  <div className={styles.claudeTimelineBar} />
+                  <div className={styles.claudeStepsList}>
+                    {visibleSteps.map((step) => {
+                      const isStepRunning = elapsedSeconds >= step.appearsAt && elapsedSeconds < step.completeAt;
+                      const isStepDone    = elapsedSeconds >= step.completeAt;
+                      const isResultOpen  = expandedResults[step.id] ?? false;
+
+                      return (
+                        <div key={step.id} className={styles.claudeStep}>
+                          <div className={styles.claudeStepRow}>
+                            <span className={styles.claudeStepIcon}>{step.icon}</span>
+                            <span className={`${styles.claudeStepLabel} ${isStepDone ? styles.claudeStepLabelDone : ''}`}>
+                              {step.label}
+                            </span>
+                            {isStepRunning && <span className={styles.claudeStepSpinner} />}
+                            {isStepDone && (
+                              <button
+                                className={styles.claudeResultPill}
+                                onClick={(e) => { e.stopPropagation(); toggleResult(step.id); }}
+                              >
+                                {isResultOpen ? 'Hide' : 'Result'}
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Nested Result Card */}
+                          {isResultOpen && isStepDone && (
+                            <div className={styles.claudeResultCard}>
+                              <div className={styles.claudeResultSection}>
+                                <span className={styles.claudeResultSectionLabel}>Response</span>
+                                <pre className={styles.claudeResultCode}>{step.result}</pre>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Done footer */}
+                    {isBlockDone && (
+                      <div className={styles.claudeDoneRow}>
+                        <span className={styles.claudeDoneCheck}>✓</span>
+                        <span className={styles.claudeDoneText}>Done</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Streamed text below the block ── */}
+              {elapsedSeconds >= block.streamAt && streamText && (
+                <div className={styles.claudeStreamText}>
+                  {streamText}
+                  {streamedChars[block.id] < block.streamText.length && (
+                    <span className={styles.agentCursorBlink}>▋</span>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
 
-        {/* Blinking cursor at the bottom */}
-        {!backendCompleted && (
+        {/* Live cursor when still running */}
+        {!backendCompleted && visibleBlocks.length > 0 && (
           <div className={styles.agentCursor}>
             <span className={styles.agentCursorBlink}>▋</span>
           </div>
         )}
       </div>
 
-      {/* Progress Footer */}
+      {/* Footer progress */}
       <div className={styles.agentTerminalFooter}>
         <div className={styles.agentProgressRow}>
           <span className={styles.agentProgressLabel}>Pipeline Execution</span>
           <span className={styles.agentProgressPct}>{progress}%</span>
         </div>
         <div className={styles.agentProgressBarBg}>
-          <div
-            className={styles.agentProgressBarFill}
-            style={{ width: `${progress}%` }}
-          />
+          <div className={styles.agentProgressBarFill} style={{ width: `${progress}%` }} />
         </div>
         <p className={styles.agentProgressSubtext}>
           {elapsedSeconds < 16 ? '🔍 Searching & ingesting connected platform data...' :
-           elapsedSeconds < 26 ? '🧠 Planning — AI agent correlating behavioral patterns...' :
-           elapsedSeconds < 37 ? '⚙️ Executing forensic analysis & risk scoring...' :
+           elapsedSeconds < 27 ? '🧠 Planning — AI agent correlating behavioral patterns...' :
+           elapsedSeconds < 41 ? '⚙️ Executing forensic analysis & risk scoring...' :
            '📄 Finalizing report & compiling audit certificate...'}
         </p>
       </div>
