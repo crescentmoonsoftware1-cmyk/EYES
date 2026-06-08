@@ -43,7 +43,7 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'github',          name: 'GitHub',          icon: <GitHubIconOfficial />,   category: 'Development',  description: 'Sync repositories, pull requests, and code history.',       color: 'var(--text-primary)' },
   { id: 'vercel',          name: 'Vercel',          icon: <VercelIconOfficial />,   category: 'Development',  description: 'Track deployments, logs, and project health.',              color: 'var(--text-primary)', apiKeyOnly: true },
   { id: 'netlify',         name: 'Netlify',         icon: <NetlifyIconOfficial />,  category: 'Development',  description: 'Monitor site deployments and build history.',               color: '#05BDBA', comingSoon: true },
-  { id: 'sentry',          name: 'Sentry',          icon: <SentryIconOfficial />,   category: 'Development',  description: 'Monitor error logs and application health.',                color: '#362D59' },
+  { id: 'sentry',          name: 'Sentry',          icon: <SentryIconOfficial />,   category: 'Development',  description: 'Monitor error logs and application health.',                color: '#362D59', comingSoon: true },
   { id: 'webflow',         name: 'Webflow',         icon: <WebflowIconOfficial />,  category: 'Development',  description: 'Sync site settings, forms, and CMS data.',                 color: '#4353FF', comingSoon: true },
 
   // ─── Social ───────────────────────────────────────────────────────────────
