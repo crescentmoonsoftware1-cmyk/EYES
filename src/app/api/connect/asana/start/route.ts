@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('redirect_uri', new URL('/api/connect/asana/callback', baseUrl).toString());
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('state', state);
-  authUrl.searchParams.set('scope', 'default');
+  authUrl.searchParams.set('scope', 'openid email profile users:read workspaces:read tasks:read');
 
   return NextResponse.redirect(authUrl);
 }
