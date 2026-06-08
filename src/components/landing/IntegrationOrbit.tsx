@@ -327,7 +327,7 @@ export default function IntegrationOrbit() {
         ref={subTextRef}
         className="font-serif text-[16px] md:text-[22px] text-[var(--text-secondary)] text-center max-w-[500px] leading-[1.6] flex flex-wrap justify-center gap-x-[6px] px-4 mt-4 mb-16 z-10"
       >
-        {"Connect your accounts. Get answers from your own past. Notice patterns you can't see from inside your life.".split(" ").map((word, i) => (
+        {"Show me [X], and I'll show you [Y]. Turn back the pages. The answers are all there, you just couldn't see the ending when you were lost in the story.".split(" ").map((word, i) => (
           <React.Fragment key={i}>
             <span className="inline-block">{word}</span>
             {" "}
