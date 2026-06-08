@@ -39,7 +39,7 @@ export default function PoliciesLayout({ children }: { children: React.ReactNode
                       href={tab.path}
                       className={`relative rounded-full px-4 py-2 text-[10px] md:text-xs font-semibold tracking-[0.25em] transition-all duration-200 select-none uppercase text-center ${
                         isActive
-                          ? "bg-[rgba(255,255,255,0.16)] text-[var(--text-primary)] shadow-sm"
+                          ? "bg-[rgba(224,106,59,0.12)] border border-[#E06A3B]/50 text-[#E06A3B] shadow-[0_0_12px_rgba(224,106,59,0.2)]"
                           : "bg-[rgba(255,255,255,0.03)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[#E06A3B] hover:bg-[#E06A3B]/10 hover:border-[#E06A3B]/30"
                       }`}
                     >
