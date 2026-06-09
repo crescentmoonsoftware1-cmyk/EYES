@@ -7,15 +7,9 @@ import styles from './Header.module.css';
 
 export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const router = useRouter();
-  const { user, logout, theme, setGlobalTheme } = useAuth();
+  const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const cycleTheme = () => {
-    const next = theme === 'dark' ? 'light' : theme === 'light' ? 'ember' : 'dark';
-    setGlobalTheme(next);
-  };
-  void cycleTheme; // kept in case needed later
 
 
   const avatarImageUrl = user?.avatar && user.avatar.length > 2 ? user.avatar : null;
@@ -48,33 +42,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       </div>
 
       <div className={styles.right}>
-        <div className={styles.themeGroup}>
-          <button
-            className={`${styles.themeBtn} ${theme === 'dark' ? styles.themeBtnActive : ''}`}
-            onClick={() => setGlobalTheme('dark')}
-            title="Dark Mode"
-            aria-label="Dark Mode"
-          >
-            <MoonIcon />
-          </button>
-          <button
-            className={`${styles.themeBtn} ${theme === 'light' ? styles.themeBtnActive : ''}`}
-            onClick={() => setGlobalTheme('light')}
-            title="Light Mode"
-            aria-label="Light Mode"
-          >
-            <SunIcon />
-          </button>
-          <button
-            className={`${styles.themeBtn} ${styles.themeBtnEmber} ${theme === 'ember' ? styles.themeBtnActive : ''}`}
-            onClick={() => setGlobalTheme('ember')}
-            title="Ember Mode"
-            aria-label="Ember Mode"
-          >
-            <EmberIcon />
-          </button>
-        </div>
-
         <div className={styles.userMenuContainer} ref={menuRef}>
           <button 
             className={styles.avatarBtn} 
@@ -132,23 +99,6 @@ function SettingsIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1-2.83 0l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 }
 
-function MoonIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
-}
-
-function SunIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>;
-}
-
 function LogoutIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-}
-
-function EmberIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" />
-      <path d="M12 6c0 3-2 5-2 7a2 2 0 0 0 4 0c0-2-2-4-2-7z" fill="currentColor" stroke="none" />
-    </svg>
-  );
 }

@@ -22,7 +22,7 @@
 .eyeIcon {
   width: 26px;
   height: 26px;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
@@ -35,6 +35,7 @@
   font-size: 17px;
   letter-spacing: 2px;
   color: var(--text-primary);
+  display: none;
 }
 
 .neuralStatus {
@@ -93,6 +94,14 @@
   
   .header {
     padding: 0 16px;
+  }
+
+  .eyeIcon {
+    display: flex;
+  }
+
+  .logoText {
+    display: block;
   }
 }
 

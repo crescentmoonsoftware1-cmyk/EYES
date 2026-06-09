@@ -507,34 +507,27 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(0, 194, 255, 0.1);
+  border: 1.5px solid rgba(0, 194, 255, 0.15);
 }
 
 .scanRingInner {
   position: absolute;
-  inset: 10px;
+  inset: 8px;
   border-radius: 50%;
-  border: 2px dashed rgba(0, 194, 255, 0.3);
-  animation: spin 8s linear infinite;
+  border: 1px solid rgba(0, 194, 255, 0.1);
 }
 
 .scanRingPulse {
   position: absolute;
-  inset: 20px;
+  inset: 16px;
   border-radius: 50%;
-  background: rgba(0, 194, 255, 0.1);
-  animation: pulseCore 2s infinite ease-in-out;
+  background: rgba(0, 194, 255, 0.05);
 }
 
 .scanRingIcon {
   font-size: 24px;
   z-index: 10;
   color: var(--accent-vital);
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .emptyTitle {
@@ -687,8 +680,9 @@
 [data-theme='ember'] .neuralPulseRing { background: rgba(224, 106, 59, 0.08); }
 [data-theme='ember'] .neuralPulseRing::after { border-color: rgba(224, 106, 59, 0.25); }
 [data-theme='ember'] .scanRing { border-color: rgba(224, 106, 59, 0.2); }
-[data-theme='ember'] .scanRingInner { border-color: rgba(224, 106, 59, 0.4); }
-[data-theme='ember'] .scanRingPulse { background: rgba(224, 106, 59, 0.15); }
+[data-theme='ember'] .scanRingInner { border-color: rgba(224, 106, 59, 0.15); }
+[data-theme='ember'] .scanRingPulse { background: rgba(224, 106, 59, 0.08); }
+
 [data-theme='ember'] .confidence {
   background: rgba(224, 106, 59, 0.12);
   border-color: rgba(224, 106, 59, 0.25);

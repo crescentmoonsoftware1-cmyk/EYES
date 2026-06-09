@@ -141,7 +141,7 @@
 
 .themeGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
@@ -179,6 +179,14 @@
   border-radius: 8px;
   margin-bottom: 12px;
   border: 1px solid #e2e8f0;
+}
+
+.themePreviewEmber {
+  height: 80px;
+  background: #0d0602;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #3d1c10;
 }
 
 .themeCard span {
@@ -439,3 +447,202 @@
   border-color: var(--accent-red);
   color: var(--accent-red);
 }
+
+/* AI Integrations Upload Styles */
+.uploadZone {
+  width: 100%;
+  border: 2px dashed var(--border-subtle);
+  border-radius: 16px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.01);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.uploadZone:hover {
+  border-color: var(--accent-primary);
+  background: rgba(224, 106, 59, 0.02);
+}
+
+.uploadZoneDragActive {
+  border-color: var(--accent-primary);
+  background: rgba(224, 106, 59, 0.06);
+  box-shadow: 0 0 12px rgba(224, 106, 59, 0.1);
+}
+
+.uploadTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.uploadDesc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.browseLabel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.browseLabel:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-secondary);
+}
+
+.uploadedFileContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 8px;
+}
+
+.fileSize {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.actionBtnRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.syncProgressContainer {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.syncStatusText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.syncProgressTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.syncProgressBar {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+}
+
+.betaBadge {
+  background: rgba(224, 106, 59, 0.1);
+  border: 1px solid rgba(224, 106, 59, 0.2);
+  color: var(--accent-primary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.importHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
+  margin-bottom: 12px;
+}
+
+.importList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.importItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+
+.importItemInfo h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.importItemInfo p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.statusPill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.statusCompleted {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.statusProcessing {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.statusError {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+

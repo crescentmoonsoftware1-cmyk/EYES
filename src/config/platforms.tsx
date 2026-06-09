@@ -44,11 +44,9 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'asana',           name: 'Asana',           icon: <AsanaIconOfficial />,    category: 'Productivity', description: 'Track project tasks, goals, and team progress.',             color: '#F95D5C' },
   { id: 'linear',          name: 'Linear',          icon: <LinearIconOfficial />,   category: 'Productivity', description: 'Sync engineering tickets, cycles, and roadmaps.',           color: '#5E6AD2' },
   { id: 'clickup',         name: 'ClickUp',         icon: <ClickUpIconOfficial />,  category: 'Productivity', description: 'Connect your all-in-one productivity workspace.',            color: '#7B68EE' },
-  { id: 'trello',          name: 'Trello',          icon: <TrelloIconOfficial />,   category: 'Productivity', description: 'Index boards, cards, and workflow history.',                 color: '#0079BF', apiKeyOnly: true },
 
   // ─── Development ──────────────────────────────────────────────────────────
   { id: 'github',          name: 'GitHub',          icon: <GitHubIconOfficial />,   category: 'Development',  description: 'Sync repositories, pull requests, and code history.',       color: 'var(--text-primary)' },
-  { id: 'vercel',          name: 'Vercel',          icon: <VercelIconOfficial />,   category: 'Development',  description: 'Track deployments, logs, and project health.',              color: 'var(--text-primary)', apiKeyOnly: true },
   { id: 'netlify',         name: 'Netlify',         icon: <NetlifyIconOfficial />,  category: 'Development',  description: 'Monitor site deployments and build history.',               color: '#05BDBA', comingSoon: true },
   { id: 'sentry',          name: 'Sentry',          icon: <SentryIconOfficial />,   category: 'Development',  description: 'Monitor error logs and application health.',                color: '#362D59', comingSoon: true },
   { id: 'webflow',         name: 'Webflow',         icon: <WebflowIconOfficial />,  category: 'Development',  description: 'Sync site settings, forms, and CMS data.',                 color: '#4353FF', comingSoon: true },
@@ -66,7 +64,6 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'withings',        name: 'Withings',        icon: <WithingsIconOfficial />, category: 'Health',       description: 'Connect health and wellness device metrics.',              color: '#00A8A8', comingSoon: true },
 
   // ─── Missing Nodes (Target 26) ───────────────────────────────────────────
-  { id: 'supabase',        name: 'Supabase',        icon: <SupabaseIconOfficial />, category: 'Development',  description: 'Monitor your backend databases and auth states.',           color: '#3ECF8E' },
   { id: 'posthog',         name: 'PostHog',         icon: <PostHogIconOfficial />,  category: 'Development',  description: 'Sync user analytics and product data.',                    color: '#F0F0F0', comingSoon: true },
   { id: 'devin',           name: 'Devin',           icon: <DevinIconOfficial />,    category: 'Development',  description: 'Monitor autonomous AI engineering agents.',               color: '#1A1A1A', comingSoon: true },
   { id: 'cursor',          name: 'Cursor',          icon: <CursorIconOfficial />,   category: 'Development',  description: 'Sync your AI-assisted code evolution history.',            color: 'var(--text-primary)', comingSoon: true },

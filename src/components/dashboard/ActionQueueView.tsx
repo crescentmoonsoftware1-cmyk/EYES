@@ -10,6 +10,7 @@ interface ActionItem {
   id: string;
   memory_id: string | null;
   source_id?: string | null;
+  platform_link?: string | null;
   platform: string;
   title: string;
   description: string;
@@ -70,7 +71,13 @@ function getConversationalSummary(action: ActionItem) {
   } else if (action.description?.includes('asked:')) {
     sender = action.description.split('asked:')[0].trim();
   } else {
-    sender = action.title.split(' ')[0] || 'A user';
+    const firstWord = action.title.split(' ')[0] || '';
+    const actionVerbs = ['review', 'send', 'create', 'reply', 'submit', 'schedule', 'update', 'approve', 'dismiss', 'check', 'verify', 'vote', 'invite', 'trade', 'resolve', 'attend'];
+    if (firstWord && !actionVerbs.includes(firstWord.toLowerCase())) {
+      sender = firstWord;
+    } else {
+      sender = 'Someone';
+    }
   }
 
   let cleanDesc = action.description || '';
@@ -102,6 +109,8 @@ function parseCitations(desc: string) {
 }
 
 function getNativePlatformLink(action: ActionItem) {
+  if (action.platform_link) return action.platform_link;
+
   const platform = action.platform.toLowerCase();
   const sourceId = action.source_id;
   
@@ -113,7 +122,10 @@ function getNativePlatformLink(action: ActionItem) {
   }
   
   if (platform === 'slack') {
-    return `https://slack.com/app_redirect?channel=${sourceId || 'general'}`;
+    if (sourceId && !sourceId.startsWith('test_')) {
+      return `https://slack.com/app_redirect?channel=${sourceId}`;
+    }
+    return 'https://slack.com';
   }
   
   if (platform === 'github') {
@@ -136,7 +148,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings' | 'communications' | 'tasks'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedAction, setEditedAction] = useState<ActionItem | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -357,6 +369,8 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const filtered = actions.filter(a => {
     if (activeFilter === 'priority') return a.confidence >= 80;
     if (activeFilter === 'meetings') return a.action_type === 'CALENDAR';
+    if (activeFilter === 'communications') return ['gmail', 'slack', 'discord'].includes(a.platform.toLowerCase());
+    if (activeFilter === 'tasks') return ['github', 'linear', 'trello'].includes(a.platform.toLowerCase());
     return true;
   });
 
@@ -394,7 +408,9 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
             <div className={styles.filterChips}>
               <button className={activeFilter === 'all' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('all')}>All</button>
               <button className={activeFilter === 'priority' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('priority')}>Priority</button>
+              <button className={activeFilter === 'communications' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('communications')}>Communications</button>
               <button className={activeFilter === 'meetings' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('meetings')}>Meetings</button>
+              <button className={activeFilter === 'tasks' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('tasks')}>Tasks</button>
             </div>
           </div>
 
@@ -426,18 +442,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                 </p>
               )}
 
-              {/* Platform scan stats */}
-              {Object.keys(scanStats).length > 0 && (
-                <div className={styles.scanStatsGrid}>
-                  {Object.entries(scanStats).map(([platform, count]) => (
-                    <div key={platform} className={styles.scanStatItem}>
-                      <span className={styles.scanStatIcon}>{PLATFORM_ICONS[platform] ?? '🔗'}</span>
-                      <span className={styles.scanStatLabel}>{platform}</span>
-                      <span className={styles.scanStatCount}>{count.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+
 
               {/* Recently handled section removed as requested */}
             </div>

@@ -210,7 +210,17 @@ export async function POST(request: Request) {
 
     // 0. Query routing / Caching classification
     let needsRetrieval = true;
-    if (history && history.length > 0) {
+
+    // Quick regex greeting/conversational check
+    const lowerMessage = message.trim().toLowerCase();
+    const isGreeting = /^(hi|hello|hey|yo|greetings|good\s+(morning|afternoon|evening)|howdy|hola|namaste)(\s+(eyes|there|sabar|assistant))?\s*[,.!?]*$/i.test(lowerMessage) || 
+                       /^(how\s+are\s+you|what's\s+up|how's\s+it\s+going|sup)\s*[,.!?]*$/i.test(lowerMessage) ||
+                       /^(thanks|thank\s+you|ok|okay|cool|awesome|great|perfect|yes|no|bye|goodbye)\s*[,.!?]*$/i.test(lowerMessage);
+
+    if (isGreeting) {
+      needsRetrieval = false;
+      console.log(`[Chat] Query routing: Skipping database retrieval for greeting/conversational message: "${message}"`);
+    } else if (history && history.length > 0) {
       try {
         const classificationRaw = await invokeModel({
           capability: 'chat',

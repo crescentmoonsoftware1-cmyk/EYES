@@ -49,30 +49,68 @@ export async function GET() {
 
     if (actionsRes.error) throw actionsRes.error;
 
-    // Fetch memory source_ids for deep links
+    // Fetch memory source_ids and metadata for deep links
     const actionsData = actionsRes.data ?? [];
     const memoryIds = actionsData
       .map(a => a.memory_id)
       .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
 
-    let memorySourceMap: Record<string, string> = {};
+    let memoriesMap: Record<string, { source_id: string | null; metadata: any }> = {};
     if (memoryIds.length > 0) {
       const { data: memories } = await supabase
         .from('memories')
-        .select('id, source_id')
+        .select('id, source_id, metadata')
         .in('id', memoryIds);
 
       (memories ?? []).forEach(m => {
-        if (m.source_id) {
-          memorySourceMap[m.id] = m.source_id;
-        }
+        memoriesMap[m.id] = {
+          source_id: m.source_id || null,
+          metadata: m.metadata || {}
+        };
       });
     }
 
-    const actionsWithSource = actionsData.map(a => ({
-      ...a,
-      source_id: a.memory_id ? memorySourceMap[a.memory_id] || null : null
-    }));
+    const actionsWithSource = actionsData.map(a => {
+      const mem = a.memory_id ? memoriesMap[a.memory_id] : null;
+      const sourceId = mem ? mem.source_id : null;
+      const metadata = mem ? mem.metadata : null;
+      
+      // Calculate direct platform deep link
+      let platformLink: string | null = null;
+      const platform = a.platform.toLowerCase();
+      
+      if (platform === 'gmail') {
+        if (sourceId) {
+          platformLink = `https://mail.google.com/mail/u/0/#all/${sourceId}`;
+        } else {
+          platformLink = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(a.title)}`;
+        }
+      } else if (platform === 'slack') {
+        const channelId = metadata?.channel_id || metadata?.channel;
+        const ts = metadata?.ts;
+        if (channelId) {
+          if (ts) {
+            platformLink = `https://slack.com/app_redirect?channel=${channelId}&message_ts=${ts}`;
+          } else {
+            platformLink = `https://slack.com/app_redirect?channel=${channelId}`;
+          }
+        } else if (sourceId && !sourceId.startsWith('test_')) {
+          platformLink = `https://slack.com/app_redirect?channel=${sourceId}`;
+        } else {
+          platformLink = 'https://slack.com';
+        }
+      } else if (platform === 'github') {
+        platformLink = sourceId ? `https://github.com/${sourceId}` : 'https://github.com';
+      } else if (platform === 'linear') {
+        platformLink = sourceId ? `https://linear.app/issue/${sourceId}` : 'https://linear.app';
+      }
+
+      return {
+        ...a,
+        source_id: sourceId,
+        platform_link: platformLink
+      };
+    });
 
     const lastRunAt = logRes.data?.last_run_at ? new Date(logRes.data.last_run_at) : null;
     const isStale = !lastRunAt || (Date.now() - lastRunAt.getTime()) > 30 * 60 * 1000;

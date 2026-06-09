@@ -126,19 +126,47 @@ function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[], actua
 }
 
 function mapPlatforms(syncRows: SyncStatusRow[]): PlatformStatus[] {
-  const platforms = syncRows.map((row) => ({
+  const uniquePlatforms: Record<string, PlatformStatus> = {};
+
+  for (const row of syncRows) {
     // Normalise the DB underscore format to the hyphen format used in ALL_POSSIBLE_PLATFORMS.
     // Without this, 'google_calendar' from the DB never matches 'google-calendar' in the
     // connector hub filter, causing it to appear in both the hub AND managed connections.
-    id: row.platform === 'google_calendar' ? 'google-calendar' : row.platform,
-    name: platformLabelMap[row.platform] ?? row.platform,
-    connected: true,
-    status: (row.status ?? 'idle') as PlatformStatus['status'],
-    items: row.total_items ?? 0,
-    errorMessage: row.error_message,
-  }));
+    const id = row.platform === 'google_calendar' ? 'google-calendar' : row.platform;
+    const name = platformLabelMap[row.platform] ?? row.platform;
+    const status = (row.status ?? 'idle') as PlatformStatus['status'];
+    const items = row.total_items ?? 0;
+    const errorMessage = row.error_message;
 
-  return platforms;
+    const existing = uniquePlatforms[id];
+    if (!existing) {
+      uniquePlatforms[id] = {
+        id,
+        name,
+        connected: true,
+        status,
+        items,
+        errorMessage,
+      };
+    } else {
+      // Prioritize active/syncing or error states, and take the max items synced
+      const prioritizedStatus = 
+        status === 'syncing' || existing.status === 'syncing' ? 'syncing' :
+        status === 'error' || existing.status === 'error' ? 'error' :
+        status === 'connected' || existing.status === 'connected' ? 'connected' : existing.status;
+
+      uniquePlatforms[id] = {
+        id,
+        name: existing.name || name,
+        connected: true,
+        status: prioritizedStatus,
+        items: Math.max(existing.items, items),
+        errorMessage: existing.errorMessage || errorMessage,
+      };
+    }
+  }
+
+  return Object.values(uniquePlatforms);
 }
 
 function mapFeed(rows: RawEventRow[]): FeedItem[] {

@@ -83,7 +83,8 @@
 
 .feedEventCard {
   background: var(--bg-card);
-  border: 1px solid var(--border-primary); /* Sharper border */
+  border: 1px solid var(--border-primary);
+  /* Sharper border */
   border-radius: var(--radius-lg);
   padding: 24px;
   display: flex;
@@ -106,7 +107,8 @@
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  background: transparent; /* Removed cement */
+  background: transparent;
+  /* Removed cement */
   border: 1px solid var(--border-primary);
   border-radius: 8px;
   flex-shrink: 0;
@@ -198,22 +200,27 @@
   line-height: 1.7;
   font-size: 14px;
 }
+
 .markdownContent p {
   margin: 0 0 8px 0;
 }
+
 .markdownContent strong {
   font-weight: 700;
   color: var(--text-primary);
 }
+
 .markdownContent em {
   font-style: italic;
   color: var(--text-secondary);
 }
+
 .markdownContent ul {
   margin: 6px 0 6px 18px;
   padding: 0;
   list-style: disc;
 }
+
 .markdownContent li {
   margin-bottom: 4px;
   line-height: 1.6;
@@ -533,7 +540,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent; /* Removed cement */
+  background: transparent;
+  /* Removed cement */
   border: 1px solid var(--border-primary);
 }
 
@@ -543,8 +551,19 @@
   gap: 4px;
 }
 
-.readyStatusText { font-size: 11px; font-weight: 700; color: var(--accent-green); text-transform: uppercase; }
-.syncStatusText { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; }
+.readyStatusText {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  text-transform: uppercase;
+}
+
+.syncStatusText {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
 
 /* KPI GRID */
 .kpiGrid {
@@ -609,12 +628,15 @@
 }
 
 .filterChip {
-  background: transparent; /* Removed cement color */
-  border: 1px solid var(--border-primary); /* Sharper border */
+  background: transparent;
+  /* Removed cement color */
+  border: 1px solid var(--border-primary);
+  /* Sharper border */
   padding: 6px 18px;
   border-radius: 99px;
   font-size: 12px;
-  font-weight: 800; /* Bolder text */
+  font-weight: 800;
+  /* Bolder text */
   color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition-main);
@@ -969,9 +991,11 @@
   gap: 8px;
   margin-bottom: 32px;
   border-bottom: 1px solid var(--border-subtle);
-  padding: 8px 0 16px; /* Added 8px top padding to prevent clipping */
+  padding: 8px 0 16px;
+  /* Added 8px top padding to prevent clipping */
   overflow-x: auto;
-  overflow-y: hidden; /* Prevent vertical scroll while allowing horizontal */
+  overflow-y: hidden;
+  /* Prevent vertical scroll while allowing horizontal */
   scrollbar-width: none;
 }
 
@@ -996,9 +1020,17 @@
 }
 
 @keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
 }
 
 .chatModeLayout {
@@ -1049,14 +1081,27 @@
 
 /* ── Ember theme overrides ── */
 /* Orange bg elements → white text */
-[data-theme='ember'] .filterChipActive { 
+[data-theme='ember'] .filterChipActive {
   background: var(--accent-primary) !important;
   border-color: var(--accent-primary) !important;
-  color: #FFFFFF !important; 
+  color: #FFFFFF !important;
 }
-[data-theme='ember'] .commandSendBtn { color: #FFFFFF; }
-[data-theme='ember'] .miniSyncBtn { color: #FFFFFF; }
-[data-theme='ember'] .readinessCard:hover .addIndicator { color: #FFFFFF; }
+
+[data-theme='ember'] .userMsg {
+  color: #FFFFFF !important;
+}
+
+[data-theme='ember'] .commandSendBtn {
+  color: #FFFFFF;
+}
+
+[data-theme='ember'] .miniSyncBtn {
+  color: #FFFFFF;
+}
+
+[data-theme='ember'] .readinessCard:hover .addIndicator {
+  color: #FFFFFF;
+}
 
 /* Hardcoded cyan → orange */
 [data-theme='ember'] .proposedActionBox {
@@ -1064,4 +1109,3 @@
   border-color: rgba(224, 106, 59, 0.15);
   border-left-color: var(--accent-primary);
 }
-

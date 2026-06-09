@@ -372,95 +372,104 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
           <aside className={`${styles.sidebarCard} stagger-3`}>
             <div className={styles.sidebarSectionTitle}>RISK PROFILE</div>
-            {/* Animated Risk Dial SVG */}
+            {/* Multi-Segment Radial Chart */}
             {(() => {
-              const riskPercent = Math.min(100, Math.max(0, (activeAudit.riskScore / 10) * 100));
-              const strokeDashoffset = 251.2 - (251.2 * riskPercent) / 100;
               const isCritical = activeAudit.riskScore > 7;
               const isModerate = activeAudit.riskScore > 4;
-              const riskColor = isCritical ? 'var(--accent-red, #ef4444)' : isModerate ? 'var(--accent-amber, #f59e0b)' : 'var(--accent-green, #10b981)';
-              
+              const riskColor = isCritical ? '#ef4444' : isModerate ? '#f59e0b' : '#00D1FF';
+              const riskLabel = isCritical ? 'CRITICAL' : isModerate ? 'MODERATE' : 'OPTIMAL';
+
+              // Metric values 0–1
+              const promiseVal = activeAudit.riskScore > 7 ? 0.72 : activeAudit.riskScore > 4 ? 0.85 : 0.96;
+              const sentimentVal = Math.min(1, (activeAudit.metadata?.sentimentBalance || 1));
+              const safetyVal = Math.min(1, (10 - activeAudit.riskScore) / 10);
+
+              // SVG arc helper — draws an arc segment on a circle
+              // cx,cy = center, r = radius, pct = fill 0..1, gap = degrees gap between segments
+              const describeArc = (cx: number, cy: number, r: number, pct: number) => {
+                const total = 300; // degrees of arc (leaving 60° gap at bottom)
+                const sweep = total * pct;
+                const startAngle = -150; // start top-left
+                const endAngle = startAngle + sweep;
+                const toRad = (d: number) => (d * Math.PI) / 180;
+                const x1 = cx + r * Math.cos(toRad(startAngle));
+                const y1 = cy + r * Math.sin(toRad(startAngle));
+                const x2 = cx + r * Math.cos(toRad(endAngle));
+                const y2 = cy + r * Math.sin(toRad(endAngle));
+                const largeArc = sweep > 180 ? 1 : 0;
+                return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
+              };
+
+              const describeFullArc = (cx: number, cy: number, r: number) => describeArc(cx, cy, r, 1);
+
+              const cx = 65, cy = 65;
+
               return (
-                <div className={styles.dialContainer}>
-                  <svg width="115" height="115" viewBox="0 0 100 100" className={styles.dialSvg}>
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="4" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="40"
+                <div className={styles.radialChartContainer}>
+                  <svg width="130" height="130" viewBox="0 0 130 130" className={styles.radialSvg}>
+                    {/* ── Track rings (background) ── */}
+                    <path d={describeFullArc(cx, cy, 52)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" strokeLinecap="round"/>
+                    <path d={describeFullArc(cx, cy, 40)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" strokeLinecap="round"/>
+                    <path d={describeFullArc(cx, cy, 28)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" strokeLinecap="round"/>
+
+                    {/* ── Outer ring: Promise Reliability (orange) ── */}
+                    <path
+                      d={describeArc(cx, cy, 52, promiseVal)}
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      style={{ filter: 'drop-shadow(0 0 5px #f9731680)' }}
+                    />
+
+                    {/* ── Middle ring: Sentiment Index (cyan) ── */}
+                    <path
+                      d={describeArc(cx, cy, 40, sentimentVal)}
+                      fill="none"
+                      stroke="#06b6d4"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      style={{ filter: 'drop-shadow(0 0 5px #06b6d480)' }}
+                    />
+
+                    {/* ── Inner ring: Linguistic Safety (green/red) ── */}
+                    <path
+                      d={describeArc(cx, cy, 28, safetyVal)}
                       fill="none"
                       stroke={riskColor}
-                      strokeWidth="5"
-                      strokeDasharray="251.2"
-                      strokeDashoffset={strokeDashoffset}
+                      strokeWidth="8"
                       strokeLinecap="round"
-                      transform="rotate(-90 50 50)"
-                      className={styles.dialStroke}
-                      style={{ filter: `drop-shadow(0 0 4px ${riskColor}80)` }}
+                      style={{ filter: `drop-shadow(0 0 5px ${riskColor}80)` }}
                     />
-                    <text x="50" y="46" textAnchor="middle" dominantBaseline="middle" className={styles.dialValue} fill="var(--text-primary)">
+
+                    {/* ── Center score ── */}
+                    <circle cx={cx} cy={cy} r="18" fill="rgba(0,0,0,0.6)" />
+                    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className={styles.dialValue} fill="var(--text-primary)">
                       {activeAudit.riskScore}
                     </text>
-                    <text x="50" y="70" textAnchor="middle" dominantBaseline="middle" className={styles.dialLabel} fill={riskColor}>
-                      {isCritical ? 'CRITICAL' : isModerate ? 'MODERATE' : 'OPTIMAL'}
-                    </text>
                   </svg>
+
+                  {/* Legend */}
+                  <div className={styles.radialLegend}>
+                    <div className={styles.radialLegendItem}>
+                      <span className={styles.radialDot} style={{ background: '#f97316', boxShadow: '0 0 6px #f97316' }} />
+                      <span className={styles.radialLegendLabel}>Promise Reliability</span>
+                      <span className={styles.radialLegendVal}>{Math.round(promiseVal * 100)}%</span>
+                    </div>
+                    <div className={styles.radialLegendItem}>
+                      <span className={styles.radialDot} style={{ background: '#06b6d4', boxShadow: '0 0 6px #06b6d4' }} />
+                      <span className={styles.radialLegendLabel}>Sentiment Index</span>
+                      <span className={styles.radialLegendVal}>{Math.round(sentimentVal * 100)}%</span>
+                    </div>
+                    <div className={styles.radialLegendItem}>
+                      <span className={styles.radialDot} style={{ background: riskColor, boxShadow: `0 0 6px ${riskColor}` }} />
+                      <span className={styles.radialLegendLabel}>Linguistic Safety</span>
+                      <span className={styles.radialLegendVal}>{Math.round(safetyVal * 100)}%</span>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
-
-            {/* Category breakdown bars */}
-            <div className={styles.categoryBreakdown}>
-              <div className={styles.breakdownHeader}>COMMITMENT ANALYSIS</div>
-
-              <div className={styles.categoryItem}>
-                <div className={styles.categoryLabelRow}>
-                  <span>Promise Reliability</span>
-                  <span>{activeAudit.riskScore > 7 ? '72%' : activeAudit.riskScore > 4 ? '85%' : '96%'}</span>
-                </div>
-                <div className={styles.categoryBar}>
-                  <div
-                    className={styles.categoryBarFill}
-                    style={{
-                      width: activeAudit.riskScore > 7 ? '72%' : activeAudit.riskScore > 4 ? '85%' : '96%',
-                      backgroundColor: 'var(--accent-green, #10b981)'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.categoryItem}>
-                <div className={styles.categoryLabelRow}>
-                  <span>Sentiment Index</span>
-                  <span>{((activeAudit.metadata?.sentimentBalance || 0.6) * 100).toFixed(0)}%</span>
-                </div>
-                <div className={styles.categoryBar}>
-                  <div
-                    className={styles.categoryBarFill}
-                    style={{
-                      width: `${((activeAudit.metadata?.sentimentBalance || 0.6) * 100).toFixed(0)}%`,
-                      backgroundColor: '#06b6d4'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.categoryItem}>
-                <div className={styles.categoryLabelRow}>
-                  <span>Linguistic Safety</span>
-                  <span>{((10 - activeAudit.riskScore) * 10).toFixed(0)}%</span>
-                </div>
-                <div className={styles.categoryBar}>
-                  <div
-                    className={styles.categoryBarFill}
-                    style={{
-                      width: `${((10 - activeAudit.riskScore) * 10).toFixed(0)}%`,
-                      backgroundColor: activeAudit.riskScore > 7 ? 'var(--accent-red, #ef4444)' : activeAudit.riskScore > 4 ? 'var(--accent-amber, #f59e0b)' : 'var(--accent-green, #10b981)'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
 
             <div className={styles.sidebarActions}>
               <button

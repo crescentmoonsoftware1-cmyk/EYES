@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { 
   ChatIcon, 
   ConnectorsIcon, 
@@ -22,6 +23,12 @@ export default function Sidebar() {
   const searchParams = useSearchParams();
   const activeView = searchParams.get('view') || 'dashboard';
   const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const { user } = useAuth();
+
+  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
+  const adminEmails = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
+  const isAdmin = user && user.email && adminEmails.includes(user.email.toLowerCase());
+
 
   useEffect(() => {
     const loadReadiness = async () => {
@@ -52,6 +59,8 @@ export default function Sidebar() {
       router.push(`/?view=dashboard&new=${Date.now()}`);
     } else if (view === 'dashboard') {
       router.push('/');
+    } else if (view === 'admin-funnel') {
+      router.push('/admin/funnel');
     } else {
       router.push(`/?view=${view}`);
     }
@@ -59,14 +68,15 @@ export default function Sidebar() {
 
   return (
     <aside className={styles.sidebar}>
-      <button className={styles.newChatBtn} onClick={() => navigateToView('chat')}>
-        <PlusIcon />
-        <span>New Chat</span>
-      </button>
+      <div onClick={() => router.push('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 10px', marginBottom: '20px' }}>
+        <div style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 800, fontSize: '18px', letterSpacing: '2.5px', color: 'var(--text-primary)', margin: 0 }}>EYES</h1>
+      </div>
 
       <div className={styles.scrollArea}>
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>WORKSPACE</h3>
           
           <div 
             className={`${styles.item} ${activeView === 'dashboard' ? styles.itemActive : ''}`} 
@@ -112,6 +122,20 @@ export default function Sidebar() {
               <span className={styles.itemDesc}>Review runs and activity</span>
             </div>
           </div>
+
+          {isAdmin && (
+            <div 
+              className={`${styles.item} ${activeView === 'admin-funnel' ? styles.itemActive : ''}`} 
+              onClick={() => navigateToView('admin-funnel')}
+              style={{ borderLeft: '2px solid #E06A3B', paddingLeft: '6px' }}
+            >
+              <div className={styles.itemIcon}><span style={{fontSize: '18px'}}>📊</span></div>
+              <div className={styles.itemMain}>
+                <span className={styles.itemLabel} style={{ color: '#E06A3B' }}>Admin Analytics</span>
+                <span className={styles.itemDesc}>Onboarding funnel metrics</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { getBaseUrl } from '@/utils/url';
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientId = process.env.TWITTER_CLIENT_ID?.trim();
   if (!clientId) return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=missing_client_id', baseUrl));
 
   const supabase = await createClient();
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     path: '/', maxAge: 60 * 10,
   });
 
-  const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
+  const authUrl = new URL('https://x.com/i/oauth2/authorize');
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', new URL('/api/connect/twitter/callback', baseUrl).toString());
