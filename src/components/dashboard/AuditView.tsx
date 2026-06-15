@@ -21,28 +21,52 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   const [auditHistory, setAuditHistory] = useState<ReputationAudit[]>([]);
 
-  // Fetch the latest audit on mount
+  // Fetch the latest audit on mount, and poll if returning from Stripe
   useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const checkIsSuccessRedirect = typeof window !== 'undefined' && window.location.search.includes('audit=success');
+    
+    if (checkIsSuccessRedirect) {
+      setAuditMode('running'); // Show thinking veil or loading state
+    }
+
     const fetchLatest = async () => {
       try {
         const auditRes = await fetch('/api/audit/latest');
         if (auditRes.ok) {
           const data = await auditRes.json();
-          if (data) {
+          if (data && data.id) {
             setActiveAudit(data);
+            
+            // If we came from Stripe, and the audit is now found, clean the URL
+            if (checkIsSuccessRedirect) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+              if (data.status === 'completed') {
+                setAuditMode('completed');
+              }
+            }
+            return true; // Found it
           }
         }
       } catch (err) {
         console.error('Failed to fetch latest audit:', err);
       }
+      return false; // Not found yet
     };
 
-    fetchLatest();
+    fetchLatest().then((found) => {
+      // If we are waiting for a webhook from Stripe, poll every 2 seconds until it appears
+      if (!found && checkIsSuccessRedirect) {
+        interval = setInterval(async () => {
+          const isFound = await fetchLatest();
+          if (isFound) clearInterval(interval);
+        }, 2000);
+      }
+    });
 
-    // keep existing load behavior; polling of a specific audit is handled
-    // by a dedicated effect that watches `activeAudit.id` so we can
-    // perform near-real-time updates for the in-progress audit.
-    return () => { };
+    return () => { 
+      if (interval) clearInterval(interval); 
+    };
   }, []);
 
   // Fetch audit history for the history table
@@ -175,7 +199,22 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   }
 
   // 2. RUNNING / FAILED STATE — Thinking Veil
-  if (auditMode === 'running' && activeAudit?.id) {
+  if (auditMode === 'running') {
+    // If we don't have the audit ID yet (waiting for Stripe Webhook), show a generic initializing screen
+    if (!activeAudit?.id) {
+      return (
+        <div className={styles.auditContainer} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh'}}>
+          <div style={{textAlign: 'center', color: '#a9b1d6'}}>
+            <svg className={styles.spinner} viewBox="0 0 50 50" style={{width: '40px', height: '40px', margin: '0 auto 20px', animation: 'spin 2s linear infinite'}}>
+              <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="90 150" strokeLinecap="round" />
+            </svg>
+            <h2>Verifying Secure Payment...</h2>
+            <p>Waiting for secure webhook confirmation. Your audit will begin momentarily.</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <ThinkingVeil
         auditId={activeAudit.id}
