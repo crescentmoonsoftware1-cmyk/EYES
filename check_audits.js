@@ -8,8 +8,8 @@ async function run() {
   try {
     const { data: audits, error } = await supabase
       .from('reputation_audits')
-      .select('id, user_id, status, risk_score, created_at')
-      .eq('user_id', '4d2f3e3c-b834-43fc-852a-c3cdbb535b68');
+      .select('id, user_id, status, stage, risk_score, created_at, error_message')
+      .eq('user_id', 'cc860f68-fa04-4fbf-9716-6fda32df4c3b');
 
     if (error) throw error;
     console.log(`Found ${audits.length} audits:`);

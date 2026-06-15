@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
+import { waitUntil } from '@vercel/functions';
 
 /**
  * Stripe Webhook Handler (K5)
@@ -104,10 +105,18 @@ export async function POST(request: Request) {
 
       if (createError) throw createError;
 
-      // Non-blocking background analysis
-      AuditAnalysisService.runAnalysis(audit.id, userId).catch(err => {
-        console.error('[Stripe Webhook] Background analysis failed:', err);
-      });
+      // Update status to 'analysis' to match the original behavior and trigger UI transition
+      await supabase
+        .from('reputation_audits')
+        .update({ status: 'analysis' })
+        .eq('id', audit.id);
+
+      // Non-blocking background analysis via Vercel waitUntil (prevents serverless function termination)
+      waitUntil(
+        AuditAnalysisService.runAnalysis(audit.id, userId).catch(err => {
+          console.error('[Stripe Webhook] Background analysis failed:', err);
+        })
+      );
 
       console.log(`[Stripe Webhook] Audit ${audit.id} created for user ${userId} (lens: ${lensId})`);
       return NextResponse.json({ received: true, auditId: audit.id });
@@ -127,8 +136,10 @@ export async function POST(request: Request) {
         .single();
       if (error) throw error;
 
-      AuditAnalysisService.runAnalysis(audit.id, userId).catch(err =>
-        console.error('[Stripe Webhook] Background analysis failed:', err));
+      waitUntil(
+        AuditAnalysisService.runAnalysis(audit.id, userId).catch(err =>
+          console.error('[Stripe Webhook] Background analysis failed:', err))
+      );
 
       return NextResponse.json({ received: true, auditId: audit.id });
     }
