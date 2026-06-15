@@ -534,13 +534,21 @@ export class PDFGenerationService {
           const descHeight = doc.heightOfString(desc, { width: colWidth });
           doc.fillColor(GRAY_FOOTER).text(desc, col2X, oppY + titleHeight + 2, { width: colWidth });
           
-          doc.font(FONT_MONO).fontSize(6.5).fillColor(FOREST_GREEN).text(`Source: ${src}  |  Priority: ${priority}  |  Impact: ${scoreRed} pts`, col2X, oppY + titleHeight + descHeight + 6);
-          oppY += titleHeight + descHeight + 18;
+          const metaText = `Source: ${src}  |  Priority: ${priority}  |  Impact: ${scoreRed} pts`;
+          doc.font(FONT_MONO).fontSize(6.5);
+          const metaHeight = doc.heightOfString(metaText, { width: colWidth });
+          doc.fillColor(FOREST_GREEN).text(
+            metaText,
+            col2X, oppY + titleHeight + descHeight + 6,
+            { width: colWidth }
+          );
+          
+          oppY += titleHeight + descHeight + metaHeight + 12;
         } else {
           const str = String(o);
           doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(str, col2X, oppY, { width: colWidth });
           const titleHeight = doc.heightOfString(str, { width: colWidth });
-          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Source: Verified Platform Connector  |  Priority: Medium  |  Impact: -0.5 pts`, col2X, oppY + titleHeight + 4);
+          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Source: Verified Platform Connector  |  Priority: Medium  |  Impact: -0.5 pts`, col2X, oppY + titleHeight + 4, { width: colWidth });
           oppY += titleHeight + 18;
         }
       });
@@ -565,20 +573,40 @@ export class PDFGenerationService {
       findY += 72;
     } else {
       findings.slice(0, 5).forEach((f) => {
-        doc.rect(50, findY, 495, 60).fill(CARD_BG);
-        doc.rect(50, findY, 495, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+        // Calculate dynamic height of the text block with correct font sizes
+        doc.font(FONT_BOLD).fontSize(9);
+        const findingHeight = doc.heightOfString(f.finding, { width: 380 });
+        
+        doc.font(FONT_MONO).fontSize(7.5);
+        const evidenceHeight = doc.heightOfString(`Evidence: ${f.evidence}`, { width: 380 });
+        
+        doc.font(FONT_BODY).fontSize(8);
+        const impactHeight = doc.heightOfString(`Impact: ${f.impact}`, { width: 380 });
+        
+        // Card height is text height + padding (12px top, 12px bottom, plus spaces between elements)
+        const textBlockHeight = findingHeight + evidenceHeight + impactHeight + 8; // 8px for vertical gap spacing
+        const cardHeight = Math.max(60, textBlockHeight + 24);
+
+        doc.rect(50, findY, 495, cardHeight).fill(CARD_BG);
+        doc.rect(50, findY, 495, cardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
 
         const sev = (f.severity || 'LOW').toUpperCase();
         const sevColor = sev === 'HIGH' || sev === 'CRITICAL' ? MUTED_RED : sev === 'MEDIUM' ? '#B8860B' : FOREST_GREEN;
         
-        doc.rect(65, findY + 12, 50, 14).fill(sevColor);
-        doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(sev, 65, findY + 16, { align: 'center', width: 50 });
+        // Draw severity badge centered vertically in the card
+        const badgeY = findY + (cardHeight - 14) / 2;
+        doc.rect(65, badgeY, 50, 14).fill(sevColor);
+        doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(sev, 65, badgeY + 4, { align: 'center', width: 50 });
 
-        doc.font(FONT_BOLD).fontSize(9).fillColor(INK_BLACK).text(f.finding, 130, findY + 13, { width: 395 });
-        doc.font(FONT_MONO).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Evidence: ${f.evidence}`, 130, findY + 28);
-        doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(`Impact: ${f.impact}`, 130, findY + 39, { width: 395 });
+        // Draw text elements sequentially
+        doc.y = findY + 12;
+        doc.font(FONT_BOLD).fontSize(9).fillColor(INK_BLACK).text(f.finding, 130, doc.y, { width: 380 });
+        doc.y += 2; // small gap
+        doc.font(FONT_MONO).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Evidence: ${f.evidence}`, 130, doc.y, { width: 380 });
+        doc.y += 2; // small gap
+        doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(`Impact: ${f.impact}`, 130, doc.y, { width: 380 });
 
-        findY += 72;
+        findY += cardHeight + 12; // Next card starts after this one + gap
       });
     }
 
@@ -627,14 +655,21 @@ export class PDFGenerationService {
       // 2. Consistency Narrative
       doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('CONSISTENCY NARRATIVE', 50, clY);
       clY += 15;
-      doc.rect(50, clY, 495, 60).fill(CARD_BG);
-      doc.rect(50, clY, 495, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      
+      const narrativeWidth = 465;
+      const narrativeText = cl.consistencyNarrative || "No consistency narrative was returned by the engine.";
+      doc.font(FONT_BODY).fontSize(8.5);
+      const narrativeHeight = doc.heightOfString(narrativeText, { width: narrativeWidth, lineGap: 3 });
+      const narrativeCardHeight = Math.max(50, narrativeHeight + 24); // padding 12px top and bottom
+
+      doc.rect(50, clY, 495, narrativeCardHeight).fill(CARD_BG);
+      doc.rect(50, clY, 495, narrativeCardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
       doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(
-        cl.consistencyNarrative || "No consistency narrative was returned by the engine.",
-        65, clY + 12, { width: 465, lineGap: 3 }
+        narrativeText,
+        65, clY + 12, { width: narrativeWidth, lineGap: 3 }
       );
 
-      clY += 80;
+      clY += narrativeCardHeight + 20;
 
       // 3. Contradiction Flags
       doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('CROSS-PLATFORM CONTRADICTION FLAGS', 50, clY);
@@ -648,35 +683,49 @@ export class PDFGenerationService {
         clY += 60;
       } else {
         flags.slice(0, 3).forEach((flag: any) => {
-          doc.rect(50, clY, 495, 50).fill(CARD_BG);
-          doc.rect(50, clY, 495, 50).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+          const titleText = `${flag.platformA || 'Platform A'} vs ${flag.platformB || 'Platform B'}`;
+          doc.font(FONT_BOLD).fontSize(8.5);
+          const titleHeight = doc.heightOfString(titleText, { width: 410 });
+
+          const flagDesc = flag.description || 'No details provided.';
+          doc.font(FONT_BODY).fontSize(8);
+          const flagDescHeight = doc.heightOfString(flagDesc, { width: 410 });
+          
+          // Card height is title height + description height + padding/gap
+          const flagCardHeight = Math.max(50, titleHeight + flagDescHeight + 22);
+
+          doc.rect(50, clY, 495, flagCardHeight).fill(CARD_BG);
+          doc.rect(50, clY, 495, flagCardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
           
           const fsev = (flag.severity || 'LOW').toUpperCase();
           const fsevColor = fsev === 'HIGH' ? MUTED_RED : fsev === 'MEDIUM' ? '#B8860B' : FOREST_GREEN;
           
-          doc.rect(65, clY + 15, 45, 14).fill(fsevColor);
-          doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(fsev, 65, clY + 19, { align: 'center', width: 45 });
+          const badgeY = clY + (flagCardHeight - 14) / 2;
+          doc.rect(65, badgeY, 45, 14).fill(fsevColor);
+          doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(fsev, 65, badgeY + 4, { align: 'center', width: 45 });
 
-          doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(
-            `${flag.platformA || 'Platform A'} vs ${flag.platformB || 'Platform B'}`,
-            120, clY + 12
-          );
-          doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(
-            flag.description || 'No details provided.',
-            120, clY + 25, { width: 410 }
-          );
-          clY += 60;
+          doc.y = clY + 10;
+          doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(titleText, 120, doc.y, { width: 410 });
+          doc.y += 4; // spacing between title and description
+          doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(flagDesc, 120, doc.y, { width: 410 });
+          clY += flagCardHeight + 10;
         });
       }
 
       // 4. Recommendation
       doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('ALIGNMENT RECOMMENDATION', 50, clY);
       clY += 15;
-      doc.rect(50, clY, 495, 45).fill(CARD_BG);
-      doc.rect(50, clY, 495, 45).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      
+      const recText = cl.improvementRecommendation || "No recommendation was returned.";
+      doc.font(FONT_BODY).fontSize(8.5);
+      const recHeight = doc.heightOfString(recText, { width: 465 });
+      const recCardHeight = Math.max(40, recHeight + 24);
+
+      doc.rect(50, clY, 495, recCardHeight).fill(CARD_BG);
+      doc.rect(50, clY, 495, recCardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
       doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(
-        cl.improvementRecommendation || "No recommendation was returned.",
-        65, clY + 15, { width: 465 }
+        recText,
+        65, clY + 12, { width: 465 }
       );
     }
 
@@ -696,6 +745,16 @@ export class PDFGenerationService {
     const citationsList: Array<{ platform: string; date: string; id: string; text: string }> = [];
     const memoryContentMap = data.memoryContentMap || {};
 
+    const decodeEntities = (str: string): string => {
+      if (!str) return '';
+      return str
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">");
+    };
+
     // 1. Gather commitment citations
     commitments.forEach((c: any) => {
       let citId = (c.citation || '').slice(0, 8).toUpperCase();
@@ -705,7 +764,7 @@ export class PDFGenerationService {
         citId = crypto.createHash('sha256').update(c.text).digest('hex').slice(0, 8).toUpperCase();
       }
       const rawText = hasRealId ? (memoryContentMap[citId.toLowerCase()] || c.text) : c.text;
-      const cleanText = rawText.replace(/\s+/g, ' ').trim();
+      const cleanText = decodeEntities(rawText.replace(/\s+/g, ' ').trim());
       citationsList.push({
         platform: c.platform || 'Unknown',
         date: c.date ? c.date.split('T')[0] : endRange,
@@ -735,7 +794,7 @@ export class PDFGenerationService {
             }
           }
           const rawText = memoryContentMap[refId.toLowerCase()] || `${f.finding} — ${f.evidence}`;
-          const cleanText = rawText.replace(/\s+/g, ' ').trim();
+          const cleanText = decodeEntities(rawText.replace(/\s+/g, ' ').trim());
           citationsList.push({
             platform: platform,
             date: endRange,

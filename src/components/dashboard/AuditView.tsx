@@ -36,16 +36,34 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         if (auditRes.ok) {
           const data = await auditRes.json();
           if (data && data.id) {
+            // Check if the audit is recent (created in the last 2 minutes)
+            const auditCreatedAt = new Date(data.createdAt).getTime();
+            const ageMs = Date.now() - auditCreatedAt;
+            const isRecent = ageMs < 120000; // 120 seconds
+
+            // If we are returning from a successful payment, we only care about the new audit.
+            // If the latest audit in the DB is old and completed, we must wait for the webhook to create the new one.
+            if (checkIsSuccessRedirect && data.status === 'completed' && !isRecent) {
+              return false; // Keep polling until the new audit is registered
+            }
+
             setActiveAudit(data);
             
             // If we came from Stripe, and the audit is now found, clean the URL
             if (checkIsSuccessRedirect) {
-              window.history.replaceState({}, document.title, window.location.pathname);
+              const url = new URL(window.location.href);
+              url.searchParams.delete('audit');
+              window.history.replaceState({}, document.title, url.pathname + url.search);
               if (data.status === 'completed') {
                 setAuditMode('completed');
+              } else {
+                setAuditMode('running');
               }
+            } else if (data.status === 'analysis' || data.status === 'pending') {
+              // If the latest audit is active, automatically show the progress screen
+              setAuditMode('running');
             }
-            return true; // Found it
+            return true; // Found the correct audit
           }
         }
       } catch (err) {

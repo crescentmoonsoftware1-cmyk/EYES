@@ -48,6 +48,10 @@ vi.mock('@/utils/supabase/server', () => ({
     const adminQueryBuilder = {
       select: vi.fn(() => adminQueryBuilder),
       eq: vi.fn(() => adminQueryBuilder),
+      like: vi.fn(() => adminQueryBuilder),
+      maybeSingle: vi.fn(async () => {
+        return { data: hoisted.audit, error: null };
+      }),
       in: vi.fn(async () => {
         return {
           data: [

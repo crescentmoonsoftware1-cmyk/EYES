@@ -6,16 +6,12 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 
 async function run() {
   try {
-    // List users from auth
     const { data: { users }, error } = await supabase.auth.admin.listUsers();
     if (error) throw error;
     
-    const targetUser = users.find(u => u.email === 'thomasshelby251890@gmail.com');
-    if (targetUser) {
-      console.log('User found:', targetUser.email, 'ID:', targetUser.id);
-    } else {
-      console.log('User not found in auth.');
-    }
+    users.forEach(u => {
+      console.log('User:', u.email, 'ID:', u.id);
+    });
   } catch (err) {
     console.error(err);
   }

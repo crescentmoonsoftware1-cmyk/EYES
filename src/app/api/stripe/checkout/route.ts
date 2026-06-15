@@ -18,10 +18,10 @@ export async function POST(request: Request) {
     // Build form data for Stripe API application/x-www-form-urlencoded
     const params = new URLSearchParams();
     params.append('payment_method_types[0]', 'card');
-    params.append('line_items[0][price_data][currency]', 'usd');
+    params.append('line_items[0][price_data][currency]', 'eur');
     params.append('line_items[0][price_data][product_data][name]', `EYES Reputation Audit (${type.toUpperCase()})`);
     params.append('line_items[0][price_data][product_data][description]', 'Comprehensive deep analysis of your digital footprint and risk vectors.');
-    params.append('line_items[0][price_data][unit_amount]', '9900'); // $99.00
+    params.append('line_items[0][price_data][unit_amount]', '3900'); // €39.00
     params.append('line_items[0][quantity]', '1');
     params.append('mode', 'payment');
     params.append('success_url', `${origin}/?view=audit&audit=success`);

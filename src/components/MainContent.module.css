@@ -385,9 +385,10 @@
 }
 
 .brandDisplayTitle {
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: -1.5px;
+  font-size: 46px;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.5px;
   margin-bottom: 20px;
   color: var(--text-primary);
   font-family: var(--font-serif);
@@ -1108,4 +1109,60 @@
   background: rgba(224, 106, 59, 0.05);
   border-color: rgba(224, 106, 59, 0.15);
   border-left-color: var(--accent-primary);
+}
+
+/* --- NEURAL LOADER STYLES --- */
+.neuralLoader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+  animation: fadeIn 0.4s ease-out;
+  max-width: fit-content;
+}
+
+.neuralOrb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid rgba(224, 106, 59, 0.1);
+  border-top-color: var(--accent-vital);
+  animation: spin 1s linear infinite;
+}
+
+[data-theme='ember'] .neuralOrb {
+  border-top-color: var(--accent-primary);
+  border-color: rgba(224, 106, 59, 0.15);
+}
+
+.neuralTextContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.neuralStatusText {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.neuralSubText {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

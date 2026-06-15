@@ -49,7 +49,7 @@ function HomeInner() {
       }}>
         <div style={{
           color: '#E06A3B',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-display)',
           fontWeight: 600,
           fontSize: '12px',
           letterSpacing: '0.15em',
@@ -64,6 +64,7 @@ function HomeInner() {
           background: 'rgba(255,255,255,0.06)',
           position: 'relative',
           overflow: 'hidden',
+          borderRadius: '2px',
         }}>
           <div style={{
             position: 'absolute',
@@ -114,7 +115,7 @@ function HomeInner() {
       }}>
         <div style={{
           color: '#E06A3B',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-display)',
           fontWeight: 600,
           fontSize: '12px',
           letterSpacing: '0.15em',
