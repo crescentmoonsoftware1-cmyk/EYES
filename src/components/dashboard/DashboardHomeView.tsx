@@ -24,6 +24,7 @@ interface DashboardHomeViewProps {
 
 export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewProps) {
   const [activeCategory, setActiveCategory] = React.useState<string>('All');
+  const [googleInterstitial, setGoogleInterstitial] = React.useState<string | null>(null); // stores startUrl
   const liveStatus = syncStatus ?? null;
   
   const remainingPlatforms = ALL_POSSIBLE_PLATFORMS.filter(p => !platforms.find(ap => ap.id === p.id)?.connected);
@@ -46,8 +47,12 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
         return;
       }
       let startUrl = `/api/connect/${p.id}/start`;
-      if (p.id.startsWith('google') || p.id === 'gmail' || p.id === 'youtube') {
+      const isGoogle = p.id.startsWith('google') || p.id === 'gmail' || p.id === 'youtube';
+      if (isGoogle) {
         startUrl = `/api/connect/google/start?platform=${p.id}`;
+        // C7: show pre-consent interstitial before redirecting to Google OAuth
+        setGoogleInterstitial(startUrl);
+        return;
       }
       window.location.href = startUrl;
     };
@@ -71,7 +76,7 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
           {!isApiKey && <span className={styles.addIndicator}>+</span>}
           {isApiKey && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>🔑</span>}
         </div>
-        <p className={styles.platformDesc}>{p.description || 'Integrate this platform to expand your neural knowledge base.'}</p>
+        <p className={styles.platformDesc}>{p.description || 'Connect this platform to index more of your life data.'}</p>
       </div>
     );
   };
@@ -129,9 +134,61 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
 
   return (
     <div className={styles.readinessContainer}>
+
+      {/* C7: Google pre-consent interstitial modal */}
+      {googleInterstitial && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }}>
+          <div style={{
+            background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)',
+            borderRadius: '20px', padding: '32px', maxWidth: '480px', width: '100%',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+          }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
+              Before connecting to Google
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '20px' }}>
+              Google may show a notice saying this app is{' '}
+              <strong style={{ color: 'var(--text-primary)' }}>"not verified"</strong>{' '}
+              — this appears while our OAuth verification is in review with Google (a process that takes days to weeks).
+              It does not mean the connection is unsafe.
+            </p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '28px' }}>
+              EYES reads your <strong style={{ color: 'var(--text-primary)' }}>Gmail, Calendar, and Drive</strong> data
+              only for indexing into your personal vault. Your OAuth tokens are encrypted at rest and never shared.
+              You can disconnect at any time from Source Readiness.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => { window.location.href = googleInterstitial; }}
+                style={{
+                  flex: 1, padding: '12px 20px', background: 'var(--text-primary)', color: 'var(--bg-primary)',
+                  border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                }}
+              >
+                Continue to Google
+              </button>
+              <button
+                onClick={() => setGoogleInterstitial(null)}
+                style={{
+                  padding: '12px 20px', background: 'transparent', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)', borderRadius: '10px', fontWeight: 600,
+                  fontSize: '0.9rem', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* High-Contrast Live Indexing Counter Hero */}
       <div style={{ marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
-        <h1 className={styles.pageHeroTitle} style={{ textAlign: 'left', marginBottom: '16px' }}>Neural Archive</h1>
+        <h1 className={styles.pageHeroTitle} style={{ textAlign: 'left', marginBottom: '16px' }}>Vault</h1>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="stagger-1" style={{ padding: '14px 22px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
              <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Total Memories Indexed</span>

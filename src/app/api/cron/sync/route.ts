@@ -171,7 +171,7 @@ function toFiniteNumber(raw: string | undefined, fallback: number) {
 // OAuth platforms come from oauth_tokens; direct-key platforms are injected below.
 const SUPPORTED_PLATFORMS = new Set([
   // Original 7
-  'github', 'gmail', 'google_calendar', 'notion', 'reddit', 'slack', 'discord',
+  'github', 'gmail', 'google_calendar', 'google-calendar', 'notion', 'reddit', 'slack', 'discord',
   // Expanded — all OAuth platforms added in later sessions
   'dropbox', 'asana', 'clickup', 'netlify', 'webflow', 'canva',
   'strava', 'fitbit', 'withings', 'sentry', 'twitter',
@@ -792,7 +792,10 @@ async function runCronSync(request: Request) {
   const retryPriorityOrder = new Map<string, number>();
 
   (tokenRows as TokenRow[] | null)?.forEach((row) => {
-    // Accept ALL platforms — SUPPORTED_PLATFORMS guards retry logic, not initial token scan
+    // Only queue sync for platforms that are actually supported by the cron engine
+    if (!SUPPORTED_PLATFORMS.has(row.platform)) {
+      return;
+    }
     if (!userPlatformMap.has(row.user_id)) {
       userPlatformMap.set(row.user_id, new Set());
     }

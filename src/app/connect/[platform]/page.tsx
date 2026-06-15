@@ -181,7 +181,7 @@ function ConnectPlatformInner() {
       background: '#F8F5F2', gap: '12px',
     }}>
       <p style={{ fontFamily: 'Georgia, serif', fontSize: '1.2rem', color: '#1D1C16', margin: 0 }}>
-        Updating Neural Archive...
+        Redirecting...
       </p>
       <div style={{ width: '40px', height: '2px', background: '#1D1C16', opacity: 0.2 }} />
     </div>

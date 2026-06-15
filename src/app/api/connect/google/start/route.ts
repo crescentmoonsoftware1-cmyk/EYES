@@ -8,9 +8,7 @@ import { createClient } from '@/utils/supabase/server';
 import { getBaseUrl } from '@/utils/url';
 
 const allowedPlatforms = new Set([
-  'gmail', 'google-calendar', 'youtube',
-  'google-docs', 'google-sheets', 'google-slides',
-  'google-meet', 'google-chat', 'google-maps'
+  'gmail', 'google-calendar'
 ]);
 
 const googleSharedScopes = [
@@ -20,11 +18,6 @@ const googleSharedScopes = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/documents.readonly',
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
-  'https://www.googleapis.com/auth/presentations.readonly',
-  'https://www.googleapis.com/auth/drive.readonly',
-  'https://www.googleapis.com/auth/youtube.readonly',
 ];
 
 
@@ -41,6 +34,15 @@ export async function GET(request: Request) {
 
   if (!allowedPlatforms.has(platform)) {
     return NextResponse.redirect(new URL('/connect/gmail?oauth=error&reason=invalid_platform', baseUrl));
+  }
+
+  const mockState = `${platform}:mock_nonce`;
+
+  if (process.env.MOCK_MODE === 'true') {
+    const callbackUrl = new URL('/api/connect/google/callback', baseUrl);
+    callbackUrl.searchParams.set('code', 'mock_google_code');
+    callbackUrl.searchParams.set('state', mockState);
+    return NextResponse.redirect(callbackUrl);
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;

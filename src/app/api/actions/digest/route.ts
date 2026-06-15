@@ -66,9 +66,9 @@ ${memoryContext}
 
     if (finalDigest.length === 0) {
       finalDigest = [
-        "Your neural link is active and processing new signals.",
-        "System state: Optimal across all connected nodes.",
-        "Awaiting new high-priority events from your network."
+        "Your account sync is active and processing new signals.",
+        "System state: Running normally.",
+        "Awaiting new high-priority events from your connected accounts."
       ];
     }
 
@@ -79,9 +79,9 @@ ${memoryContext}
     // NEVER return a 500 for the digest, always provide a fallback
     return NextResponse.json({ 
       digest: [
-        "Neural sync complete. System monitoring active.",
+        "Sync complete. System monitoring active.",
         "Security protocols running in the background.",
-        "Reviewing your latest memory streams..."
+        "Reviewing your latest activity records..."
       ]
     });
   }

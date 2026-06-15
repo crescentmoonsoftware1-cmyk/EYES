@@ -44,7 +44,7 @@ export function TimelineView({ onBack }: TimelineViewProps) {
       <h2 className={styles.soloTitle}>TIME LINE</h2>
       
       {loading ? (
-        <div className={styles.timelineLoading}>Neural indexing in progress...</div>
+        <div className={styles.timelineLoading}>Indexing in progress...</div>
       ) : (
         <div className={styles.graphContainer}>
           <div className={styles.yAxisLabel}>Items Indexed</div>

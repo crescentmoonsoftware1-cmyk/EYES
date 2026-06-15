@@ -31,7 +31,7 @@ export async function DELETE(request: Request) {
       .delete()
       .eq('user_id', user.id);
 
-    // 3. Delete neural chat history
+    // 3. Delete chat history
     const { error: embeddingError } = await supabase
       .from('chat_threads')
       .delete()
@@ -61,7 +61,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Your neural archive has been permanently erased. Farewell.' 
+      message: 'Your archive has been permanently erased. Farewell.' 
     });
   } catch (err) {
     console.error('[GDPR-KillSwitch] Critical failure:', err);

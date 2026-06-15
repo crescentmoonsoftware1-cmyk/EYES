@@ -7,6 +7,7 @@ import styles from './LandingPage.module.css';
 import IntegrationOrbit from './IntegrationOrbit';
 import ScrollyTelling from './ScrollyTelling';
 import Footer from './Footer';
+import EyesLogo from '../common/EyesLogo';
 
 const ease: [number, number, number, number] = [0.16, 1, 0.3, 1]; // Premium smooth ease
 
@@ -149,22 +150,10 @@ export default function LandingPage() {
         >
           <div 
             className={styles.logoRow}
-            onMouseEnter={() => setLogoHovered(true)}
-            onMouseLeave={() => setLogoHovered(false)}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{ cursor: 'pointer', color: 'var(--text-primary)' }}
           >
-            <div className={styles.logoIconMini}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <motion.circle 
-                  cx="12" 
-                  cy="12" 
-                  r="3" 
-                  animate={logoHovered ? { x: [0, 1.2, -1.2, 0], y: [0, -0.8, 0.8, 0] } : { x: 0, y: 0 }}
-                  transition={{ duration: 0.8, ease: "easeInOut", repeat: logoHovered ? Infinity : 0 }}
-                />
-              </svg>
-            </div>
-            <span className={styles.logoTextMini}>EYES</span>
+            <EyesLogo width={92} height={22} />
           </div>
           
           <div className={styles.navLinks} onMouseLeave={() => setHoveredLink(null)}>

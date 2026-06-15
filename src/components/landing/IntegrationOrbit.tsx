@@ -198,27 +198,27 @@ export default function IntegrationOrbit() {
       }
 
       // Track absolute positions of nodes for line rendering
-      const actualNodePositions: { x: number; y: number; opacity: number }[] = [];
-
+      const actualNodePositions: ({ x: number; y: number; opacity: number } | null)[] = new Array(NODES.length).fill(null);
+ 
       NODES.forEach((node, i) => {
         const card = cardsRef.current[i];
         if (!card) return;
-
+ 
         const anim = anims.current[i];
-
+ 
         // Base coordinates animated by GSAP from center source card
         const bx = anim.x * layoutScale;
         const by = anim.y * layoutScale;
-
+ 
         // Parallax offset proportional to node depth (only active once revealed)
         const offsetX = (coords.currentX - centerX) * node.depth * 0.08 * anim.opacity;
         const offsetY = (coords.currentY - centerY) * node.depth * 0.08 * anim.opacity;
-
+ 
         const currentX = centerX + bx + offsetX;
         const currentY = centerY + by + offsetY;
-
-        actualNodePositions.push({ x: currentX, y: currentY, opacity: anim.opacity });
-
+ 
+        actualNodePositions[i] = { x: currentX, y: currentY, opacity: anim.opacity };
+ 
         // Apply transformations directly to the DOM for max performance
         gsap.set(card, {
           x: bx + offsetX,
@@ -228,12 +228,12 @@ export default function IntegrationOrbit() {
           zIndex: Math.round(100 + node.depth * 10)
         });
       });
-
+ 
       // Update Static Constellation Lines in SVG
       CONNECTIONS.forEach((pair, idx) => {
         const line = staticLinesRef.current[idx];
         if (!line) return;
-
+ 
         const p1 = actualNodePositions[pair[0]];
         const p2 = actualNodePositions[pair[1]];
         if (p1 && p2) {
@@ -241,44 +241,51 @@ export default function IntegrationOrbit() {
           line.setAttribute('y1', p1.y.toString());
           line.setAttribute('x2', p2.x.toString());
           line.setAttribute('y2', p2.y.toString());
-
+ 
           // Connect line opacity to node reveal values
           const opacityVal = p1.opacity * p2.opacity * 0.6;
           line.setAttribute('opacity', opacityVal.toString());
         }
       });
-
+ 
       // Update Dynamic Active Magnetic Cursor Lines (connect to nearest 3 nodes)
-      if (coords.active && actualNodePositions.length > 0) {
-        // Compute distances to cursor
-        const distances = actualNodePositions.map((pos, idx) => {
-          const dx = pos.x - coords.currentX;
-          const dy = pos.y - coords.currentY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          return { idx, dist, pos };
-        });
-
+      if (coords.active && actualNodePositions.some(p => p !== null)) {
+        // Compute distances to cursor for defined positions
+        const distances = actualNodePositions
+          .map((pos, idx) => {
+            if (!pos) return null;
+            const dx = pos.x - coords.currentX;
+            const dy = pos.y - coords.currentY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            return { idx, dist, pos };
+          })
+          .filter((item): item is { idx: number; dist: number; pos: { x: number; y: number; opacity: number } } => item !== null);
+ 
         // Sort to get 3 closest nodes
         distances.sort((a, b) => a.dist - b.dist);
-
+ 
         for (let i = 0; i < 3; i++) {
           const line = cursorLinesRef.current[i];
           if (!line) continue;
-
+ 
           const match = distances[i];
+          if (!match) {
+            line.setAttribute('opacity', '0');
+            continue;
+          }
           const maxDistance = isMobile ? 200 : 350;
           const proximity = Math.max(0, 1 - match.dist / maxDistance);
-
+ 
           // Only show connection if node is mostly visible/revealed
           const finalOpacity = proximity * 0.75 * match.pos.opacity;
-
+ 
           line.setAttribute('x1', coords.currentX.toString());
           line.setAttribute('y1', coords.currentY.toString());
           line.setAttribute('x2', match.pos.x.toString());
           line.setAttribute('y2', match.pos.y.toString());
           line.setAttribute('opacity', finalOpacity.toString());
         }
-
+ 
         // Hide unused cursor lines if any
         for (let i = 3; i < cursorLinesRef.current.length; i++) {
           const line = cursorLinesRef.current[i];

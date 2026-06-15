@@ -7,6 +7,7 @@ import type { PlatformStatus } from '@/types/dashboard';
 
 interface SourceReadinessViewProps {
   platforms: PlatformStatus[];
+  totalMemories?: number;
 }
 
 function getTimeAgo(dateString?: string | null) {
@@ -41,9 +42,12 @@ function parseErrorMessage(raw?: string | null): string {
   return clean.length > 65 ? clean.slice(0, 65) + '…' : clean;
 }
 
-export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
+export function SourceReadinessView({ platforms, totalMemories }: SourceReadinessViewProps) {
   const connectedCount = platforms.filter(p => p.connected).length;
   const connectedList = platforms.filter(p => p.connected);
+  const activeSourcesCount = platforms.filter(p => p.connected && (p.items || 0) >= 1).length;
+  const availablePlatformsCount = ALL_POSSIBLE_PLATFORMS.filter(p => !p.comingSoon).length;
+  const coveragePercent = Math.round((connectedCount / availablePlatformsCount) * 100);
 
   // True health score: percentage of connected platforms that are not in an 'error' state
   const healthScore = connectedCount === 0 ? 0 : Math.round(((connectedCount - platforms.filter(p => p.status === 'error').length) / connectedCount) * 100);
@@ -84,14 +88,19 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
         method: 'POST',
       });
 
+      if (response.status === 404) {
+        alert(`Manually syncing ${id} is not supported yet (Integration Coming Soon).`);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`Sync failed (${response.status})`);
       }
 
       // Trigger another refresh to show the updated data
       window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
-    } catch (error) {
-      console.error('Force sync error:', error);
+    } catch (error: any) {
+      console.warn('Force sync failed:', error);
       alert(`Failed to manually sync ${id}.`);
     }
   };
@@ -101,12 +110,12 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
       {/* Header with Health Score */}
       <div className={styles.readinessHeader} style={{ alignItems: 'center' }}>
         <div className={styles.readinessTitle}>
-          <h1 className={styles.pageHeroTitle} style={{ marginBottom: '4px' }}>Network Integrity</h1>
-          <p className={styles.pageHeroSub}>Diagnostic overview of active neural links and data ingestion status.</p>
+          <h1 className={styles.pageHeroTitle} style={{ marginBottom: '4px' }}>Source Readiness</h1>
+          <p className={styles.pageHeroSub}>Overview of connected sources and data ingestion status.</p>
         </div>
         <div style={{ textAlign: 'right' }}>
            <div style={{ fontSize: '48px', fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{healthScore}%</div>
-           <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-green)', letterSpacing: '2px' }}>SYSTEM OPTIMAL</div>
+           <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: '2px' }}>HEALTH SCORE</div>
         </div>
       </div>
 
@@ -114,21 +123,21 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
         <div className={styles.kpiCard}>
           <div className={styles.kpiMainRow}>
             <span className={styles.kpiLabel}>Active Sources</span>
-            <span className={styles.kpiValue}>{connectedCount}</span>
+            <span className={styles.kpiValue}>{activeSourcesCount}</span>
           </div>
           <span className={styles.kpiDesc}>Currently providing data to your memory.</span>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiMainRow}>
-            <span className={styles.kpiLabel}>Neural Coverage</span>
-            <span className={styles.kpiValue}>{Math.round((connectedCount / ALL_POSSIBLE_PLATFORMS.length) * 100)}%</span>
+            <span className={styles.kpiLabel}>Indexed Coverage</span>
+            <span className={styles.kpiValue}>{coveragePercent}%</span>
           </div>
-          <span className={styles.kpiDesc}>Percentage of available ecosystem indexed.</span>
+          <span className={styles.kpiDesc}>Connected platforms out of available sources.</span>
         </div>
         <div className={`${styles.kpiCard} ${styles.kpiCardFocus}`}>
           <div className={styles.kpiMainRow}>
             <span className={styles.kpiLabel}>Total Memories</span>
-            <span className={styles.kpiValue}>{connectedList.reduce((acc, p) => acc + (p.items || 0), 0).toLocaleString()}</span>
+            <span className={styles.kpiValue}>{(totalMemories ?? 0).toLocaleString()}</span>
           </div>
           <span className={styles.kpiDesc}>Total records extracted and processed.</span>
         </div>
@@ -136,10 +145,10 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
 
       {/* Management Grid */}
       <div className={styles.readinessSection}>
-        <h3 className={styles.subHeader}>● ACTIVE SOURCES ({connectedCount})</h3>
+        <h3 className={styles.subHeader}>● ACTIVE SOURCES ({activeSourcesCount})</h3>
         
         {connectedList.length === 0 ? (
-          <div className={styles.emptyState}>No active neural links detected. Go to the Connectors Hub to expand your network.</div>
+          <div className={styles.emptyState}>No sources connected. Go to the Connectors Hub to add your first source.</div>
         ) : (
           <div className={styles.readinessGrid}>
             {connectedList.map(p => {
@@ -173,7 +182,7 @@ export function SourceReadinessView({ platforms }: SourceReadinessViewProps) {
                           lineHeight: '1.4'
                         }}
                       >
-                        {isError ? parseErrorMessage(p.errorMessage) : (isSyncing ? 'Synchronizing Pulse...' : 'Optimal Neural Link')}
+                        {isError ? parseErrorMessage(p.errorMessage) : (isSyncing ? 'Syncing...' : 'Connected')}
                       </span>
                     </div>
                     {isSyncing && <div className={styles.syncPulse} />}

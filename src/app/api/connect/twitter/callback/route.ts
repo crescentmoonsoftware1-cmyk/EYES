@@ -7,6 +7,16 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
+  const oauthError = url.searchParams.get('error');
+
+  if (oauthError) {
+    console.error('Twitter authorization returned error:', oauthError);
+    return NextResponse.redirect(new URL(`/connect/twitter?oauth=error&reason=twitter_oauth_${oauthError}`, url.origin));
+  }
+
+  if (!code || !state) {
+    return NextResponse.redirect(new URL('/connect/twitter?oauth=error&reason=missing_code_or_state', url.origin));
+  }
 
   const clientId = process.env.TWITTER_CLIENT_ID?.trim();
   const clientSecret = process.env.TWITTER_CLIENT_SECRET?.trim();

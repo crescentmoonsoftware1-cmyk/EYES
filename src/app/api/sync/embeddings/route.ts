@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         .not('embedding', 'is', null);
 
       return NextResponse.json({
-        message: 'Neural index is current — all memories embedded.',
+        message: 'Index is current — all memories embedded.',
         indexed: 0,
         totalAtUser: totalIndexed ?? 0,
       });
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     console.log(`[AI-Brain] Batch done — embedded ${successCount} memories. Total indexed: ${totalIndexed}`);
 
     return NextResponse.json({
-      message: 'Neural indexing cycle complete.',
+      message: 'Indexing cycle complete.',
       indexed: successCount,
       totalAtUser: totalIndexed ?? 0,
       quotaExhausted,
@@ -123,6 +123,6 @@ export async function POST(request: Request) {
 
   } catch (err) {
     console.error('[AI-Brain] Deep indexing failure:', err);
-    return NextResponse.json({ error: 'Internal neural link failure during indexing.' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal failure during indexing.' }, { status: 500 });
   }
 }

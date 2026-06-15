@@ -80,8 +80,9 @@ export async function GET() {
       const platform = a.platform.toLowerCase();
       
       if (platform === 'gmail') {
-        if (sourceId) {
-          platformLink = `https://mail.google.com/mail/u/0/#all/${sourceId}`;
+        const threadId = metadata?.thread_id || sourceId;
+        if (threadId) {
+          platformLink = `https://mail.google.com/mail/u/0/#all/${threadId}`;
         } else {
           platformLink = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(a.title)}`;
         }

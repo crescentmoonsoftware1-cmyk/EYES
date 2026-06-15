@@ -418,7 +418,7 @@ export function IntelligenceView({ onBack }: IntelligenceViewProps) {
               {data.clusters.length === 0 ? (
                 <PendingCard
                   title="No patterns detected yet"
-                  detail="Connect more platforms and sync data, then click Re-Analyze to detect your cognitive patterns."
+                  detail="Connect more platforms and sync data, then click Re-Analyze to detect your behavioral patterns."
                 />
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
@@ -466,7 +466,7 @@ export function IntelligenceView({ onBack }: IntelligenceViewProps) {
               {data.correlations.length === 0 ? (
                 <PendingCard
                   title="Entity correlation mapping pending"
-                  detail="Identifies which people, apps, and contexts shift you into specific cognitive states. Requires state cluster data to be established first."
+                  detail="Identifies which people, apps, and contexts shift you into specific behavioral states. Requires state cluster data to be established first."
                 />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

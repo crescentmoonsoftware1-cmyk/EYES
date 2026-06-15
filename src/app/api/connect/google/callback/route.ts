@@ -41,6 +41,120 @@ export async function GET(request: Request) {
   const platformFromState = requestedPlatformFromState || 'gmail';
 
   try {
+    const isMock = process.env.MOCK_MODE === 'true';
+
+    if (isMock) {
+      console.log('[Google OAuth Mock] Bypassing real OAuth in mock mode...');
+      const mockSupabase = await createClient();
+      const { data: mockAuthData } = await mockSupabase.auth.getUser();
+      if (!mockAuthData?.user) {
+        return NextResponse.redirect(new URL('/login', await appBaseUrl(request)));
+      }
+      const mockUserId = mockAuthData.user.id;
+      const now = new Date().toISOString();
+      const accessToken = encryptToken('mock_access_token');
+      const refreshToken = encryptToken('mock_refresh_token');
+
+      const platforms = ['gmail', 'google-calendar'];
+
+      const tokenUpserts = platforms.map((dbPlatform) =>
+        mockSupabase.from('oauth_tokens').upsert({
+          user_id: mockUserId,
+          platform: dbPlatform,
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          scope: 'gmail.readonly calendar.readonly',
+          expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+          created_at: now,
+          updated_at: now,
+        }, { onConflict: 'user_id,platform' })
+      );
+
+      const syncUpserts = platforms.map((dbPlatform) =>
+        mockSupabase.from('sync_status').upsert({
+          user_id: mockUserId,
+          platform: dbPlatform,
+          status: 'connected',
+          sync_progress: 100,
+          total_items: 2,
+          last_sync_at: now,
+          next_sync_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          error_message: null,
+        }, { onConflict: 'user_id,platform' })
+      );
+
+      // Populating realistic mock memories for Gmail, Google Calendar, and GitHub
+      const mockMemories = [
+        {
+          user_id: mockUserId,
+          platform: 'gmail',
+          source_id: 'gmail_8842_mock',
+          event_type: 'email',
+          title: 'Re: Investor Network Introduction & One-Pager',
+          content: 'Hi, thank you for the introduction. Can you please send over your team\'s one-pager by the end of the month? Looking forward to review.',
+          author: 'john@investornet.com',
+          timestamp: '2026-03-14T10:00:00Z',
+          metadata: {
+            from: 'john@investornet.com',
+            snippet: 'Can you please send over your team\'s one-pager by the end of the month?',
+            body_indexed: true,
+            risk_score: 0,
+            risk_factors: []
+          },
+          is_flagged: false
+        },
+        {
+          user_id: mockUserId,
+          platform: 'google_calendar',
+          source_id: 'cal_9120_mock',
+          event_type: 'calendar_event',
+          title: 'Investor Network Meeting',
+          content: 'Follow-up meeting to discuss the one-pager and investor network introduction.',
+          author: 'Google Calendar',
+          timestamp: '2026-04-02T15:00:00Z',
+          metadata: {
+            start: { dateTime: '2026-04-02T15:00:00Z' },
+            end: { dateTime: '2026-04-02T16:00:00Z' },
+            htmlLink: 'https://calendar.google.com/calendar/r/eventedit/cal_9120'
+          },
+          is_flagged: false
+        },
+        {
+          user_id: mockUserId,
+          platform: 'github',
+          source_id: 'gh_1122_mock',
+          event_type: 'pull_request',
+          title: 'Update one-pager draft',
+          content: 'Fixed typos and updated team bios in the project one-pager document.',
+          author: 'developer@company.com',
+          timestamp: '2026-03-20T14:30:00Z',
+          metadata: {
+            htmlLink: 'https://github.com/company/repo/pull/1'
+          },
+          is_flagged: false
+        }
+      ];
+
+      const { error: memoryError } = await mockSupabase.from('memories').upsert(mockMemories, { onConflict: 'user_id,source_id' });
+      if (memoryError) {
+        console.warn('[Google OAuth Mock] Failed to insert mock memories:', memoryError);
+      } else {
+        console.log('[Google OAuth Mock] Successfully inserted mock memories!');
+      }
+
+      await Promise.all([...tokenUpserts, ...syncUpserts]);
+
+      // Welcome email triggers on first-time login/connection
+      try {
+        const { data: profile } = await mockSupabase.from('user_profiles').select('email, name').eq('user_id', mockUserId).maybeSingle();
+        if (profile?.email) {
+          sendWelcomeEmail(profile.email, profile.name || 'User');
+        }
+      } catch {}
+
+      return NextResponse.redirect(new URL(`/connect/${platformFromState}?oauth=success`, await appBaseUrl(request)));
+    }
+
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -126,9 +240,7 @@ export async function GET(request: Request) {
     const refreshToken = tokenBody.refresh_token ? encryptToken(tokenBody.refresh_token) : null;
 
     const platforms = [
-      'gmail', 'google-calendar', 'youtube',
-      'google-docs', 'google-sheets', 'google-slides',
-      'google-meet', 'google-chat', 'google-maps'
+      'gmail', 'google-calendar'
     ];
 
     console.log('[Google OAuth] Persisting to Supabase...');

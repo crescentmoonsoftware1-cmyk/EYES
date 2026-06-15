@@ -117,9 +117,9 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
           <h2 style={{ 
             color: '#fff', fontSize: '16px', fontWeight: 700, 
             letterSpacing: '-0.02em', margin: 0 
-          }}>Neural Intelligence</h2>
+          }}>Intelligence Layer</h2>
           <p style={{ color: '#6366f1', fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', marginTop: '4px', textTransform: 'uppercase' }}>
-            Cognitive Layer Active
+            Intelligence Layer Active
           </p>
         </div>
         <button onClick={onClose} style={{

@@ -30,6 +30,7 @@ function ChatPageInner() {
   const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
   const [brainPanelOpen, setBrainPanelOpen] = useState(false);
   const [excludedMemories, setExcludedMemories] = useState<Set<string>>(new Set());
+  const rollingSummaryRef = useRef('');  // Section 04 — rolling conversation summary
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);
   const hasSubmittedRef = useRef(false);
@@ -96,11 +97,16 @@ function ChatPageInner() {
     try {
       const response = await fetch('/api/chat?stream=1', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-timezone-offset': String(new Date().getTimezoneOffset()),
+        },
         signal: controller.signal,
         body: JSON.stringify({ 
           message: prompt,
-          history: messages.map(m => ({ role: m.role, content: m.content })) 
+          history: messages.map(m => ({ role: m.role, content: m.content })),
+          threadId: dbThreadId,
+          summary: rollingSummaryRef.current,
         }),
       });
 
@@ -158,7 +164,7 @@ function ChatPageInner() {
         // Non-200 response
         setMessages((prev) => [  
           ...prev.slice(0, -1),
-          { role: 'assistant', content: '⚠️ The neural service returned an error. Please try again.', pending: false }
+          { role: 'assistant', content: '⚠️ The service returned an error. Please try again.', pending: false }
         ]);
       }
     } catch (err) {
@@ -194,8 +200,10 @@ function ChatPageInner() {
           <div className={styles.chatColumn}>
             {messages.length === 0 ? (
               <div className={styles.emptyState}>
-                <h1 className={styles.brandTitle}>The EYES</h1>
-                <p className={styles.brandSubtitle}>How can the neural index assist you today?</p>
+                <h1 className={styles.brandTitle} style={{ fontSize: 'clamp(24px, 5vw, 32px)', lineHeight: 1.2 }}>
+                  Everything You Ever Said
+                </h1>
+                <p className={styles.brandSubtitle}>Ask me anything about your life.</p>
               </div>
             ) : (
               <div className={styles.messageList}>
@@ -220,7 +228,7 @@ function ChatPageInner() {
                                 code: ({node, inline, ...props}: any) => 
                                   inline 
                                     ? <code style={{background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace'}} {...props} />
-                                    : <div style={{background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)'}}><code {...props} /></div>,
+                                    : <span style={{display: 'block', background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)'}}><code {...props} /></span>,
                                 pre: ({node, ...props}) => <pre style={{margin: 0, padding: 0, background: 'transparent'}} {...props} />,
                                 strong: ({node, ...props}) => <strong style={{fontWeight: 700, color: 'var(--text-primary)'}} {...props} />,
                                 h1: ({node, ...props}) => <h1 style={{fontSize: '18px', fontWeight: 700, margin: '20px 0 10px', color: 'var(--text-primary)'}} {...props} />,
@@ -236,40 +244,103 @@ function ChatPageInner() {
                         )}
                         {m.pending && <span className={styles.typingCursor}>▊</span>}
                       </div>
-                      {/* Cited memory exclusion buttons */}
-                      {m.role === 'assistant' && !m.pending && m.citations && m.citations.length > 0 && (
-                        <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {m.citations.filter(c => c.memoryId).map(c => {
-                            const isExcluded = excludedMemories.has(c.memoryId!);
-                            return (
-                              <button
-                                key={c.memoryId}
-                                title={isExcluded ? 'Memory excluded from patterns' : `Don't use "${c.platform}" memory in clustering`}
-                                onClick={async () => {
-                                  if (isExcluded) return;
-                                  await fetch(`/api/memories/${c.memoryId}/exclude`, { method: 'PATCH' });
-                                  setExcludedMemories(prev => new Set([...prev, c.memoryId!]));
-                                }}
-                                style={{
-                                  background: isExcluded ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
-                                  border: `1px solid ${isExcluded ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                                  color: isExcluded ? '#10b981' : '#6b7280',
-                                  borderRadius: '6px', padding: '3px 8px',
-                                  fontSize: '11px', cursor: isExcluded ? 'default' : 'pointer',
-                                  display: 'flex', alignItems: 'center', gap: '4px',
-                                }}
-                              >
-                                {isExcluded ? '✓ Excluded' : `⊘ ${c.platform}`}
-                              </button>
-                            );
-                          })}
-                          {m.citations.some(c => c.memoryId && !excludedMemories.has(c.memoryId)) && (
-                            <span style={{ fontSize: '10px', color: '#374151', alignSelf: 'center', marginLeft: '2px' }}>
-                              exclude from patterns
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      {/* C9: Citation chips — open real source */}
+                      {m.role === 'assistant' && !m.pending && m.citations && m.citations.length > 0 && (() => {
+                        /** Build the best real URL for a citation */
+                        const resolveSourceUrl = (c: Citation): string | null => {
+                          if (c.sourceUrl) return c.sourceUrl;
+                          const platform = (c.platform || '').toLowerCase();
+                          const id = c.sourceId;
+                          if (!id) return null;
+                          if (platform === 'gmail')            return `https://mail.google.com/mail/u/0/#all/${id}`;
+                          if (platform === 'github')           return `https://github.com/${id}`;
+                          if (platform === 'slack')            return `https://slack.com/app_redirect?channel=${id}`;
+                          if (platform === 'notion')           return `https://notion.so/${id.replace(/-/g, '')}`;
+                          if (platform === 'linear')           return `https://linear.app/issue/${id}`;
+                          if (platform === 'google-calendar')  return `https://calendar.google.com/calendar/r/eventedit?eid=${id}`;
+                          if (platform === 'discord')          return `https://discord.com/channels/${id}`;
+                          if (platform === 'reddit')           return `https://reddit.com/${id}`;
+                          if (platform === 'twitter')          return `https://x.com/i/web/status/${id}`;
+                          return null;
+                        };
+
+                        return (
+                          <div style={{ marginTop: '10px' }}>
+                            {/* Source chips row */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+                              {m.citations.map((c, idx) => {
+                                const url = resolveSourceUrl(c);
+                                const label = c.title
+                                  ? (c.title.length > 40 ? c.title.slice(0, 40) + '…' : c.title)
+                                  : c.platform;
+                                const chip = (
+                                  <span style={{
+                                    background: url ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '6px', padding: '3px 8px',
+                                    fontSize: '11px', color: url ? '#a3b3cc' : '#4b5563',
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    cursor: url ? 'pointer' : 'default',
+                                    textDecoration: 'none',
+                                    transition: 'background 0.15s',
+                                    maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                  }}>
+                                    <span style={{ opacity: 0.7, fontSize: '10px' }}>↗</span>
+                                    {label}
+                                  </span>
+                                );
+                                return url ? (
+                                  <a
+                                    key={idx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={`Open in ${c.platform}`}
+                                    style={{ textDecoration: 'none' }}
+                                  >
+                                    {chip}
+                                  </a>
+                                ) : (
+                                  <span key={idx} title="Source no longer available">{chip}</span>
+                                );
+                              })}
+                            </div>
+                            {/* Secondary: memory exclude buttons */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {m.citations.filter(c => c.memoryId).map(c => {
+                                const isExcluded = excludedMemories.has(c.memoryId!);
+                                return (
+                                  <button
+                                    key={c.memoryId}
+                                    title={isExcluded ? 'Memory excluded from patterns' : `Don't use "${c.platform}" memory in clustering`}
+                                    onClick={async () => {
+                                      if (isExcluded) return;
+                                      await fetch(`/api/memories/${c.memoryId}/exclude`, { method: 'PATCH' });
+                                      setExcludedMemories(prev => new Set([...prev, c.memoryId!]));
+                                    }}
+                                    style={{
+                                      background: isExcluded ? 'rgba(16,185,129,0.1)' : 'transparent',
+                                      border: `1px solid ${isExcluded ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                                      color: isExcluded ? '#10b981' : '#4b5563',
+                                      borderRadius: '6px', padding: '2px 7px',
+                                      fontSize: '10px', cursor: isExcluded ? 'default' : 'pointer',
+                                      display: 'flex', alignItems: 'center', gap: '4px',
+                                    }}
+                                  >
+                                    {isExcluded ? '✓ Excluded' : `⊘ ${c.platform}`}
+                                  </button>
+                                );
+                              })}
+                              {m.citations.some(c => c.memoryId && !excludedMemories.has(c.memoryId)) && (
+                                <span style={{ fontSize: '10px', color: '#374151', alignSelf: 'center', marginLeft: '2px' }}>
+                                  exclude from patterns
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                     </div>
                   </div>
                 ))}
@@ -284,7 +355,8 @@ function ChatPageInner() {
                 <input 
                   type="text" 
                   className={styles.input}
-                  placeholder="Continue the investigation..."
+                  placeholder="Ask me anything about your life…"
+
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit(query)}
@@ -300,7 +372,7 @@ function ChatPageInner() {
                 {/* Brain Panel Toggle */}
                 <button
                   onClick={() => setBrainPanelOpen(p => !p)}
-                  title="Cognitive Layer"
+                  title="Intelligence Layer"
                   style={{
                     background: brainPanelOpen ? 'rgba(99,102,241,0.2)' : 'none',
                     border: '1px solid rgba(99,102,241,0.3)',

@@ -183,7 +183,7 @@ describe('resolveSyncActor — SESSION authentication', () => {
     expect('error' in result).toBe(true);
     if ('error' in result) {
       expect(result.status).toBe(500);
-      expect(result.error).toMatch(/neural session/i);
+      expect(result.error).toMatch(/user session/i);
     }
   });
 });

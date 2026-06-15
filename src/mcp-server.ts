@@ -8,7 +8,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
+// No provider SDK — embedding via Gemini REST (K1)
 import * as dotenv from "dotenv";
 
 
@@ -32,28 +32,34 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Gemini embedding client — must match main app (gemini-embedding-001, 1024d)
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
-const EMBED_MODEL = 'gemini-embedding-001';
-const EMBED_DIMS = 1024; // Must match vector(1024) column in memories table
+// Gemini embedding via REST (no SDK — K1 compliant)
+const EMBED_REST_MODEL = 'text-embedding-004'; // maps to gemini-embedding-001 1024d
+const EMBED_DIMS = 1024;
 
-/**
- * Generates a 1024-dimensional embedding using Gemini — matches the main app's vector store.
- */
 async function generateGeminiEmbedding(text: string): Promise<number[] | null> {
-  if (!genAI) {
+  if (!GEMINI_API_KEY) {
     console.error('[MCP] GEMINI_API_KEY not set — cannot generate embeddings.');
     return null;
   }
   try {
-    const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
-    const result = await model.embedContent({
-      content: { role: 'user', parts: [{ text: text.slice(0, 8000) }] },
-      taskType: TaskType.RETRIEVAL_QUERY,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      outputDimensionality: EMBED_DIMS,
-    } as Parameters<typeof model.embedContent>[0]);
-    return Array.from(result.embedding.values);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_REST_MODEL}:embedContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${EMBED_REST_MODEL}`,
+          content: { parts: [{ text: text.slice(0, 8000) }] },
+          taskType: 'RETRIEVAL_QUERY',
+          outputDimensionality: EMBED_DIMS,
+        }),
+      },
+    );
+    if (!res.ok) { console.error('[MCP] Gemini embed REST error:', res.status); return null; }
+    const data = await res.json();
+    const values: number[] = data?.embedding?.values;
+    if (values?.length !== EMBED_DIMS) return null;
+    return values;
   } catch (err) {
     console.error('[MCP] Gemini embedding failed:', err instanceof Error ? err.message : err);
     return null;

@@ -384,7 +384,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
         <div className={styles.headerTitleGroup}>
           <h1 className={styles.mainTitle}>Action Command Bridge</h1>
           <p className={styles.subtitle}>
-            Approve autonomous actions discovered across your digital trace.
+            Review and approve actions discovered across your connected sources.
             {' '}<span style={{ opacity: 0.5, fontSize: '0.75rem' }}>{lastRunDisplay}</span>
           </p>
         </div>
@@ -416,15 +416,17 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
 
           {loading ? (
             <div className={styles.loadingBox}>
+              {/* Commented out loading animation:
               <div className={styles.neuralPulseRing}>
                 <div className={styles.pulseInner} />
               </div>
+              */}
               <span className={styles.loadingTitle}>LOADING ACTION QUEUE...</span>
-              <p className={styles.loadingDetail}>Reading from your neural archive...</p>
+              <p className={styles.loadingDetail}>Reading your connected sources…</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className={styles.emptyCard}>
-              {/* Animated scanning ring */}
+              {/* Commented out scanning ring UI:
               <div className={styles.scanRingWrap}>
                 <div className={styles.scanRing}>
                   <div className={styles.scanRingInner} />
@@ -432,7 +434,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                 </div>
                 <span className={styles.scanRingIcon}>⚡</span>
               </div>
-
+              */}
               <h3 className={styles.emptyTitle}>System Active — Queue Clear</h3>
 
               {/* Countdown */}
@@ -505,8 +507,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                                   marginBottom: '16px'
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>👁️</span>
-                                    <strong style={{ fontSize: '0.8rem', letterSpacing: '0.05em', color: 'var(--accent-blue, #3b82f6)' }}>EYES COGNITIVE ASSISTANT</strong>
+                                    <strong style={{ fontSize: '0.8rem', letterSpacing: '0.05em', color: 'var(--accent-blue, #3b82f6)' }}>EYES ASSISTANT</strong>
                                   </div>
                                   <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.5', fontWeight: '500' }}>
                                     Hey! <strong style={{ color: 'var(--text-primary)' }}>{sender}</strong> sent {platformName}: <em style={{ color: 'var(--accent-blue, #2563eb)', fontStyle: 'normal', fontWeight: 'bold' }}>"{cleanDesc}"</em>. What do you want to say?

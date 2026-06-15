@@ -50,7 +50,7 @@ export function MemoryFeedView({
   return (
     <div className={styles.soloView}>
        <div className={styles.viewHeader} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '32px' }}>
-          <h1 className={styles.soloTitle} style={{ margin: 0, whiteSpace: 'nowrap' }}>MEMORY FEED</h1>
+          <h1 className={styles.soloTitle} style={{ margin: 0, whiteSpace: 'nowrap' }}>SOURCE FEED</h1>
           
           <div className={styles.filterBar} style={{ margin: 0, padding: 0, borderBottom: 'none', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
              <button 
@@ -116,7 +116,7 @@ export function MemoryFeedView({
           {feedEvents.length === 0 && (
             <div className={styles.emptyFeed}>
                <div className={styles.emptyIcon}>∅</div>
-               <p>The neural index is currently empty. Connect a platform to begin ingestion.</p>
+               <p>Your vault is empty. Connect a platform to begin indexing.</p>
             </div>
           )}
        </div>

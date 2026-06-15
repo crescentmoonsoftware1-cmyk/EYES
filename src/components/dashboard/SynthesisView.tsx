@@ -99,10 +99,10 @@ const PLATFORM_ICONS: Record<string, React.ReactElement> = {
 function NeuralLoader() {
   const [step, setStep] = React.useState(0);
   const steps = [
-    'Generating neural embedding...',
-    'Scanning vector database for semantic matches...',
-    'Fetching cognitive behavior clusters...',
-    'Synthesizing neural response...'
+    'Generating embedding...',
+    'Scanning memory database for matches...',
+    'Fetching behavioral patterns...',
+    'Synthesizing response...'
   ];
 
   React.useEffect(() => {
@@ -118,7 +118,7 @@ function NeuralLoader() {
       <div className={styles.neuralOrb} />
       <div className={styles.neuralTextContainer}>
         <span className={styles.neuralStatusText}>{steps[step]}</span>
-        <span className={styles.neuralSubText}>Cognitive OS · 70B</span>
+        <span className={styles.neuralSubText}>EYES</span>
       </div>
     </div>
   );
@@ -193,10 +193,33 @@ export function SynthesisView({
       >
         {/* Hero (no messages) */}
         {messages.length === 0 && (
-          <div style={{ width: '100%', maxWidth: '800px', textAlign: 'center' }}>
-            <h1 className={styles.brandDisplayTitle}>The EYES</h1>
-            <div className={styles.heroSummary} style={{ justifyContent: 'center' }}>
-              <div className={styles.shieldIcon}><ShieldIcon size={18} /></div>
+          <div style={{
+            width: '100%',
+            maxWidth: '800px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}>
+            <h1 className={styles.brandDisplayTitle} style={{
+              fontSize: 'clamp(28px, 6vw, 44px)',
+              lineHeight: 1.2,
+              textAlign: 'center',
+              width: '100%',
+              margin: '0 0 20px 0'
+            }}>
+              Everything You Ever Said
+            </h1>
+            <div className={styles.heroSummary} style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              gap: '8px',
+              margin: '0 0 28px 0'
+            }}>
+              <div className={styles.shieldIcon} style={{ display: 'flex', alignItems: 'center' }}><ShieldIcon size={18} /></div>
               <span>Indexed <strong>{totalMemories.toLocaleString()}</strong> records across your connected sources.</span>
             </div>
 
@@ -228,7 +251,7 @@ export function SynthesisView({
               <div className={styles.commandInputBox}>
                 <div className={styles.searchIcon}><SearchIcon /></div>
                 <input id="memory-search" name="query" type="text" className={styles.commandInput}
-                  placeholder="Search digital memories..."
+                  placeholder="Ask me anything about your life..."
                   value={query} onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) onSubmit(query.trim()); }}
                   disabled={isStreaming}
@@ -242,10 +265,12 @@ export function SynthesisView({
 
             {/* Quick actions */}
             <div className={styles.quickActions}>
-              <div className={styles.actionCard} onClick={() => setView('feed')}><span>Memory Feed</span></div>
+              <div className={styles.actionCard} onClick={() => setView('feed')}><span>Source Feed</span></div>
               <div className={styles.actionCard} onClick={() => setView('timeline')}><span>Time Line</span></div>
               <div className={styles.actionCard} onClick={() => setView('audit')}><span>Audit</span></div>
+              {/* Commented out Mind Map quick action card:
               <div className={styles.actionCard} onClick={() => setRightPanelOpen(true)}><span>🧠 Mind Map</span></div>
+              */}
             </div>
           </div>
         )}
@@ -271,7 +296,7 @@ export function SynthesisView({
                           code: ({ node, inline, ...props }: any) =>
                             inline
                               ? <code style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace' }} {...props} />
-                              : <div style={{ background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)' }}><code {...props} /></div>,
+                              : <span style={{ display: 'block', background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)' }}><code {...props} /></span>,
                           pre: ({ node, ...props }) => <pre style={{ margin: 0, padding: 0, background: 'transparent' }} {...props} />,
                           strong: ({ node, ...props }) => <strong style={{ fontWeight: 700, color: 'var(--text-primary)' }} {...props} />,
                           h1: ({ node, ...props }) => <h1 style={{ fontSize: '18px', fontWeight: 700, margin: '20px 0 10px', color: 'var(--text-primary)' }} {...props} />,

@@ -82,13 +82,13 @@ export async function POST(request: Request) {
       success: true,
       auditId: audit.id,
       status: 'analysis',
-      message: 'Neural reputation audit initiated successfully.'
+      message: 'Reputation audit initiated successfully.'
     });
 
   } catch (err) {
     console.error('[Audit API] PRODUCTION CRASH:', err);
     return NextResponse.json({ 
-      error: 'Neural execution failed.', 
+      error: 'Execution failed.', 
       detail: err instanceof Error ? err.message : String(err) 
     }, { status: 500 });
   }

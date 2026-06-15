@@ -123,7 +123,7 @@ export function HistoryView({ onBack, onLoadThread }: { onBack: () => void, onLo
     <div className={styles.soloView}>
       <div className={styles.viewHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h1 className={styles.soloTitle}>Neural History</h1>
+          <h1 className={styles.soloTitle}>Activity History</h1>
         </div>
         <button
           onClick={loadData}
@@ -150,7 +150,7 @@ export function HistoryView({ onBack, onLoadThread }: { onBack: () => void, onLo
           className={`${styles.filterChip} ${activeTab === 'activity' ? styles.filterChipActive : ''}`}
           onClick={() => setActiveTab('activity')}
         >
-          Neural Activity
+          Sync Activity
         </button>
       </div>
 
@@ -298,16 +298,16 @@ export function HistoryView({ onBack, onLoadThread }: { onBack: () => void, onLo
 
       {activeTab === 'activity' && (
         <div className={styles.threadList}>
-          {loading && <p className={styles.loadingText}>Syncing neural pulse history...</p>}
+          {loading && <p className={styles.loadingText}>Loading sync history...</p>}
           {!loading && syncs.length === 0 && (
             <div className={styles.emptyState}>
-              <p>No neural activity recorded. Connect platforms to begin indexing.</p>
+              <p>No activity recorded. Connect platforms to begin indexing.</p>
             </div>
           )}
           {!loading && syncs.map((sync) => (
             <div key={sync.runId} className={styles.threadCard} style={{ cursor: 'default', padding: '16px 24px' }}>
               <div className={styles.threadHeader} style={{ marginBottom: '4px' }}>
-                <h4 className={styles.threadTitle} style={{ fontSize: '15px' }}>Neural Link Update</h4>
+                <h4 className={styles.threadTitle} style={{ fontSize: '15px' }}>Sync Update</h4>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: sync.status === 'success' ? '#10b981' : '#ef4444' }}>
                   {sync.status.toUpperCase()}
                 </span>

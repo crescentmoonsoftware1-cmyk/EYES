@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+﻿import { Resend } from 'resend';
 
 // Using Resend shared domain until the-eyes.app is purchased.
 // Switch to 'EYES <hello@the-eyes.app>' after buying the domain + adding DNS records.
@@ -12,7 +12,7 @@ function getResendClient(): Resend {
   return new Resend(key);
 }
 
-// ── Email templates ────────────────────────────────────────────────────────────
+// â”€â”€ Email templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function welcomeHtml(name: string) {
   return `<!DOCTYPE html>
@@ -30,10 +30,10 @@ function welcomeHtml(name: string) {
     <h1>EYES is now watching.</h1>
     <p>Hi ${name},</p>
     <p>Your account is active. EYES is indexing your connected platforms and will begin detecting patterns in your behavior over the next 21 days.</p>
-    <p>For now — ask it anything about your history. It already knows more than you think.</p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Open EYES →</a>
+    <p>For now â€” ask it anything about your history. It already knows more than you think.</p>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Open EYES â†’</a>
     <div class="footer">
-      EYES Neural Memory OS · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -54,14 +54,14 @@ function clusterReadyHtml(name: string, clusterCount: number) {
 </style></head>
 <body>
   <div class="container">
-    <div class="badge">🧠 Behavioral patterns detected</div>
+    <div class="badge">ðŸ§  Behavioral patterns detected</div>
     <h1>EYES found ${clusterCount} recurring states in your data.</h1>
     <p>Hi ${name},</p>
-    <p>After analyzing your last 21+ days of activity, EYES has detected ${clusterCount} distinct behavioral modes you cycle through. These are not guesses — they are patterns computed from your actual data.</p>
+    <p>After analyzing your last 21+ days of activity, EYES has detected ${clusterCount} distinct behavioral modes you cycle through. These are not guesses â€” they are patterns computed from your actual data.</p>
     <p>Open EYES to review and name each pattern. Once confirmed, every chat answer will reference which mode you're currently in.</p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Review your patterns →</a>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Review your patterns â†’</a>
     <div class="footer">
-      EYES Neural Memory OS · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -82,14 +82,14 @@ function connectorErrorHtml(name: string, platform: string) {
 </style></head>
 <body>
   <div class="container">
-    <div class="warn">⚠ Connection expired</div>
+    <div class="warn">âš  Connection expired</div>
     <h1>Your ${platform} connection needs to be refreshed.</h1>
     <p>Hi ${name},</p>
     <p>EYES lost access to your ${platform} account. This usually happens when OAuth tokens expire. EYES cannot index new ${platform} data until you reconnect.</p>
     <p>This takes 30 seconds to fix.</p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" class="cta">Reconnect ${platform} →</a>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" class="cta">Reconnect ${platform} â†’</a>
     <div class="footer">
-      EYES Neural Memory OS · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -98,7 +98,7 @@ function connectorErrorHtml(name: string, platform: string) {
 
 
 
-// ── Public send functions ──────────────────────────────────────────────────────
+// â”€â”€ Public send functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function sendWelcomeEmail(to: string, name: string) {
   if (!process.env.RESEND_API_KEY) return;
@@ -109,7 +109,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
       subject: 'EYES is now watching.',
       html: welcomeHtml(name),
     });
-    console.log(`[Email] Welcome sent → ${to}`);
+    console.log(`[Email] Welcome sent â†’ ${to}`);
   } catch (err) {
     console.error('[Email] Welcome failed:', err);
   }
@@ -124,7 +124,7 @@ export async function sendClusterReadyEmail(to: string, name: string, clusterCou
       subject: `EYES detected ${clusterCount} behavioral patterns in your data`,
       html: clusterReadyHtml(name, clusterCount),
     });
-    console.log(`[Email] Cluster ready sent → ${to}`);
+    console.log(`[Email] Cluster ready sent â†’ ${to}`);
   } catch (err) {
     console.error('[Email] Cluster ready failed:', err)
   }
@@ -139,7 +139,7 @@ export async function sendConnectorErrorEmail(to: string, name: string, platform
       subject: `Action needed: Your ${platform} connection expired`,
       html: connectorErrorHtml(name, platform),
     });
-    console.log(`[Email] Connector error sent → ${to} for ${platform}`);
+    console.log(`[Email] Connector error sent â†’ ${to} for ${platform}`);
   } catch (err) {
     console.error('[Email] Connector error failed:', err);
   }
@@ -162,7 +162,7 @@ function draftApprovalHtml(name: string, sender: string, summary: string, draftR
 </style></head>
 <body>
   <div class="container">
-    <div class="badge">✉ Action Draft Ready</div>
+    <div class="badge">âœ‰ Action Draft Ready</div>
     <h1>Draft Reply for: "${summary}"</h1>
     <p>Hi ${name},</p>
     <p>EYES has prepared a draft response to an email from <strong>${sender}</strong>. Review the draft below:</p>
@@ -174,9 +174,9 @@ function draftApprovalHtml(name: string, sender: string, summary: string, draftR
     
     <p>Please note: this reply will NOT be sent until you approve it.</p>
     
-    <a href="${approvalUrl}" class="cta">Approve & Send Draft →</a>
+    <a href="${approvalUrl}" class="cta">Approve & Send Draft â†’</a>
     <div class="footer">
-      EYES Neural Memory OS · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -207,7 +207,7 @@ export async function sendDraftApprovalEmail(params: {
         params.actionId
       ),
     });
-    console.log(`[Email] Draft approval email sent → ${params.to}`);
+    console.log(`[Email] Draft approval email sent â†’ ${params.to}`);
   } catch (err) {
     console.error('[Email] Draft approval failed:', err);
   }

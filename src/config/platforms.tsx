@@ -54,6 +54,8 @@ export const ALL_POSSIBLE_PLATFORMS = [
   // ─── Social ───────────────────────────────────────────────────────────────
   { id: 'discord',         name: 'Discord',         icon: <DiscordIconOfficial />,  category: 'Social',       description: 'Connect servers and private messaging history.',            color: '#5865f2' },
   { id: 'twitter',         name: 'Twitter (X)',     icon: <XIconOfficial />,        category: 'Social',       description: 'Sync your tweets, mentions, and social footprint.',         color: 'var(--text-primary)' },
+  { id: 'reddit',          name: 'Reddit',          icon: <RedditIconOfficial />,   category: 'Social',       description: 'Index your posts, comments, and saved content.',            color: '#FF4500', comingSoon: true },
+
 
   // ─── Creative ─────────────────────────────────────────────────────────────
   { id: 'canva',           name: 'Canva',           icon: <CanvaIconOfficial />,    category: 'Creative',     description: 'Sync your Canva designs and creative projects.',            color: '#00C4CC', comingSoon: true },
@@ -70,13 +72,13 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'linkedin',        name: 'LinkedIn',        icon: <LinkedInIconOfficial />, category: 'Social',       description: 'Index professional networking and careers communications.', color: '#0077b5', comingSoon: true },
 
   // ─── Workspace & Maps (Coming Soon) ───────────────────────────────────────────
-  { id: 'google-docs',     name: 'Google Docs',     icon: <GoogleDocsIcon />,       category: 'Productivity', description: 'Read documents, generate reports, and meeting notes.',       color: '#4285F4' },
-  { id: 'google-sheets',   name: 'Google Sheets',   icon: <GoogleSheetsIcon />,     category: 'Productivity', description: 'Sync personal data, habits, expenses, and analytics.',       color: '#0F9D58' },
-  { id: 'google-slides',   name: 'Google Slides',   icon: <GoogleSlidesIcon />,     category: 'Productivity', description: 'Index presentation generation and AI-created reports.',      color: '#F4B400' },
-  { id: 'google-meet',     name: 'Google Meet',     icon: <GoogleMeetIcon />,       category: 'Productivity', description: 'Sync meeting data and AI-generated meeting summaries.',      color: '#00832d' },
-  { id: 'google-chat',     name: 'Google Chat',     icon: <GoogleChatIcon />,       category: 'Productivity', description: 'Index team communication and perform message analysis.',     color: '#00ac47' },
-  { id: 'google-maps',     name: 'Google Maps',     icon: <GoogleMapsIcon />,       category: 'Social',       description: 'Save travel memories, places, and location insights.',       color: '#4285F4' },
+  { id: 'google-docs',     name: 'Google Docs',     icon: <GoogleDocsIcon />,       category: 'Productivity', description: 'Read documents, generate reports, and meeting notes.',       color: '#4285F4', comingSoon: true },
+  { id: 'google-sheets',   name: 'Google Sheets',   icon: <GoogleSheetsIcon />,     category: 'Productivity', description: 'Sync personal data, habits, expenses, and analytics.',       color: '#0F9D58', comingSoon: true },
+  { id: 'google-slides',   name: 'Google Slides',   icon: <GoogleSlidesIcon />,     category: 'Productivity', description: 'Index presentation generation and AI-created reports.',      color: '#F4B400', comingSoon: true },
+  { id: 'google-meet',     name: 'Google Meet',     icon: <GoogleMeetIcon />,       category: 'Productivity', description: 'Sync meeting data and AI-generated meeting summaries.',      color: '#00832d', comingSoon: true },
+  { id: 'google-chat',     name: 'Google Chat',     icon: <GoogleChatIcon />,       category: 'Productivity', description: 'Index team communication and perform message analysis.',     color: '#00ac47', comingSoon: true },
+  { id: 'google-maps',     name: 'Google Maps',     icon: <GoogleMapsIcon />,       category: 'Social',       description: 'Save travel memories, places, and location insights.',       color: '#4285F4', comingSoon: true },
 
   // ─── Media (Coming Soon) ───────────────────────────────────────────
-  { id: 'youtube',         name: 'YouTube',         icon: <YouTubeIconOfficial />,  category: 'Creative',     description: 'Index saved videos, watch history, and learning.',           color: '#FF0000' },
+  { id: 'youtube',         name: 'YouTube',         icon: <YouTubeIconOfficial />,  category: 'Creative',     description: 'Index saved videos, watch history, and learning.',           color: '#FF0000', comingSoon: true },
 ];

@@ -85,6 +85,6 @@ export async function resolveSyncActor(request: Request): Promise<SyncActor | Sy
       mode: 'session',
     };
   } catch {
-    return { error: 'Failed to initialize neural session.', status: 500 };
+    return { error: 'Failed to initialize user session.', status: 500 };
   }
 }

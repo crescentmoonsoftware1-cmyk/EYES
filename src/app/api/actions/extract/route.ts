@@ -58,8 +58,8 @@ export async function extractForUser(userId: string, supabase: any, force = fals
 
   const memoryContext = (memories && memories.length > 0)
     ? memories.map((m: { platform: string; id: string; title?: string; content?: string }) =>
-        `[${m.platform.toUpperCase()}] [${m.id}] ${m.title ?? ''}: ${(m.content ?? '').slice(0, 120)}`
-      ).join('\n')
+      `[${m.platform.toUpperCase()}] [${m.id}] ${m.title ?? ''}: ${(m.content ?? '').slice(0, 120)}`
+    ).join('\n')
     : 'No actionable memories found.';
 
   // Get User Settings for Risk Sensitivity
@@ -69,13 +69,13 @@ export async function extractForUser(userId: string, supabase: any, force = fals
     .eq('user_id', userId)
     .eq('platform', 'user_global')
     .maybeSingle();
-    
+
   let riskSensitivity = 'MEDIUM';
   if (settingsData?.data_types?.[0]) {
     try {
       const parsedSettings = JSON.parse(settingsData.data_types[0]);
       if (parsedSettings.riskSensitivity) riskSensitivity = parsedSettings.riskSensitivity;
-    } catch {}
+    } catch { }
   }
 
   let riskInstruction = '- Risk Sensitivity is MEDIUM. Extract clear actionable tasks and standard commitments.';
@@ -85,8 +85,8 @@ export async function extractForUser(userId: string, supabase: any, force = fals
     riskInstruction = '- Risk Sensitivity is HIGH. Be hyper-vigilant. Extract subtle tasks, passive-aggressive follow-ups, minor unresponded messages, and implied commitments.';
   }
 
-  const prompt = `You are the Autonomous Agent brain of "The EYES".
-Read the recent user memories and extract concrete actionable tasks (e.g. meeting requests, PR reviews, email replies, reminders).
+  const prompt = `You are an action extraction assistant for EYES.
+Read the recent user records and extract concrete actionable tasks (e.g. meeting requests, PR reviews, email replies, reminders).
 
 Return ONLY a raw JSON object — no markdown, no explanation — in this exact format:
 {"actions": [{"id":"unique_id","memoryId":"the_memory_id_from_brackets","platform":"platform","title":"short title","description":"brief context","suggestedAction":"what to do","actionType":"CALENDAR|LINEAR_TICKET|SLACK_REPLY|REMINDER|EMAIL_REPLY","method":"POST","confidence":85}]}
@@ -139,7 +139,7 @@ ${memoryContext}`;
       try {
         const embedInput = `${action.title} ${action.description}`;
         const embedRes = await invokeModel({ capability: 'embed', messages: [{ role: 'user', content: embedInput }] });
-        
+
         if (embedRes && typeof embedRes !== 'string' && 'embedding' in embedRes) {
           const { data: matches } = await supabase.rpc('match_memories', {
             query_embedding: embedRes.embedding,
@@ -149,25 +149,25 @@ ${memoryContext}`;
           });
 
           if (matches && matches.length > 0) {
-             const historyContext = matches.map((m: any) => `[${m.platform}] ${m.title || 'Event'}: ${m.content}`).join('\n');
-             const synthesisPrompt = `You are building a citation chain for a task. 
+            const historyContext = matches.map((m: any) => `[${m.platform}] ${m.title || 'Event'}: ${m.content}`).join('\n');
+            const synthesisPrompt = `You are building a citation chain for a task. 
 Task: ${action.title} - ${action.description}
 User's History:
 ${historyContext}
 
 Write a 1-2 sentence description explaining the task AND citing the past commitment if it exists (e.g. "Valentin is asking about the deck. You promised it on April 17."). If the history is completely irrelevant, just return the original task description.
 DO NOT use markdown or quotation marks.`;
-             
-             const synthesis = await invokeModel({
-                capability: 'chat',
-                preference: 'gemini',
-                capture: false,
-                messages: [{ role: 'user', content: synthesisPrompt }]
-             });
-             
-             if (typeof synthesis === 'string' && synthesis.trim().length > 10) {
-                action.description = synthesis.trim(); // Replace basic description with citation chain
-             }
+
+            const synthesis = await invokeModel({
+              capability: 'chat',
+              preference: 'gemini',
+              capture: false,
+              messages: [{ role: 'user', content: synthesisPrompt }]
+            });
+
+            if (typeof synthesis === 'string' && synthesis.trim().length > 10) {
+              action.description = synthesis.trim(); // Replace basic description with citation chain
+            }
           }
         }
       } catch (e) {

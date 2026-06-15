@@ -17,6 +17,15 @@ type CalendarEventsResponse = {
 };
 
 export async function POST(request: Request) {
+  if (process.env.MOCK_MODE === 'true') {
+    return NextResponse.json({
+      ok: true,
+      syncedEvents: 2,
+      totalMemories: 3,
+      hasMore: false,
+    });
+  }
+
   try {
     const actor = await resolveSyncActor(request);
     if ('status' in actor) {

@@ -49,13 +49,14 @@ function HomeInner() {
       }}>
         <div style={{
           color: '#E06A3B',
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--font-sans)',
           fontWeight: 600,
           fontSize: '12px',
           letterSpacing: '0.15em',
           marginBottom: '16px',
         }}>
-          VERIFYING NEURAL LINK...
+          Connecting…
+
         </div>
         <div style={{
           width: '120px',
@@ -113,7 +114,7 @@ function HomeInner() {
       }}>
         <div style={{
           color: '#E06A3B',
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--font-sans)',
           fontWeight: 600,
           fontSize: '12px',
           letterSpacing: '0.15em',
@@ -133,7 +134,8 @@ function HomeInner() {
       {isSystemBooting && (
         <div className={styles.globalBootLoader}>
           <div className={styles.bootText}>
-            INITIALIZING EYES NEURAL LINK...
+            Loading…
+
           </div>
           <div className={styles.bootProgressLine} />
         </div>

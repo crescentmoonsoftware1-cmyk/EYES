@@ -16,8 +16,7 @@ type ReadinessPayload = {
   model: string;
   reason: string;
   checks: {
-    claudeChat: ReadinessCheck;
-    geminiChat: ReadinessCheck;
+    gateway: ReadinessCheck;
     supabase: ReadinessCheck;
   };
   lastCheckedAt: string;
@@ -41,83 +40,32 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   });
 }
 
-async function runAnthropicChatProbe(apiKey: string | undefined): Promise<ReadinessCheck> {
-  if (!apiKey || !apiKey.startsWith('sk-ant-')) {
-    return { status: 'skip', latencyMs: 0, error: 'Missing or invalid ANTHROPIC_API_KEY.' };
-  }
-
+// K2: No literal model strings — probe via gateway alias (auto-chat) when available.
+async function runGatewayProbe(): Promise<ReadinessCheck> {
+  const base = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+  const key  = process.env.LITELLM_KEY || '';
+  if (!base || !key) return { status: 'skip', latencyMs: 0, error: 'LITELLM_BASE_URL or LITELLM_KEY not set.' };
   const started = Date.now();
   try {
-    const response = await withTimeout(
-      fetch('https://api.anthropic.com/v1/messages', {
+    const res = await withTimeout(
+      fetch(`${base}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'hi' }],
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'auto-chat', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
       }),
-      4500
+      4500,
     );
-
-    if (!response.ok) {
-      const body = await response.text();
-      return {
-        status: 'fail',
-        latencyMs: Date.now() - started,
-        error: `Anthropic probe failed (${response.status}): ${body.slice(0, 160)}`,
-      };
+    if (!res.ok) {
+      const body = await res.text();
+      return { status: 'fail', latencyMs: Date.now() - started, error: `Gateway probe failed (${res.status}): ${body.slice(0, 160)}` };
     }
-
     return { status: 'pass', latencyMs: Date.now() - started };
   } catch (error) {
-    return {
-      status: 'fail',
-      latencyMs: Date.now() - started,
-      error: error instanceof Error ? error.message : String(error),
-    };
+    return { status: 'fail', latencyMs: Date.now() - started, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
-async function runGeminiProbe(apiKey: string | undefined): Promise<ReadinessCheck> {
-  if (!apiKey) {
-    return { status: 'skip', latencyMs: 0, error: 'Missing GEMINI_API_KEY.' };
-  }
 
-  const started = Date.now();
-  try {
-    const response = await withTimeout(
-      fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }] }),
-      }),
-      4000
-    );
-
-    if (!response.ok) {
-      const body = await response.text();
-      return {
-        status: 'fail',
-        latencyMs: Date.now() - started,
-        error: `Gemini probe failed (${response.status}): ${body.slice(0, 160)}`,
-      };
-    }
-
-    return { status: 'pass', latencyMs: Date.now() - started };
-  } catch (error) {
-    return {
-      status: 'fail',
-      latencyMs: Date.now() - started,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
 
 async function runSupabaseProbe(url: string | undefined, anonKey: string | undefined): Promise<ReadinessCheck> {
   if (!url || !anonKey) {
@@ -161,22 +109,19 @@ export async function GET() {
     return NextResponse.json(cachedResult.payload, { status: 200 });
   }
 
-  const anthropicCheck = await runAnthropicChatProbe(process.env.ANTHROPIC_API_KEY);
-  const geminiCheck = await runGeminiProbe(process.env.GEMINI_API_KEY);
+  const gatewayCheck  = await runGatewayProbe();
   const supabaseCheck = await runSupabaseProbe(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+  const anyAiPass = gatewayCheck.status === 'pass';
   let status: ReadinessStatus = 'online';
-  let reason = 'Neural AI Core ready (Hybrid).';
-  const provider = 'Anthropic + Google';
-  let model = 'Claude 3.5 + Gemini 1.5';
+  let reason = 'AI gateway ready.';
+  const provider = 'LiteLLM Gateway';
+  let model = gatewayCheck.status === 'pass' ? 'auto-chat (gateway)' : 'offline';
 
-  if (anthropicCheck.status !== 'pass' && geminiCheck.status !== 'pass') {
+  if (!anyAiPass) {
     status = 'offline';
     model = 'N/A';
-    reason = 'Neural AI Core offline. Both Anthropic and Gemini probes failed.';
-  } else if (anthropicCheck.status !== 'pass' || geminiCheck.status !== 'pass') {
-    status = 'degraded';
-    reason = 'Neural AI Core degraded. One or more providers are unreachable.';
+    reason = 'AI core offline. Gateway failed.';
   }
 
   if (supabaseCheck.status === 'skip' || supabaseCheck.status === 'fail') {
@@ -190,8 +135,7 @@ export async function GET() {
     model,
     reason,
     checks: {
-      claudeChat: anthropicCheck,
-      geminiChat: geminiCheck,
+      gateway: gatewayCheck,
       supabase: supabaseCheck,
     },
     lastCheckedAt: new Date().toISOString(),

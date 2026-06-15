@@ -23,7 +23,7 @@ export default async function StatusPage() {
   
   const systems = [
     { name: 'Core Database (Supabase EU)', status: dbHealth.status, latency: dbHealth.latency, type: 'infrastructure' },
-    { name: 'Cognitive Engine (Claude)', status: 'operational', latency: 450, type: 'infrastructure' },
+    { name: 'Intelligence Engine (Claude)', status: 'operational', latency: 450, type: 'infrastructure' },
     { name: 'Vector Store (pgvector)', status: dbHealth.status, latency: dbHealth.latency + 12, type: 'infrastructure' },
     { name: 'Background Cron Daemon', status: 'operational', latency: null, type: 'infrastructure' },
   ];

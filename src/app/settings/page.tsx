@@ -314,7 +314,7 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
-  const handleSaveNeuralSettings = async () => {
+  const handleSaveSettings = async () => {
     setSettingsSaved(null);
     try {
       const res = await fetch('/api/user/settings', {
@@ -378,7 +378,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/user/wipe', { method: 'POST' });
       if (res.ok) {
-        alert("Neural Archive successfully purged.");
+        alert("Data archive successfully purged.");
       } else {
         alert("Failed to purge archive.");
       }
@@ -403,7 +403,7 @@ export default function SettingsPage() {
       <div className={styles.mainWrapper}>
         <div className={styles.container}>
           <h1 className={styles.title}>Account Settings</h1>
-          <p className={styles.subtitle}>Manage your digital identity and neural interface preferences.</p>
+          <p className={styles.subtitle}>Manage your account preferences and data settings.</p>
 
           <div className={styles.contentLayout}>
             {/* Tabs Sidebar */}
@@ -418,7 +418,7 @@ export default function SettingsPage() {
                 className={`${styles.tabBtn} ${activeTab === 'tuning' ? styles.tabActive : ''}`}
                 onClick={() => setActiveTab('tuning')}
               >
-                Neural Tuning
+                Sensitivity
               </button>
               <button 
                 className={`${styles.tabBtn} ${activeTab === 'theme' ? styles.tabActive : ''}`}
@@ -497,7 +497,7 @@ export default function SettingsPage() {
                         </button>
                       ))}
                     </div>
-                    <p className={styles.fieldDesc}>Adjust how aggressive the neural flagger is in identifying potential risks.</p>
+                    <p className={styles.fieldDesc}>Adjust how aggressively the system flags potential risks.</p>
                   </div>
 
                   <div className={styles.fieldGroup}>
@@ -523,8 +523,8 @@ export default function SettingsPage() {
                   {settingsSaved && activeTab === 'tuning' && (
                     <p className={settingsSaved.includes('saved') ? styles.successText : styles.errorText}>{settingsSaved}</p>
                   )}
-                  <button className={styles.saveBtn} onClick={handleSaveNeuralSettings}>
-                    Save Neural Settings
+                  <button className={styles.saveBtn} onClick={handleSaveSettings}>
+                    Save Sensitivity Settings
                   </button>
                 </div>
               )}
@@ -534,7 +534,7 @@ export default function SettingsPage() {
                 <div className={styles.privacySection}>
                   <div className={styles.fieldGroup}>
                     <label>EXCLUDE SENDERS / DOMAINS</label>
-                    <p className={styles.fieldDesc}>These entries will never be indexed or scanned by the neural engine.</p>
+                    <p className={styles.fieldDesc}>These entries will never be indexed or scanned by the analysis engine.</p>
                     
                     <div className={styles.listContainer}>
                       {excludedSenders.map(sender => (
@@ -622,7 +622,7 @@ export default function SettingsPage() {
                   {settingsSaved && activeTab === 'privacy' && (
                     <p className={settingsSaved.includes('saved') ? styles.successText : styles.errorText}>{settingsSaved}</p>
                   )}
-                  <button className={styles.saveBtn} onClick={handleSaveNeuralSettings}>
+                  <button className={styles.saveBtn} onClick={handleSaveSettings}>
                     Save Privacy Settings
                   </button>
                 </div>
@@ -766,7 +766,7 @@ export default function SettingsPage() {
                     
                     <div className={styles.dangerAction}>
                       <div>
-                        <strong>Purge Neural Archive</strong>
+                        <strong>Purge Data Archive</strong>
                         <p>Wipe all indexed memories from all connected platforms.</p>
                       </div>
                       <button 
@@ -780,7 +780,7 @@ export default function SettingsPage() {
                     <div className={styles.dangerAction} style={{ marginTop: '24px' }}>
                       <div>
                         <strong>Delete Account</strong>
-                        <p>Permanently remove your neural identity and all associated data.</p>
+                        <p>Permanently remove your account and all associated data.</p>
                       </div>
                       <button className={styles.dangerBtn} onClick={handleDeleteAccount}>Delete Account</button>
                     </div>

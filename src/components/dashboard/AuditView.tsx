@@ -4,12 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from './AuditView.module.css';
 import type { ReputationAudit, AuditSummary } from '@/types/dashboard';
 import { AnimatedNumber } from '../common/AnimatedNumber';
-import {
-  ShieldIcon,
-  PrivacyEyeIcon,
-  OperationalLinkIcon,
-  SentimentChartIcon
-} from '../common/icons/PlatformIcons';
+import { ThinkingVeil } from './ThinkingVeil';
+import { createClient } from '@/utils/supabase/client';
 
 interface AuditViewProps {
   onBack: () => void;
@@ -21,8 +17,8 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   const [isInitiating, setIsInitiating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [auditMode, setAuditMode] = useState<'dashboard' | 'running' | 'completed'>('dashboard');
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [backendCompleted, setBackendCompleted] = useState(false);
+
+
   const [auditHistory, setAuditHistory] = useState<ReputationAudit[]>([]);
 
   // Fetch the latest audit on mount
@@ -59,9 +55,10 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Poll a specific audit by id so the UI updates in near-real-time
+  // Poll to refresh the activeAudit data when the certificate view is showing
+  // (the ThinkingVeil handles all completion detection while running)
   useEffect(() => {
-    if (!activeAudit?.id) return;
+    if (auditMode !== 'completed' || !activeAudit?.id) return;
 
     let stopped = false;
     const poll = async () => {
@@ -71,58 +68,19 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         if (!res.ok) return;
         const data = await res.json();
         if (!data) return;
-
         setActiveAudit(prev => ({ ...(prev ?? {} as Partial<ReputationAudit>), ...data } as ReputationAudit));
-
-        if (data.status === 'completed') {
-          setBackendCompleted(true);
-          setErrorMessage(null);
-          stopped = true;
-        }
-        if (data.status === 'failed') {
-          setErrorMessage(data.summaryNarrative || 'The neural analysis encountered an unexpected error.');
-          stopped = true;
-        }
+        stopped = true; // single refresh on mount is enough
       } catch (err) {
-        console.warn('[Audit Poll] failed to fetch audit status:', err);
+        console.warn('[Audit Poll] failed:', err);
       }
     };
 
-    // Start immediate poll and then interval
     poll();
-    const interval = setInterval(poll, 3000);
-    return () => {
-      stopped = true;
-      clearInterval(interval);
-    };
-  }, [activeAudit?.id]);
-
-  // Update elapsed seconds for the node graph simulation
-  useEffect(() => {
-    if (auditMode !== 'running') {
-      setElapsedSeconds(0);
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [auditMode]);
-
-  // Synchronize state transition: Wait for BOTH backend completion and minimum animation runtime (25s)
-  useEffect(() => {
-    if (backendCompleted && elapsedSeconds >= 25) {
-      setAuditMode('completed');
-    }
-  }, [backendCompleted, elapsedSeconds]);
+    return () => { stopped = true; };
+  }, [activeAudit?.id, auditMode]);
 
   const handleStartAudit = async (type: string = 'full') => {
     setIsInitiating(true);
-    setAuditMode('running');
-    setElapsedSeconds(0);
-    setBackendCompleted(false);
     setErrorMessage(null);
     try {
       const res = await fetch('/api/audit/create', {
@@ -133,8 +91,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
       if (res.ok) {
         const data = await res.json();
         // Set the active audit ID so the useEffect poller starts tracking it
-        setActiveAudit(prev => ({
-          ...(prev || {}),
+        setActiveAudit({
           id: data.auditId,
           status: 'pending',
           riskScore: 0,
@@ -152,16 +109,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             topEntities: [],
             riskFindings: []
           }
-        } as ReputationAudit));
+        } as ReputationAudit);
 
-        // Stay in 'running' mode. The useEffect poller will transition us to 'completed'
-        // only once the database record actually has a reportUrl.
-      } else {
-        setAuditMode('dashboard');
+        // Transition to 'running' mode ONLY after the new audit state is queued
+        setAuditMode('running');
       }
     } catch (err) {
       console.error('Initiation failed:', err);
-      setAuditMode('dashboard');
     } finally {
       setIsInitiating(false);
     }
@@ -174,7 +128,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         <header className={styles.auditHeader}>
           <div>
             <h1 className={styles.auditTitle}>Audit Control Center</h1>
-            <p className={styles.auditSubtitle}>Select a specialized lens for deep neural analysis.</p>
+            <p className={styles.auditSubtitle}>Select a lens to run a deep analysis of your connected data.</p>
           </div>
           {activeAudit && activeAudit.status === 'completed' && (
             <button 
@@ -195,7 +149,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           <div className={`${styles.mainAuditCard} magnetic-card stagger-2`} onClick={() => handleStartAudit('full')}>
             <div className={styles.cardHeader}>
               <div className={styles.cardBadge}>RECOMMENDED</div>
-              <div className={styles.cardIcon}><ShieldIcon size={32} /></div>
             </div>
             <div className={styles.cardBody}>
               <h3>Full Reputation Audit</h3>
@@ -209,17 +162,14 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           {/* SPECIALIZED ACTIONS */}
           <div className={`${styles.secondaryAuditGrid} stagger-3`}>
             <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('reputation')}>
-              <div className={styles.miniIcon}><ShieldIcon size={24} /></div>
               <h4>Investor / Reputation</h4>
               <p>"What will someone find when they run diligence on me?" Cold, clinical analysis of unfulfilled commitments, contradictions, and external risks.</p>
             </div>
             <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('behavioral')}>
-              <div className={styles.miniIcon}><OperationalLinkIcon size={24} /></div>
               <h4>Behavioral / Self</h4>
               <p>"What did I actually accomplish, and what slipped?" Analysis of follow-through, task loops, drift, and dropped commitments.</p>
             </div>
             <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('hiring')}>
-              <div className={styles.miniIcon}><SentimentChartIcon size={24} /></div>
               <h4>Hiring / Professional</h4>
               <p>"What does a recruiter or employer see?" Analysis of reliability, stakeholder communication quality, and professional red flags.</p>
             </div>
@@ -231,21 +181,35 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             <span className={styles.statusDot} />
             {summary
               ? `SYSTEM READY: ${summary.totalMemories.toLocaleString()} MEMORIES INDEXED`
-              : 'SYSTEM READY — NEURAL ENGINE ACTIVE'}
+              : 'SYSTEM READY'}
           </div>
         </div>
       </div>
     );
   }
 
-  // 2. RUNNING / FAILED STATE — Agentic Terminal UI
-  if (auditMode === 'running' || errorMessage) {
-    return <AgenticTerminal
-      elapsedSeconds={elapsedSeconds}
-      errorMessage={errorMessage}
-      backendCompleted={backendCompleted}
-      onReturnToDashboard={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
-    />;
+  // 2. RUNNING / FAILED STATE — Thinking Veil
+  if (auditMode === 'running' && activeAudit?.id) {
+    return (
+      <ThinkingVeil
+        auditId={activeAudit.id}
+        onComplete={() => setAuditMode('completed')}
+        onError={(msg) => { setErrorMessage(msg); setAuditMode('dashboard'); }}
+        onReturnToDashboard={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
+      />
+    );
+  }
+
+  // 2b. Error fallback (no audit id yet)
+  if (errorMessage) {
+    return (
+      <ThinkingVeil
+        auditId={activeAudit?.id ?? ''}
+        onComplete={() => setAuditMode('completed')}
+        onError={() => {}}
+        onReturnToDashboard={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
+      />
+    );
   }
 
   // 3. COMPLETED PREVIEW
@@ -284,7 +248,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           <div className={`${styles.metricCard} magnetic-card`}>
             <div className={styles.metricHeader}>
               <span className={styles.metricLabel}>Total Footprint</span>
-              <span className={styles.metricIcon}>🌐</span>
             </div>
             <div className={styles.metricValue}>
               <AnimatedNumber value={activeAudit.mentionsCount || 0} />
@@ -294,7 +257,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           <div className={`${styles.metricCard} magnetic-card`}>
             <div className={styles.metricHeader}>
               <span className={styles.metricLabel}>Sentiment Balance</span>
-              <span className={styles.metricIcon} style={{ color: '#06b6d4' }}>🎭</span>
             </div>
             <div className={styles.metricValue}>
               <AnimatedNumber value={((activeAudit.metadata?.sentimentBalance || 0) * 100)} />%
@@ -304,7 +266,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           <div className={`${styles.metricCard} magnetic-card`}>
             <div className={styles.metricHeader}>
               <span className={styles.metricLabel}>Extracted Promises</span>
-              <span className={styles.metricIcon} style={{ color: '#10b981' }}>🤝</span>
             </div>
             <div className={styles.metricValue}>
               <AnimatedNumber value={activeAudit.commitmentsCount || 0} />
@@ -360,7 +321,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               {/* Premium Cryptographic Seal Banner */}
               <div className={styles.lockedContainer}>
                 <div className={styles.lockedHeader}>
-                  <span className={styles.lockIcon}>🔒</span>
                   <strong>SECURE REPORT ACCESS REQUIRED</strong>
                 </div>
                 <p className={styles.lockedText}>
@@ -372,99 +332,76 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
           <aside className={`${styles.sidebarCard} stagger-3`}>
             <div className={styles.sidebarSectionTitle}>RISK PROFILE</div>
-            {/* Multi-Segment Radial Chart */}
+            {/* Minimalist Single Gauge Chart */}
             {(() => {
               const isCritical = activeAudit.riskScore > 7;
               const isModerate = activeAudit.riskScore > 4;
-              const riskColor = isCritical ? '#ef4444' : isModerate ? '#f59e0b' : '#00D1FF';
-              const riskLabel = isCritical ? 'CRITICAL' : isModerate ? 'MODERATE' : 'OPTIMAL';
+              const riskColor = isCritical ? 'var(--accent-red)' : isModerate ? '#f59e0b' : 'var(--accent-green)';
 
               // Metric values 0–1
               const promiseVal = activeAudit.riskScore > 7 ? 0.72 : activeAudit.riskScore > 4 ? 0.85 : 0.96;
               const sentimentVal = Math.min(1, (activeAudit.metadata?.sentimentBalance || 1));
               const safetyVal = Math.min(1, (10 - activeAudit.riskScore) / 10);
 
-              // SVG arc helper — draws an arc segment on a circle
-              // cx,cy = center, r = radius, pct = fill 0..1, gap = degrees gap between segments
-              const describeArc = (cx: number, cy: number, r: number, pct: number) => {
-                const total = 300; // degrees of arc (leaving 60° gap at bottom)
-                const sweep = total * pct;
-                const startAngle = -150; // start top-left
-                const endAngle = startAngle + sweep;
-                const toRad = (d: number) => (d * Math.PI) / 180;
-                const x1 = cx + r * Math.cos(toRad(startAngle));
-                const y1 = cy + r * Math.sin(toRad(startAngle));
-                const x2 = cx + r * Math.cos(toRad(endAngle));
-                const y2 = cy + r * Math.sin(toRad(endAngle));
-                const largeArc = sweep > 180 ? 1 : 0;
-                return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
-              };
-
-              const describeFullArc = (cx: number, cy: number, r: number) => describeArc(cx, cy, r, 1);
-
-              const cx = 65, cy = 65;
+              const riskFraction = activeAudit.riskScore / 10;
+              const circumference = 2 * Math.PI * 60;
 
               return (
-                <div className={styles.radialChartContainer}>
-                  <svg width="130" height="130" viewBox="0 0 130 130" className={styles.radialSvg}>
-                    {/* ── Track rings (background) ── */}
-                    <path d={describeFullArc(cx, cy, 52)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" strokeLinecap="round"/>
-                    <path d={describeFullArc(cx, cy, 40)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" strokeLinecap="round"/>
-                    <path d={describeFullArc(cx, cy, 28)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" strokeLinecap="round"/>
+                <div className={styles.singleGaugeContainer}>
+                  <div className={styles.gaugeCenter}>
+                    <svg className={styles.gaugeSvg} width="160" height="160" viewBox="0 0 160 160">
+                      <defs>
+                        <filter id="glowSingle">
+                          <feGaussianBlur stdDeviation="4" result="blur" />
+                          <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
 
-                    {/* ── Outer ring: Promise Reliability (orange) ── */}
-                    <path
-                      d={describeArc(cx, cy, 52, promiseVal)}
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      style={{ filter: 'drop-shadow(0 0 5px #f9731680)' }}
-                    />
-
-                    {/* ── Middle ring: Sentiment Index (cyan) ── */}
-                    <path
-                      d={describeArc(cx, cy, 40, sentimentVal)}
-                      fill="none"
-                      stroke="#06b6d4"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      style={{ filter: 'drop-shadow(0 0 5px #06b6d480)' }}
-                    />
-
-                    {/* ── Inner ring: Linguistic Safety (green/red) ── */}
-                    <path
-                      d={describeArc(cx, cy, 28, safetyVal)}
-                      fill="none"
-                      stroke={riskColor}
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      style={{ filter: `drop-shadow(0 0 5px ${riskColor}80)` }}
-                    />
-
-                    {/* ── Center score ── */}
-                    <circle cx={cx} cy={cy} r="18" fill="rgba(0,0,0,0.6)" />
-                    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className={styles.dialValue} fill="var(--text-primary)">
-                      {activeAudit.riskScore}
-                    </text>
-                  </svg>
-
-                  {/* Legend */}
-                  <div className={styles.radialLegend}>
-                    <div className={styles.radialLegendItem}>
-                      <span className={styles.radialDot} style={{ background: '#f97316', boxShadow: '0 0 6px #f97316' }} />
-                      <span className={styles.radialLegendLabel}>Promise Reliability</span>
-                      <span className={styles.radialLegendVal}>{Math.round(promiseVal * 100)}%</span>
+                      {/* Background Track */}
+                      <circle 
+                        className={styles.singleRingTrack} 
+                        cx="80" cy="80" r="60" 
+                        transform="rotate(-90 80 80)" 
+                      />
+                      
+                      {/* Active Fill */}
+                      <circle 
+                        className={styles.singleRingFill} 
+                        cx="80" cy="80" r="60"
+                        stroke={riskColor}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={circumference * (1 - riskFraction)}
+                        transform="rotate(-90 80 80)"
+                        filter="url(#glowSingle)" 
+                      />
+                    </svg>
+                    <div className={styles.gaugeScore}>
+                      <span className={styles.scoreNumber} style={{ color: riskColor }}>
+                        {activeAudit.riskScore.toFixed(1)}
+                      </span>
+                      <span className={styles.scoreText}>RISK SCORE</span>
                     </div>
-                    <div className={styles.radialLegendItem}>
-                      <span className={styles.radialDot} style={{ background: '#06b6d4', boxShadow: '0 0 6px #06b6d4' }} />
-                      <span className={styles.radialLegendLabel}>Sentiment Index</span>
-                      <span className={styles.radialLegendVal}>{Math.round(sentimentVal * 100)}%</span>
+                  </div>
+
+                  {/* 3-Column Minimal Grid */}
+                  <div className={styles.minimalGrid}>
+                    <div className={styles.minimalGridItem}>
+                      <span className={styles.gridVal}>{Math.round(promiseVal * 100)}%</span>
+                      <span className={styles.gridLabel}>Commitments</span>
+                      <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${promiseVal * 100}%`, background: riskColor }}/></div>
                     </div>
-                    <div className={styles.radialLegendItem}>
-                      <span className={styles.radialDot} style={{ background: riskColor, boxShadow: `0 0 6px ${riskColor}` }} />
-                      <span className={styles.radialLegendLabel}>Linguistic Safety</span>
-                      <span className={styles.radialLegendVal}>{Math.round(safetyVal * 100)}%</span>
+                    <div className={styles.minimalGridItem}>
+                      <span className={styles.gridVal}>{Math.round(sentimentVal * 100)}%</span>
+                      <span className={styles.gridLabel}>Sentiment</span>
+                      <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${sentimentVal * 100}%`, background: riskColor }}/></div>
+                    </div>
+                    <div className={styles.minimalGridItem}>
+                      <span className={styles.gridVal}>{Math.round(safetyVal * 100)}%</span>
+                      <span className={styles.gridLabel}>Mentions</span>
+                      <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${safetyVal * 100}%`, background: riskColor }}/></div>
                     </div>
                   </div>
                 </div>
@@ -479,7 +416,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                   if (!activeAudit?.id) return;
                   setIsDownloading(true);
                   try {
-                    const res = await fetch(`/api/audit/${activeAudit.id}/pdf`);
+                    const supabase = createClient();
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const res = await fetch(`/api/audit/${activeAudit.id}/pdf`, {
+                      headers: {
+                        'Authorization': `Bearer ${session?.access_token || ''}`
+                      }
+                    });
                     if (!res.ok) throw new Error('PDF generation failed');
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
@@ -524,6 +467,8 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                       const errData = await res.json().catch(() => ({}));
                       throw new Error(errData.detail || errData.error || 'Failed to start re-analysis');
                     }
+                    setActiveAudit(prev => prev ? { ...prev, status: 'pending' } : null);
+                    setErrorMessage(null);
                     setAuditMode('running');
                   } catch (err) {
                     console.error('[Reanalyze] failed:', err);
@@ -546,295 +491,5 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   return null;
 }
-
-// ─── AgenticTerminal — Claude-style Tool Use UI ───────────────────────────────
-
-interface ToolStep {
-  id: string;
-  icon: string;
-  label: string;
-  result: string;
-  appearsAt: number;
-  completeAt: number;
-}
-
-interface ToolBlock {
-  id: string;
-  title: string;
-  steps: ToolStep[];
-  appearsAt: number;
-  completeAt: number;
-  streamText: string;   // text streamed below the block once it's done
-  streamAt: number;     // when streaming of text begins
-}
-
-const TOOL_BLOCKS: ToolBlock[] = [
-  {
-    id: 'b1',
-    title: 'Searching connected platforms',
-    appearsAt: 0,
-    completeAt: 16,
-    streamAt: 17,
-    streamText: 'Found 1,247 messages across Gmail, 84 calendar events, 312 Slack threads, and 156 GitHub commits. Extracting commitment signals and behavioral patterns from cross-platform data...',
-    steps: [
-      { id: 'b1s1', icon: '📧', label: 'Querying Gmail — scanning inbox & sent mail', result: '{ "threads": 423, "commitments_found": 38, "sentiment": "neutral" }', appearsAt: 1,  completeAt: 5  },
-      { id: 'b1s2', icon: '📅', label: 'Scanning Google Calendar — extracting events', result: '{ "events": 84, "missed": 3, "promises_mapped": 12 }',                appearsAt: 4,  completeAt: 8  },
-      { id: 'b1s3', icon: '💬', label: 'Pulling Slack — reading channel history',      result: '{ "messages": 312, "reactions": 89, "commitments": 21 }',              appearsAt: 7,  completeAt: 11 },
-      { id: 'b1s4', icon: '🗒️', label: 'Fetching Notion — indexing pages & databases', result: '{ "pages": 67, "tasks": 134, "completed": 118 }',                      appearsAt: 9,  completeAt: 13 },
-      { id: 'b1s5', icon: '🐙', label: 'Connecting to GitHub — scanning commits & PRs', result: '{ "commits": 156, "prs": 14, "merged": 11, "open": 3 }',               appearsAt: 11, completeAt: 15 },
-      { id: 'b1s6', icon: '🎮', label: 'Reading Discord — extracting server messages',  result: '{ "messages": 290, "servers": 4, "tone": "professional" }',             appearsAt: 13, completeAt: 16 },
-    ]
-  },
-  {
-    id: 'b2',
-    title: 'Planning & Setup — Building context map',
-    appearsAt: 17,
-    completeAt: 26,
-    streamAt: 27,
-    streamText: 'Identified 47 unique commitment signals. Behavioral model detected 3 recurring patterns of dropped follow-through. Cross-referencing with calendar timeline...',
-    steps: [
-      { id: 'b2s1', icon: '🧠', label: 'EYES Audit Agent activated — building context map', result: '{ "entities": 47, "platforms_correlated": 6, "patterns": 3 }',  appearsAt: 18, completeAt: 21 },
-      { id: 'b2s2', icon: '🔗', label: 'Clustering related entities & topics',             result: '{ "clusters": 8, "top_topic": "project deadlines", "links": 134 }', appearsAt: 20, completeAt: 23 },
-      { id: 'b2s3', icon: '⚡', label: 'Behavioral Analytics running linguistic scan',      result: '{ "sentiment_balance": 0.74, "tone_drift": false, "anomalies": 2 }', appearsAt: 22, completeAt: 26 },
-    ]
-  },
-  {
-    id: 'b3',
-    title: 'Executing forensic analysis & risk scoring',
-    appearsAt: 27,
-    completeAt: 40,
-    streamAt: 41,
-    streamText: 'Risk score computed at 3.2/10 — OPTIMAL range. Promise reliability at 94%. Generating executive summary narrative...',
-    steps: [
-      { id: 'b3s1', icon: '🛡️', label: 'Risk Evaluator assigning behavioral risk scores',         result: '{ "risk_score": 3.2, "risk_level": "OPTIMAL", "flags": 2 }',      appearsAt: 28, completeAt: 32 },
-      { id: 'b3s2', icon: '🗓️', label: 'Calendar Matcher — cross-referencing promises vs events', result: '{ "matched": 11, "unmatched": 1, "compliance_rate": "91.7%" }',  appearsAt: 31, completeAt: 35 },
-      { id: 'b3s3', icon: '📊', label: 'Generating executive summary narrative',                   result: '{ "words": 312, "findings": 6, "opportunities": 3 }',            appearsAt: 34, completeAt: 39 },
-    ]
-  },
-  {
-    id: 'b4',
-    title: 'Final Output — Compiling audit certificate',
-    appearsAt: 41,
-    completeAt: 50,
-    streamAt: 51,
-    streamText: '✅ Audit complete. Your cryptographic PDF report has been compiled with a verification hash. Loading your Reputation Certificate dashboard...',
-    steps: [
-      { id: 'b4s1', icon: '📄', label: 'Compiling cryptographic PDF report',            result: '{ "pages": 8, "hash": "a3f7c2d9...", "size": "1.2MB" }', appearsAt: 42, completeAt: 47 },
-      { id: 'b4s2', icon: '✅', label: 'Audit complete — certificate ready for review', result: '{ "status": "COMPLETE", "certificate_id": "AUD-2026-0608" }', appearsAt: 46, completeAt: 50 },
-    ]
-  }
-];
-
-interface AgenticTerminalProps {
-  elapsedSeconds: number;
-  errorMessage: string | null;
-  backendCompleted: boolean;
-  onReturnToDashboard: () => void;
-}
-
-function AgenticTerminal({ elapsedSeconds, errorMessage, backendCompleted, onReturnToDashboard }: AgenticTerminalProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({ b1: true });
-  const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({});
-  const [streamedChars, setStreamedChars] = useState<Record<string, number>>({});
-
-  // Auto-scroll
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [elapsedSeconds, streamedChars]);
-
-  // Streaming text effect: for each visible block that has passed streamAt, stream its text
-  useEffect(() => {
-    const visibleBlocks = TOOL_BLOCKS.filter(b => elapsedSeconds >= b.streamAt);
-    visibleBlocks.forEach(block => {
-      const current = streamedChars[block.id] ?? 0;
-      if (current < block.streamText.length) {
-        const timer = setTimeout(() => {
-          setStreamedChars(prev => ({
-            ...prev,
-            [block.id]: Math.min((prev[block.id] ?? 0) + 4, block.streamText.length)
-          }));
-        }, 30);
-        return () => clearTimeout(timer);
-      }
-    });
-  }, [elapsedSeconds, streamedChars]);
-
-  // Auto-expand the currently active block and collapse previous ones
-  useEffect(() => {
-    const activeBlock = [...TOOL_BLOCKS].reverse().find(b => elapsedSeconds >= b.appearsAt && elapsedSeconds < b.completeAt);
-    const justCompleted = [...TOOL_BLOCKS].reverse().find(b => elapsedSeconds >= b.completeAt && elapsedSeconds < b.completeAt + 3);
-    if (activeBlock) {
-      setExpandedBlocks(prev => ({ ...prev, [activeBlock.id]: true }));
-    }
-    if (justCompleted) {
-      // Collapse block shortly after completion
-      setExpandedBlocks(prev => ({ ...prev, [justCompleted.id]: false }));
-    }
-  }, [elapsedSeconds]);
-
-  const toggleBlock = (id: string) => setExpandedBlocks(prev => ({ ...prev, [id]: !prev[id] }));
-  const toggleResult = (id: string) => setExpandedResults(prev => ({ ...prev, [id]: !prev[id] }));
-
-  // Progress
-  let progress = 0;
-  if (elapsedSeconds < 5)  progress = Math.round((elapsedSeconds / 5) * 10);
-  else if (elapsedSeconds < 16) progress = 10 + Math.round(((elapsedSeconds - 5) / 11) * 25);
-  else if (elapsedSeconds < 27) progress = 35 + Math.round(((elapsedSeconds - 16) / 11) * 20);
-  else if (elapsedSeconds < 41) progress = 55 + Math.round(((elapsedSeconds - 27) / 14) * 25);
-  else if (elapsedSeconds < 52) progress = 80 + Math.round(((elapsedSeconds - 41) / 11) * 15);
-  else progress = 95;
-
-  const visibleBlocks = TOOL_BLOCKS.filter(b => elapsedSeconds >= b.appearsAt);
-
-  if (errorMessage) {
-    return (
-      <div className={styles.agentTerminalWrapper}>
-        <div className={styles.agentTerminalHeader}>
-          <span className={styles.agentBadgeError}>⚠ ANALYSIS FAILED</span>
-        </div>
-        <div className={styles.agentTerminalBody}>
-          <p className={styles.agentErrorText}>{errorMessage}</p>
-          <button className={styles.rerunBtn} onClick={onReturnToDashboard}>RETURN TO CONTROL CENTER</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.agentTerminalWrapper}>
-      {/* Header bar */}
-      <div className={styles.agentTerminalHeader}>
-        <div className={styles.agentHeaderLeft}>
-          <span className={styles.agentPulseDot} />
-          <span className={styles.agentHeaderTitle}>EYES AUDIT AGENT</span>
-          <span className={styles.agentHeaderDivider}>|</span>
-          <span className={styles.agentHeaderPhase}>NEURAL ANALYSIS RUNNING</span>
-        </div>
-        <div className={styles.agentHeaderRight}>
-          <span className={styles.agentTimer}>
-            {String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:{String(elapsedSeconds % 60).padStart(2, '0')}
-          </span>
-        </div>
-      </div>
-
-      {/* Scrollable body */}
-      <div className={styles.agentTerminalBody} ref={scrollRef}>
-        {visibleBlocks.map((block) => {
-          const isBlockRunning = elapsedSeconds >= block.appearsAt && elapsedSeconds < block.completeAt;
-          const isBlockDone    = elapsedSeconds >= block.completeAt;
-          const isExpanded     = expandedBlocks[block.id] ?? false;
-          const streamText     = block.streamText.slice(0, streamedChars[block.id] ?? 0);
-          const visibleSteps   = block.steps.filter(s => elapsedSeconds >= s.appearsAt);
-
-          return (
-            <div key={block.id} className={styles.claudeBlock}>
-              {/* ── Collapsible Status Bar ── */}
-              <button
-                className={`${styles.claudeStatusBar} ${isBlockRunning ? styles.claudeStatusRunning : ''} ${isBlockDone ? styles.claudeStatusDone : ''}`}
-                onClick={() => toggleBlock(block.id)}
-              >
-                <div className={styles.claudeStatusLeft}>
-                  {isBlockRunning
-                    ? <span className={styles.claudeSpinner} />
-                    : <span className={styles.claudeCheckIcon}>✓</span>
-                  }
-                  <span className={styles.claudeStatusText}>{block.title}</span>
-                </div>
-                <span className={`${styles.claudeChevron} ${isExpanded ? styles.claudeChevronDown : ''}`}>›</span>
-              </button>
-
-              {/* ── Expanded Steps (Timeline) ── */}
-              {isExpanded && (
-                <div className={styles.claudeTimeline}>
-                  <div className={styles.claudeTimelineBar} />
-                  <div className={styles.claudeStepsList}>
-                    {visibleSteps.map((step) => {
-                      const isStepRunning = elapsedSeconds >= step.appearsAt && elapsedSeconds < step.completeAt;
-                      const isStepDone    = elapsedSeconds >= step.completeAt;
-                      const isResultOpen  = expandedResults[step.id] ?? false;
-
-                      return (
-                        <div key={step.id} className={styles.claudeStep}>
-                          <div className={styles.claudeStepRow}>
-                            <span className={styles.claudeStepIcon}>{step.icon}</span>
-                            <span className={`${styles.claudeStepLabel} ${isStepDone ? styles.claudeStepLabelDone : ''}`}>
-                              {step.label}
-                            </span>
-                            {isStepRunning && <span className={styles.claudeStepSpinner} />}
-                            {isStepDone && (
-                              <button
-                                className={styles.claudeResultPill}
-                                onClick={(e) => { e.stopPropagation(); toggleResult(step.id); }}
-                              >
-                                {isResultOpen ? 'Hide' : 'Result'}
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Nested Result Card */}
-                          {isResultOpen && isStepDone && (
-                            <div className={styles.claudeResultCard}>
-                              <div className={styles.claudeResultSection}>
-                                <span className={styles.claudeResultSectionLabel}>Response</span>
-                                <pre className={styles.claudeResultCode}>{step.result}</pre>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* Done footer */}
-                    {isBlockDone && (
-                      <div className={styles.claudeDoneRow}>
-                        <span className={styles.claudeDoneCheck}>✓</span>
-                        <span className={styles.claudeDoneText}>Done</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Streamed text below the block ── */}
-              {elapsedSeconds >= block.streamAt && streamText && (
-                <div className={styles.claudeStreamText}>
-                  {streamText}
-                  {streamedChars[block.id] < block.streamText.length && (
-                    <span className={styles.agentCursorBlink}>▋</span>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Live cursor when still running */}
-        {!backendCompleted && visibleBlocks.length > 0 && (
-          <div className={styles.agentCursor}>
-            <span className={styles.agentCursorBlink}>▋</span>
-          </div>
-        )}
-      </div>
-
-      {/* Footer progress */}
-      <div className={styles.agentTerminalFooter}>
-        <div className={styles.agentProgressRow}>
-          <span className={styles.agentProgressLabel}>Pipeline Execution</span>
-          <span className={styles.agentProgressPct}>{progress}%</span>
-        </div>
-        <div className={styles.agentProgressBarBg}>
-          <div className={styles.agentProgressBarFill} style={{ width: `${progress}%` }} />
-        </div>
-        <p className={styles.agentProgressSubtext}>
-          {elapsedSeconds < 16 ? '🔍 Searching & ingesting connected platform data...' :
-           elapsedSeconds < 27 ? '🧠 Planning — AI agent correlating behavioral patterns...' :
-           elapsedSeconds < 41 ? '⚙️ Executing forensic analysis & risk scoring...' :
-           '📄 Finalizing report & compiling audit certificate...'}
-        </p>
-      </div>
-    </div>
-  );
-}
+// Section 06: AgenticTerminal removed — replaced by ThinkingVeil (frosted glass overlay).
+// The ThinkingVeil is a self-contained component in ThinkingVeil.tsx.

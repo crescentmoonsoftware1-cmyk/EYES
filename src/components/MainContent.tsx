@@ -84,7 +84,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       if (lastSync && now - parseInt(lastSync) < 300000) return;
 
       try {
-        console.log('[Automatic Sync] Initiating neural link update...');
+        console.log('[Automatic Sync] Initiating background sync...');
         sessionStorage.setItem('eyes-auto-sync-timestamp', now.toString());
         await fetch('/api/sync/all?background=true', { method: 'POST' });
       } catch (e) {
@@ -118,7 +118,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       const now = Date.now();
       if (now - lastRefresh < 5000) return; // Only allow refresh every 5s
       
-      console.log('[Dashboard] Real-time pulse detected. Refreshing neural state...');
+      console.log('[Dashboard] Real-time event detected. Refreshing data...');
       lastRefresh = now;
       load();
     };
@@ -176,7 +176,10 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     try {
       const response = await fetch('/api/chat?stream=1', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-timezone-offset': String(new Date().getTimezoneOffset()),
+        },
         signal: controller.signal,
       body: JSON.stringify({ 
         message: prompt,
@@ -291,7 +294,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       )}
 
       {activeView === 'readiness' && (
-        <SourceReadinessView platforms={platforms} />
+        <SourceReadinessView platforms={platforms} totalMemories={syncStatus?.memoriesIndexed ?? summary.totalMemories ?? 0} />
       )}
 
       {activeView === 'connectors' && (

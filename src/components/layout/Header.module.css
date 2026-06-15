@@ -302,12 +302,12 @@
 }
 
 .logoutBtn {
-  color: #ff4d4d;
+  color: var(--text-secondary);
 }
 
 .logoutBtn:hover {
-  background: rgba(255, 77, 77, 0.1);
-  color: #ff4d4d;
+  background: rgba(229, 115, 115, 0.08);
+  color: #e57373;
 }
 
 
@@ -339,3 +339,16 @@
 .switchActive::after {
   left: 16px;
 }
+
+.mobileLogo {
+  display: none;
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .mobileLogo {
+    display: flex;
+    align-items: center;
+  }
+}
+

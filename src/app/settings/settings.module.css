@@ -125,7 +125,7 @@
 }
 
 .saveBtn {
-  background: var(--accent-primary); color: #FFFFFF !important;
+  background: var(--accent-primary); color: var(--bg-primary) !important;
   border: none;
   padding: 12px 24px;
   border-radius: 10px;

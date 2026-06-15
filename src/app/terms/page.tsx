@@ -21,7 +21,8 @@ export default function TermsOfService() {
           <p>By accessing and using The EYES (&quot;Service&quot;), you accept and agree to be bound by the terms and provision of this agreement.</p>
           
           <h2 style={{ color: 'var(--text-primary)', fontSize: '20px', marginTop: '24px' }}>2. Description of Service</h2>
-          <p>The EYES provides a centralized neural archive indexing platform. You are responsible for ensuring you have the legal right to connect any third-party accounts (Google, Slack, etc.) to this service.</p>
+          <p>EYES provides a personal intelligence platform that indexes your connected accounts. You are responsible for ensuring you have the legal right to connect any third-party accounts (Google, Slack, etc.) to this service.</p>
+
           
           <h2 style={{ color: 'var(--text-primary)', fontSize: '20px', marginTop: '24px' }}>3. User Conduct</h2>
           <p>You agree to use the Service only for lawful purposes. You are solely responsible for the security of your account and any data you choose to index.</p>

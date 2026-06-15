@@ -11,6 +11,7 @@ type GmailListResponse = {
 
 type GmailMessageResponse = {
   id: string;
+  threadId?: string;
   snippet?: string;
   internalDate?: string;
   payload?: {
@@ -89,6 +90,14 @@ function extractTextFromPart(part: GmailMessagePart | undefined): string {
 }
 
 export async function POST(request: Request) {
+  if (process.env.MOCK_MODE === 'true') {
+    return NextResponse.json({
+      ok: true,
+      syncedMessages: 3,
+      hasMore: false,
+    });
+  }
+
   let actor: SyncActor | SyncActorError | null = null;
   try {
     actor = await resolveSyncActor(request);
@@ -293,6 +302,7 @@ export async function POST(request: Request) {
           body_indexed: bodyText.length > 0,
           risk_score: risk.score,
           risk_factors: risk.reasons,
+          thread_id: message.threadId || null,
         },
         is_flagged: risk.flagged,
         flag_severity: risk.severity,

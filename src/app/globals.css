@@ -32,9 +32,9 @@
   --header-height: 64px;
 
   --font-sans: 'Outfit', sans-serif;
-  --font-display: 'Syne', sans-serif;
-  --font-serif: 'Cormorant Garamond', serif;
-  --font-mono: 'DM Mono', monospace;
+  --font-display: 'Outfit', sans-serif;
+  --font-serif: 'Outfit', sans-serif;
+  --font-mono: 'Outfit', sans-serif;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -77,33 +77,33 @@
 }
 
 [data-theme='ember'] {
-  /* EMBER — Landing Page Brand Orange */
-  --bg-primary: #050505;
-  --bg-secondary: #0A0A0A;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-card-hover: rgba(255, 255, 255, 0.08);
+  /* EMBER — Warm, Rich Ember Dark Mode */
+  --bg-primary: #0B0705;           /* Rich, very dark warm charcoal-amber */
+  --bg-secondary: #130C09;         /* Warm dark cocoa */
+  --bg-card: rgba(224, 106, 59, 0.04);
+  --bg-card-hover: rgba(224, 106, 59, 0.09);
 
-  --text-primary: #FFFFFF;    /* Pure White */
-  --text-secondary: #CCCCCC;
-  --text-muted: #888888;
+  --text-primary: #FFFFFF;         /* Warm Pure White */
+  --text-secondary: #D9CBC4;       /* Warm light clay-gray */
+  --text-muted: #8E7D75;           /* Warm muted brown-gray */
 
   --accent-primary: #E06A3B;       /* Landing Page Orange */
-  --accent-primary-soft: #D15A2D;  
+  --accent-primary-soft: #EF8354;  /* Brightened orange for readability */
   --accent-vital: #E06A3B;         
   --accent-green: #E06A3B;
-  --accent-red: #FF3B3B;
+  --accent-red: #FF4D4D;
 
-  --border-primary: rgba(224, 106, 59, 0.30);
-  --border-subtle: rgba(224, 106, 59, 0.15);
+  --border-primary: rgba(224, 106, 59, 0.28);
+  --border-subtle: rgba(224, 106, 59, 0.14);
 
   --shadow-sm: 0 2px 10px rgba(0,0,0,0.6);
   --shadow-md: 0 4px 20px rgba(0,0,0,0.6);
-  --shadow-lg: 0 12px 40px rgba(224, 106, 59, 0.25);
+  --shadow-lg: 0 12px 40px rgba(224, 106, 59, 0.2);
 }
 
 /* ── Ember: accent overrides only ── */
 [data-theme='ember'] .neural-bg {
-  background: #050505;
+  background: radial-gradient(circle at 50% 0%, rgba(224, 106, 59, 0.09) 0%, #0B0705 70%);
 }
 
 /* Scrollbar becomes orange in ember */
@@ -150,8 +150,11 @@ body {
 h1,
 h2,
 h3,
+h4,
+h5,
+h6,
 .brand-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
 }
 
 .neural-bg {

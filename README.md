@@ -57,3 +57,13 @@ Required env vars:
 - `TOKEN_ENCRYPTION_KEY`
 
 If you want the platform readiness screen to show Linear as configured, all of the above must be present.
+
+## EYES Gateway Setup
+
+Core LLM operations are routed through a single OpenAI-compatible AI gateway.
+
+Required env vars:
+
+- `LITELLM_BASE_URL` (usually set to `https://eyes-llm-gateway.fly.dev/v1`)
+- `LITELLM_KEY` (the master key or project virtual key)
+

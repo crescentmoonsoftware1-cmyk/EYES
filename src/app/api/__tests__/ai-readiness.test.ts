@@ -16,7 +16,7 @@ describe("GET /api/ai-readiness", () => {
 
       expect(response.status).toBe(200);
       expect(json.status).toBe("offline");
-      expect(json.reason).toContain("Both Anthropic and Gemini probes failed");
+      expect(json.reason).toContain("Gateway, Anthropic, and Gemini all failed");
     } finally {
       process.env.ANTHROPIC_API_KEY = originalAnthropic;
       process.env.GEMINI_API_KEY = originalGemini;
@@ -26,8 +26,10 @@ describe("GET /api/ai-readiness", () => {
   it("returns degraded when only one key is missing", async () => {
     const originalAnthropic = process.env.ANTHROPIC_API_KEY;
     const originalGemini = process.env.GEMINI_API_KEY;
+    const originalAnthropicModel = process.env.ANTHROPIC_PROBE_MODEL;
     
     process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    process.env.ANTHROPIC_PROBE_MODEL = "claude-test-model";
     delete process.env.GEMINI_API_KEY;
 
     const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: Parameters<typeof fetch>[0]) => {
@@ -47,6 +49,7 @@ describe("GET /api/ai-readiness", () => {
     } finally {
       process.env.ANTHROPIC_API_KEY = originalAnthropic;
       process.env.GEMINI_API_KEY = originalGemini;
+      process.env.ANTHROPIC_PROBE_MODEL = originalAnthropicModel;
       fetchSpy.mockRestore();
     }
   });

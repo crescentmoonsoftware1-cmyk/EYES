@@ -1,0 +1,263 @@
+/* ThinkingVeil.module.css — Section 06 Thinking Veil */
+
+/* ── Root: full-screen dark overlay ───────────────────────────────────────── */
+.veilRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(5, 5, 12, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── Ghosted record cards layer (behind glass) ───────────────────────────── */
+.ghostLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ghostCard {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  letter-spacing: 0.02em;
+  filter: blur(1.5px);
+  animation: driftCard linear infinite;
+  transform: translateY(0);
+}
+
+@keyframes driftCard {
+  0%   { transform: translateY(0px)    rotate(-0.5deg); }
+  33%  { transform: translateY(-18px)  rotate(0.5deg);  }
+  66%  { transform: translateY(10px)   rotate(-0.3deg); }
+  100% { transform: translateY(0px)    rotate(-0.5deg); }
+}
+
+/* ── Frosted glass panel ─────────────────────────────────────────────────── */
+.glass {
+  position: relative;
+  z-index: 10;
+  width: min(520px, 90vw);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.05) inset,
+    0 32px 64px rgba(0,0,0,0.6),
+    0 0 120px rgba(99, 102, 241, 0.08);
+  padding: 40px 36px 36px;
+  animation: glassIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes glassIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.glassInner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Timer row ───────────────────────────────────────────────────────────── */
+.timerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pulseDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6366f1;
+  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6);
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0   rgba(99, 102, 241, 0.6); }
+  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);   }
+}
+
+.timerLabel {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.12em;
+}
+
+/* ── Status line ─────────────────────────────────────────────────────────── */
+.statusLine {
+  font-family: 'Inter', 'SF Pro Display', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  min-height: 56px;
+}
+
+.cursor {
+  display: inline-block;
+  color: #6366f1;
+  animation: blink 1s step-start infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(99,102,241,0.6);
+}
+
+.progressPct {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ── Stage breadcrumb dots ───────────────────────────────────────────────── */
+.stageCrumbs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.stageDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  transition: all 0.4s ease;
+}
+
+.stageDotDone {
+  background: rgba(99, 102, 241, 0.5);
+}
+
+.stageDotActive {
+  background: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
+  transform: scale(1.3);
+}
+
+/* ── Email offer ─────────────────────────────────────────────────────────── */
+.emailOffer {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeIn 0.4s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.emailOffer p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.emailBtn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+
+.emailBtn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.9);
+}
+
+/* ── Error state ─────────────────────────────────────────────────────────── */
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.errorTitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: #f87171;
+  margin: 0;
+}
+
+.errorMsg {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.returnBtn {
+  align-self: center;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #f87171;
+  font-size: 12px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.returnBtn:hover {
+  background: rgba(248, 113, 113, 0.18);
+}

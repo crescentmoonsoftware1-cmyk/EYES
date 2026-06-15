@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { generateEmbedding } from '@/services/ai/ai';
 
 /**
- * Neural Re-index: Regenerates embeddings for all memories that lack an embedding.
+ * Re-index: Regenerates embeddings for all memories that lack an embedding.
  * Reads from the unified `memories` table. Processes up to 200 items per call.
  */
 export async function POST(request: Request) {
@@ -56,11 +56,11 @@ export async function POST(request: Request) {
       processed: events.length,
       successCount,
       errors: errors.length > 0 ? errors : null,
-      message: `Neural re-indexing complete for ${successCount} records.`
+      message: `Re-indexing complete for ${successCount} records.`
     });
 
   } catch (err) {
     console.error('[Re-index API] Failure:', err);
-    return NextResponse.json({ error: 'Failed to re-index neural memories.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to re-index memories.' }, { status: 500 });
   }
 }

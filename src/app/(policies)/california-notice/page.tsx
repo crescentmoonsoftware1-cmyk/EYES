@@ -35,7 +35,7 @@ export default function CaliforniaNotice() {
           <UnorderedList>
             <ListItem><Strong>Identifiers:</Strong> Legal name, primary email address, unique account IDs, Internet Protocol (IP) address, browser cookies, and encrypted OAuth tokens.</ListItem>
             <ListItem><Strong>Commercial Information:</Strong> Transaction status, billing ledger logs, and subscription type (credit card transactions are securely isolated and processed by Stripe).</ListItem>
-            <ListItem><Strong>Internet or Electronic Network Activity:</Strong> Search queries conducted within the neural search interface, system diagnostic flags, connection speed logs, and layout preferences.</ListItem>
+            <ListItem><Strong>Internet or Electronic Network Activity:</Strong> Search queries conducted within the chat interface, system diagnostic flags, connection speed logs, and layout preferences.</ListItem>
             <ListItem><Strong>Professional & Employment-Related Information:</Strong> Communication headers, sender/recipient records, document filenames, and metadata from accounts (such as Slack, Google Workspace, GitHub) you choose to sync.</ListItem>
             <ListItem><Strong>Sensitive Personal Information:</Strong> Account credentials, passwords, and the text payload contents of your communications. <em>Crucially, we do not utilize these payloads for any purpose other than executing search and reputation audits. Payloads are never shared or sold.</em></ListItem>
           </UnorderedList>

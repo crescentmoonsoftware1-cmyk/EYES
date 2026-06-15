@@ -33,6 +33,6 @@ export async function GET() {
     return NextResponse.json({ timelineData });
   } catch (err) {
     console.error('Timeline stats error:', err);
-    return NextResponse.json({ error: 'Failed to retrieve neural timeline' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to retrieve timeline' }, { status: 500 });
   }
 }

@@ -16,6 +16,8 @@ export function AnimatedNumber({ value, duration = 1500, format = 'number' }: An
     const startValue = displayValue;
     const endValue = value;
 
+    let animationFrameId: number;
+
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
@@ -26,13 +28,19 @@ export function AnimatedNumber({ value, duration = 1500, format = 'number' }: An
       setDisplayValue(Math.floor(startValue + (endValue - startValue) * easeProgress));
       
       if (progress < 1) {
-        window.requestAnimationFrame(step);
+        animationFrameId = window.requestAnimationFrame(step);
       } else {
         setDisplayValue(endValue);
       }
     };
 
-    window.requestAnimationFrame(step);
+    animationFrameId = window.requestAnimationFrame(step);
+
+    return () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [value, duration]); // We intentionally leave displayValue out of deps to allow chaining
 
   const formatted = format === 'percent' 

@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
     if (!memories || memories.length === 0) {
       return NextResponse.json({
-        message: 'No memories pending embedding — neural index is current.',
+        message: 'No memories pending embedding — index is current.',
         processed: 0,
         durationMs: Date.now() - startedAt,
       });

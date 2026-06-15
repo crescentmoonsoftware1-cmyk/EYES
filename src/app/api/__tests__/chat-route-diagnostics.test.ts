@@ -93,6 +93,12 @@ const hoisted = vi.hoisted(() => {
             }
             return { data: null, error: null };
           }),
+          maybeSingle: vi.fn(async () => {
+            if (table === 'user_profiles') {
+              return { data: { display_name: 'Diagnostics User' }, error: null };
+            }
+            return { data: null, error: null };
+          }),
           order: vi.fn(() => builder),
           limit: vi.fn(() => builder),
         };

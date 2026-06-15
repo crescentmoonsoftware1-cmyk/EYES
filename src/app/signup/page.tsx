@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, CSSProperties, useCallback } from "
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import EyesLogo from "@/components/common/EyesLogo";
 
 const GRID = 28;
 
@@ -120,7 +121,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon, requi
         color: focused ? "#E06A3B" : "#6b6b6b",
         textTransform: "uppercase",
         transition: "color 0.3s ease",
-        fontFamily: "'DM Mono', monospace",
+        fontFamily: "var(--font-sans)",
         marginBottom: "6px",
       }}>{label}</label>
       <div style={{ position: "relative" }}
@@ -288,7 +289,7 @@ export default function SignupPage() {
           style={{
             display: "flex", alignItems: "center", gap: "6px",
             color: backHovered ? "#fff" : "#555", textDecoration: "none", fontSize: "10px",
-            fontFamily: "'DM Mono', monospace", letterSpacing: "0.12em",
+            fontFamily: "var(--font-sans)", letterSpacing: "0.12em",
             transition: "color 0.2s",
             fontWeight: 500,
           }}
@@ -319,35 +320,11 @@ export default function SignupPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 10,
-            marginBottom: 28,
+            marginBottom: 32,
+            color: "#fff",
           }}
         >
-          <div
-            style={{
-              width: 44, height: 44,
-              background: "#fff",
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </div>
-          <span
-            style={{
-              fontSize: 18,
-              fontWeight: 600,
-              color: "#fff",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            EYES
-          </span>
+          <EyesLogo width={110} height={26} />
         </div>
 
         {/* Heading */}
@@ -385,7 +362,7 @@ export default function SignupPage() {
             fontSize: "12px",
             textAlign: "center",
             marginBottom: "16px",
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "var(--font-sans)",
           }}>
             {error}
           </div>
@@ -439,7 +416,7 @@ export default function SignupPage() {
                 style={{
                   fontSize: 12,
                   color: "#444",
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "var(--font-sans)",
                   letterSpacing: "0.08em",
                 }}
               >
@@ -593,7 +570,7 @@ export default function SignupPage() {
                   fontSize: "12px",
                   cursor: "pointer",
                   textDecoration: "underline",
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "var(--font-sans)",
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = "#E06A3B"}
                 onMouseLeave={e => e.currentTarget.style.color = "#555"}
@@ -610,7 +587,7 @@ export default function SignupPage() {
             style={{
               fontSize: 13,
               color: "#444",
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "var(--font-sans)",
               margin: 0,
             }}
           >
@@ -663,7 +640,7 @@ export default function SignupPage() {
         zIndex: 5,
       }}>
         <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e" }} />
-        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", color: "#555", letterSpacing: "0.1em" }}>SANCTUM SECURE</span>
+        <span style={{ fontFamily: "var(--font-sans)", fontSize: "9px", color: "#555", letterSpacing: "0.1em" }}>SANCTUM SECURE</span>
       </div>
     </div>
   );
