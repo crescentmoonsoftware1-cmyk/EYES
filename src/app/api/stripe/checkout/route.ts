@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     params.append('line_items[0][price_data][unit_amount]', '9900'); // $99.00
     params.append('line_items[0][quantity]', '1');
     params.append('mode', 'payment');
-    params.append('success_url', `${origin}/?audit=success`);
-    params.append('cancel_url', `${origin}/?audit=cancelled`);
+    params.append('success_url', `${origin}/?view=audit&audit=success`);
+    params.append('cancel_url', `${origin}/?view=audit&audit=cancelled`);
     params.append('client_reference_id', user.id);
     params.append('metadata[userId]', user.id);
     params.append('metadata[lensId]', type);
