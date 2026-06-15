@@ -83,40 +83,26 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     setIsInitiating(true);
     setErrorMessage(null);
     try {
-      const res = await fetch('/api/audit/create', {
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type })
       });
       if (res.ok) {
         const data = await res.json();
-        // Set the active audit ID so the useEffect poller starts tracking it
-        setActiveAudit({
-          id: data.auditId,
-          status: 'pending',
-          riskScore: 0,
-          mentionsCount: 0,
-          commitmentsCount: 0,
-          summaryNarrative: null,
-          connectorsCovered: [],
-          reportUrl: null,
-          createdAt: new Date().toISOString(),
-          metadata: {
-            sentimentBalance: 0,
-            unfulfilledCommitments: 0,
-            commitments: [],
-            opportunities: [],
-            topEntities: [],
-            riskFindings: []
-          }
-        } as ReputationAudit);
-
-        // Transition to 'running' mode ONLY after the new audit state is queued
-        setAuditMode('running');
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          setErrorMessage('Failed to initialize checkout session.');
+          setIsInitiating(false);
+        }
+      } else {
+        setErrorMessage('Failed to start checkout. Check network or server logs.');
+        setIsInitiating(false);
       }
     } catch (err) {
       console.error('Initiation failed:', err);
-    } finally {
+      setErrorMessage('A network error occurred.');
       setIsInitiating(false);
     }
   };
