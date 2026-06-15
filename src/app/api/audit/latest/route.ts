@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
+import { waitUntil } from '@vercel/functions';
 
 /**
  * API Route to fetch the latest Reputation Audit for the user.
@@ -29,6 +31,33 @@ export async function GET() {
       return NextResponse.json(null);
     }
 
+    // Auto-trigger self-healing: if the audit is pending, it means the webhook
+    // was created but the background task got terminated by Vercel's 10s execution limit.
+    // We lock it and trigger it now from the current active server session.
+    if (audit.status === 'pending') {
+      const adminSupabase = await createAdminClient();
+      
+      // Update status to 'analysis' atomically to prevent double triggers
+      const { data: updatedAudit } = await adminSupabase
+        .from('reputation_audits')
+        .update({ status: 'analysis' })
+        .eq('id', audit.id)
+        .eq('status', 'pending')
+        .select()
+        .maybeSingle();
+
+      if (updatedAudit) {
+        console.log(`[Audit Latest API] Self-healing triggered: starting analysis for audit ${audit.id} in background...`);
+        // Run analysis in background
+        waitUntil(
+          AuditAnalysisService.runAnalysis(audit.id, user.id).catch(err => {
+            console.error('[Audit Latest API] Background self-healing analysis failed:', err);
+          })
+        );
+        // Mutate the local status so the response immediately tells the frontend it is running
+        audit.status = 'analysis';
+      }
+    }
 
     // Map DB fields to camelCase for the frontend if needed
     const mappedAudit = {
