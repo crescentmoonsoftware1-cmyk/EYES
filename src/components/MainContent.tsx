@@ -42,10 +42,16 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadId, setThreadId] = useState<string>('');
+  const threadIdRef = useRef<string>(''); // Always-fresh ref to avoid stale closure in saveThread
   const [isStreaming, setIsStreaming] = useState(false);
   const [, setIsLoading] = useState(true);
 
   const threadIdParam = searchParams.get('threadId');
+
+  // Keep threadIdRef in sync with state
+  useEffect(() => {
+    threadIdRef.current = threadId;
+  }, [threadId]);
 
   // Load thread from URL query param if present, or initialize/reset if empty or on new chat trigger
   useEffect(() => {
@@ -62,6 +68,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
               }));
               setMessages(msgs);
               setThreadId(data.thread.id);
+              threadIdRef.current = data.thread.id;
               rollingSummaryRef.current = data.thread.summary || '';
             }
           }
@@ -206,6 +213,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         }
         if (!currentThreadId && data.threadId) {
           setThreadId(data.threadId);
+          threadIdRef.current = data.threadId;
           router.replace(`/?view=dashboard&threadId=${data.threadId}`, { scroll: false });
         }
         window.dispatchEvent(new CustomEvent('eyes-chat-saved'));
@@ -291,17 +299,21 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
           });
         }
         
-        setMessages((prev) => {
-          const finalMessages = [...prev.slice(0, -1), { 
+        const finalMessages = [
+          ...messages,
+          { role: 'user' as const, content: prompt },
+          { 
             role: 'assistant' as const, 
             content: streamedReply, 
             pending: false,
             citations: citations.length > 0 ? citations : undefined
-          }];
-          const isCurrentlyUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(threadId);
-          void saveThread(finalMessages, isCurrentlyUUID ? threadId : null);
-          return finalMessages;
-        });
+          }
+        ];
+        setMessages(finalMessages);
+        // Use ref for threadId to avoid stale closure
+        const currentThreadId = threadIdRef.current;
+        const isCurrentlyUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentThreadId);
+        void saveThread(finalMessages, isCurrentlyUUID ? currentThreadId : null);
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
