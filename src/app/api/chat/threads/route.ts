@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
   const { threadId, title, messages } = body as {
     threadId?: string;
     title?: string;
-    messages: { role: string; content: string }[];
+    messages: { role: string; content: string; pending?: boolean }[];
   };
 
   // 1. Upsert the thread
