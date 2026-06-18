@@ -19,8 +19,17 @@ import { invokeModel } from '@/services/ai/ai';
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
 
-// Section 4.7 — Proactive Observations system prompt
-const OBSERVATIONS_SYSTEM = `From the INSIGHTS records and the user's most recent 30 days of activity provided, write 3–5 observations the user has not asked for. Each observation: one or two sentences, declarative, specific, citing record IDs, no advice, no praise. Good: "You have searched for 'audit pricing' four times this month without a decision [q_log_88, q_log_91]." Bad: "You should decide on pricing soon!" Output JSON: [ { "text": string, "citations": [record_id] } ]. If the data is too thin for an honest observation, return fewer — or none. Silence is a valid output.`;
+// Section 4.7 — Proactive Observations system prompt (System Prompt 4)
+const OBSERVATIONS_SYSTEM = `You scan newly ingested records for things the user should know about, unprompted. Given a batch of new records, identify any that represent: a commitment with an approaching deadline, an unanswered ask directed at the user, a reputational signal, or a pattern continuation worth flagging. Output a JSON array of observations, each with a one-line summary, the source record reference, and a suggested surfacing priority. Silence is a valid and frequent output — if nothing in the batch genuinely warrants the user's attention, return an empty array. Never manufacture an observation to appear useful.
+
+Output format must be a raw JSON array matching this schema:
+[
+  {
+    "summary": "The declarative observation text",
+    "source_reference": ["record_id", ...],
+    "priority": "HIGH" | "MEDIUM" | "LOW"
+  }
+]`;
 
 type MemoryRow = {
   id: string;
@@ -128,16 +137,21 @@ async function processUser(
     if (typeof raw === 'string') {
       const match = raw.match(/\[[\s\S]*\]/);
       if (match) {
-        const obs = JSON.parse(match[0]) as Array<{ text: string; citations: string[] }>;
+        const obs = JSON.parse(match[0]) as Array<{ summary: string; source_reference: string[]; priority: 'HIGH' | 'MEDIUM' | 'LOW' }>;
         for (const o of obs.slice(0, 5)) {
-          if (!o.text?.trim()) continue;
+          if (!o.summary?.trim()) continue;
+          
+          let strength = 0.6;
+          if (o.priority === 'HIGH') strength = 0.9;
+          else if (o.priority === 'LOW') strength = 0.3;
+
           insightsToInsert.push({
             user_id: userId,
             kind: 'observation',
-            title: o.text.slice(0, 100),
-            body: o.text,
-            citations: o.citations || [],
-            strength: 0.7,
+            title: o.summary.slice(0, 100),
+            body: o.summary,
+            citations: o.source_reference || [],
+            strength: strength,
             computed_at: computedAt,
             is_current: true,
           });

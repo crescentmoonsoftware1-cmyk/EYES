@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { invokeModel } from '@/services/ai/ai';
 
 /**
  * MCP Server — Exposes EYES memory to external AI clients (Claude Desktop, Cursor).
@@ -89,24 +90,33 @@ async function handleCallTool(name: string, args: Record<string, unknown>, userI
     const query = String(args?.query || '');
     if (!query) return NextResponse.json({ error: 'query is required' }, { status: 400 });
 
-    // Full-text search directly on memories table
-    const { data, error } = await supabase
-      .from('memories')
-      .select('platform, title, content, author, timestamp')
-      .eq('user_id', userId)
-      .textSearch('content', query.replace(/\s+/g, ' & '), { config: 'english' })
-      .order('timestamp', { ascending: false })
-      .limit(10);
+    const embedRes = await invokeModel({
+      capability: 'embed',
+      messages: [{ role: 'user', content: query }]
+    });
+
+    if (!embedRes || typeof embedRes === 'string' || !('embedding' in embedRes)) {
+      return NextResponse.json({ error: 'Failed to generate query embedding.' }, { status: 500 });
+    }
+
+    // Search Supabase via match_memories RPC (matching the vector db schema)
+    const { data, error } = await supabase.rpc('match_memories', {
+      query_embedding: embedRes.embedding,
+      match_threshold: 0.35,
+      match_count: 10,
+      user_id_arg: userId
+    });
 
     if (error) {
       console.error('[MCP] query_my_history error:', error);
       return NextResponse.json({ error: 'Search failed.' }, { status: 500 });
     }
 
-    const text = (data ?? []).length === 0
+    interface MemoryMatch { platform: string; title: string | null; content: string | null; event_timestamp: string; similarity: number; }
+    const text = (!data || (data as MemoryMatch[]).length === 0)
       ? 'No matching records found in your synced archive.'
-      : (data as MemoryRow[] ?? []).map((m, i: number) =>
-          `${i + 1}. [${m.platform}] ${new Date(m.timestamp).toLocaleDateString()} — ${m.title ?? ''}: ${m.content?.slice(0, 200)}`
+      : (data as MemoryMatch[]).map((m: MemoryMatch, i: number) =>
+          `${i + 1}. [${m.platform.toUpperCase()}] ${m.event_timestamp ? new Date(m.event_timestamp).toLocaleDateString() : ''} — ${m.title ?? ''}: ${m.content?.slice(0, 200) ?? ''} (Similarity: ${Math.round(m.similarity * 100)}%)`
         ).join('\n');
 
     return NextResponse.json({ content: [{ type: 'text', text }] });

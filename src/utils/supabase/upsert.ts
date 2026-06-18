@@ -94,6 +94,8 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
   if (!upsertError) {
     // Fire acute detection asynchronously (non-blocking)
     fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
+    // Fire entity extraction asynchronously (non-blocking)
+    fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
     return;
   }
 

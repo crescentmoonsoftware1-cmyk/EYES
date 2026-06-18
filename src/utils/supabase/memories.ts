@@ -47,7 +47,8 @@ export type SyncStatusUpsertRow = {
  */
 export async function upsertMemoriesSafely(
   supabase: SupabaseClient,
-  rows: MemoryUpsertRow[]
+  rows: MemoryUpsertRow[],
+  options?: { skipEntityExtraction?: boolean }
 ): Promise<MemoryUpsertResult> {
   if (rows.length === 0) return { inserted: 0, skipped: 0, errors: 0 };
 
@@ -62,7 +63,7 @@ export async function upsertMemoriesSafely(
 
   let inserted = 0;
   // Track in-batch duplicates removed by deduplication
-  let skipped = rows.length - deduped.length;
+  const skipped = rows.length - deduped.length;
   let errors = 0;
 
   // Process in batches of 10 to avoid overwhelming the embedding API
@@ -114,8 +115,10 @@ export async function upsertMemoriesSafely(
             errors++;
           } else {
             inserted++;
-            // Extract entities async — non-blocking, fire-and-forget
-            extractAndStoreEntities(supabase, row).catch(() => {});
+            if (options?.skipEntityExtraction !== true) {
+              // Extract entities async — non-blocking, fire-and-forget
+              extractAndStoreEntities(supabase, row).catch(() => {});
+            }
           }
         } catch (err) {
           console.error(`[Memories] Error processing ${row.platform}/${row.source_id}:`, err);

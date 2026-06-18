@@ -11,8 +11,8 @@ import crypto from 'crypto';
  */
 
 // ── Gateway config (K1) ─────────────────────────────────────────────────────
-const GATEWAY_BASE = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
-const GATEWAY_KEY = process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
+const getGatewayBase = () => (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+const getGatewayKey = () => process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
 
 // ── Four gateway aliases (K2) ────────────────────────────────────────────────
 const ALIAS_CHAT = 'auto-chat';
@@ -25,7 +25,7 @@ const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 // ── No fallbacks permitted (K1) ────────────────────────────────────────────────
 // All calls route via the gateway.
-const EMBED_DIMS = 1536; // Updated to 1536 for auto-embed OpenAI compatible
+const EMBED_DIMS = 1024; // Align with Voyage/Gemini 1024-dim database schema (Migration 032)
 
 function pickRandom<T>(arr: T[]): T | null {
   return arr.length === 0 ? null : arr[Math.floor(Math.random() * arr.length)];
@@ -121,13 +121,15 @@ async function gatewayChat(
   messages: { role: string; content: string }[],
   maxTokens = 1024,
 ): Promise<string | null> {
-  if (!GATEWAY_BASE || !GATEWAY_KEY) return null;
+  const base = getGatewayBase();
+  const key = getGatewayKey();
+  if (!base || !key) return null;
   try {
-    const res = await fetch(`${GATEWAY_BASE}/chat/completions`, {
+    const res = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GATEWAY_KEY}`,
+        'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({ model: alias, messages, max_tokens: maxTokens, temperature: 0.1 }),
     });
@@ -144,15 +146,21 @@ async function gatewayChat(
 }
 
 async function gatewayEmbed(text: string): Promise<number[] | null> {
-  if (!GATEWAY_BASE || !GATEWAY_KEY) return null;
+  const base = getGatewayBase();
+  const key = getGatewayKey();
+  if (!base || !key) return null;
   try {
-    const res = await fetch(`${GATEWAY_BASE}/embeddings`, {
+    const res = await fetch(`${base}/embeddings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GATEWAY_KEY}`,
+        'Authorization': `Bearer ${key}`,
       },
-      body: JSON.stringify({ model: ALIAS_EMBED, input: text.slice(0, 8000) }),
+      body: JSON.stringify({
+        model: ALIAS_EMBED,
+        input: text.slice(0, 8000),
+        dimensions: 1024,
+      }),
     });
     if (!res.ok) return null;
     const body = await res.json();
@@ -219,7 +227,7 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
       captureBehavioralData({
         queryText: messages[messages.length - 1]?.content || '',
         queryType: capability,
-        modelUsed: GATEWAY_BASE ? `gateway/${capability === 'classify' ? ALIAS_CLASSIFY : ALIAS_CHAT}` : 'fallback',
+        modelUsed: getGatewayBase() ? `gateway/${capability === 'classify' ? ALIAS_CLASSIFY : ALIAS_CHAT}` : 'fallback',
         latencyMs: Date.now() - startedAt,
         resultCount: messages.length,
         responseLength: result.length,
@@ -254,11 +262,13 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
   ];
 
   // 1. Gateway stream
-  if (GATEWAY_BASE && GATEWAY_KEY) {
+  const base = getGatewayBase();
+  const key = getGatewayKey();
+  if (base && key) {
     try {
-      const res = await fetch(`${GATEWAY_BASE}/chat/completions`, {
+      const res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GATEWAY_KEY}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({ model: ALIAS_CHAT, messages: fullMessages, max_tokens: 1024, temperature: 0.1, stream: true }),
       });
       if (res.ok && res.body) {

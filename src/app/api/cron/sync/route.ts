@@ -2,16 +2,10 @@ import crypto from 'node:crypto';
 
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
-import { POST as syncGithub } from '@/app/api/sync/github/route';
-import { POST as syncGmail } from '@/app/api/sync/gmail/route';
-import { POST as syncGoogleCalendar } from '@/app/api/sync/google-calendar/route';
-import { POST as syncNotion } from '@/app/api/sync/notion/route';
-import { POST as syncReddit } from '@/app/api/sync/reddit/route';
-import { POST as syncSlack } from '@/app/api/sync/slack/route';
-import { POST as syncDiscord } from '@/app/api/sync/discord/route';
-import { POST as syncEmbeddings } from '@/app/api/sync/embeddings/route';
+import { runPlatformSyncDirect } from '@/services/sync/platform-sync';
 import { logCronMetrics, logAsyncJobFailure } from '@/utils/monitoring';
 import type { EmbeddingOutcome } from '@/services/sync/embeddings-sync';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type TokenRow = {
   user_id: string;
@@ -223,31 +217,7 @@ const ESCALATION_INCLUDE_WARNING = ['1', 'true', 'yes', 'on'].includes(
   (process.env.SYNC_ESCALATION_INCLUDE_WARNING || '').toLowerCase()
 );
 
-function toSyncRoutePlatform(platform: string) {
-  if (platform === 'google_calendar') return 'google-calendar';
-  return platform.replace(/_/g, '-');
-}
 
-function getSyncHandler(routePlatform: string) {
-  switch (routePlatform) {
-    case 'github':
-      return syncGithub;
-    case 'gmail':
-      return syncGmail;
-    case 'google-calendar':
-      return syncGoogleCalendar;
-    case 'notion':
-      return syncNotion;
-    case 'reddit':
-      return syncReddit;
-    case 'slack':
-      return syncSlack;
-    case 'discord':
-      return syncDiscord;
-    default:
-      return null;
-  }
-}
 
 function parseResponsePayload(rawBody: string) {
   if (!rawBody) return null;
@@ -569,102 +539,21 @@ async function runWithConcurrency<T, R>(
 }
 
 async function runPlatformSync(
-  baseUrl: string,
+  supabase: SupabaseClient,
   platform: string,
-  userId: string,
-  secret: string
+  userId: string
 ): Promise<PlatformOutcome> {
-  const routePlatform = toSyncRoutePlatform(platform);
-  const startedAt = Date.now();
-
-  try {
-    const handler = getSyncHandler(routePlatform);
-    if (!handler) {
-      // ── HTTP fallback for platforms without a direct in-process import ──────
-      // All newer platforms (dropbox, asana, linear, clickup, netlify, webflow,
-      // canva, strava, fitbit, withings, sentry, twitter, vercel, trello,
-      // posthog, devin, cursor) are handled via HTTP sub-request.
-      try {
-        const requestUrl = `${baseUrl}/api/sync/${routePlatform}`;
-        const response = await fetchWithTimeout(
-          requestUrl,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-cron-secret': secret,
-              'x-cron-user-id': userId,
-            },
-          },
-          SYNC_TIMEOUT_MS
-        );
-        const rawBody = await response.text();
-        const body = parseResponsePayload(rawBody);
-        if (!response.ok) {
-          return {
-            platform, routePlatform, success: false, status: response.status,
-            durationMs: Date.now() - startedAt,
-            error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Sync failed (${response.status})`,
-          };
-        }
-        return { platform, routePlatform, success: true, status: response.status, durationMs: Date.now() - startedAt };
-      } catch (httpErr) {
-        const message = httpErr instanceof Error ? httpErr.message : String(httpErr);
-        return { platform, routePlatform, success: false, status: null, durationMs: Date.now() - startedAt, error: message };
-      }
-    }
-
-    const requestUrl = new URL(`${baseUrl}/api/sync/${routePlatform}`);
-    const response = await handler(
-      new Request(requestUrl.toString(), {
-        method: 'POST',
-        headers: {
-          'x-cron-secret': secret,
-          'x-cron-user-id': userId,
-        },
-      })
-    );
-
-    const rawBody = await response.text();
-    const body = parseResponsePayload(rawBody);
-
-    if (!response.ok) {
-      return {
-        platform,
-        routePlatform,
-        success: false,
-        status: response.status,
-        durationMs: Date.now() - startedAt,
-        error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Sync failed (${response.status})`,
-      };
-    }
-
-    return {
-      platform,
-      routePlatform,
-      success: true,
-      status: response.status,
-      durationMs: Date.now() - startedAt,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      platform,
-      routePlatform,
-      success: false,
-      status: null,
-      durationMs: Date.now() - startedAt,
-      error: message,
-    };
-  }
+  return runPlatformSyncDirect(supabase, platform, userId);
 }
 
 async function runEmbeddingsSync(baseUrl: string, userId: string, secret: string): Promise<EmbeddingOutcome> {
   const startedAt = Date.now();
 
   try {
+    const mod = await import('@/app/api/sync/embeddings/route');
+    const handler = mod.POST;
     const requestUrl = new URL(`${baseUrl}/api/sync/embeddings`);
-    const response = await syncEmbeddings(
+    const response = await handler(
       new Request(requestUrl.toString(), {
         method: 'POST',
         headers: {
@@ -882,7 +771,7 @@ async function runCronSync(request: Request) {
       const platformResults = await runWithConcurrency(
         platforms,
         Math.max(1, PLATFORM_CONCURRENCY),
-        (platform) => runPlatformSync(baseUrl, platform, userId, cronSecret)
+        (platform) => runPlatformSync(supabase, platform, userId)
       );
 
       const anyPlatformSuccess = platformResults.some((result) => result.success);

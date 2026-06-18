@@ -55,7 +55,15 @@ export async function GET() {
       .map(a => a.memory_id)
       .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
 
-    let memoriesMap: Record<string, { source_id: string | null; metadata: any }> = {};
+    interface MemoryMetadata {
+      thread_id?: string;
+      channel_id?: string;
+      channel?: string;
+      ts?: string;
+      [key: string]: unknown;
+    }
+
+    const memoriesMap: Record<string, { source_id: string | null; metadata: MemoryMetadata }> = {};
     if (memoryIds.length > 0) {
       const { data: memories } = await supabase
         .from('memories')
@@ -65,7 +73,7 @@ export async function GET() {
       (memories ?? []).forEach(m => {
         memoriesMap[m.id] = {
           source_id: m.source_id || null,
-          metadata: m.metadata || {}
+          metadata: (m.metadata as MemoryMetadata) || {}
         };
       });
     }

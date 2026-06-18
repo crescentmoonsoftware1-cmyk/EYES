@@ -1,6 +1,6 @@
 import { decryptToken } from '@/services/auth/tokens';
 
-export type RevocablePlatform = 'github' | 'gmail' | 'google_calendar' | 'reddit' | 'notion';
+export type RevocablePlatform = 'github' | 'gmail' | 'google_calendar' | 'google_docs' | 'google_sheets' | 'google_slides' | 'google_meet' | 'google_chat' | 'google_maps' | 'youtube' | 'reddit' | 'notion';
 export type ProviderName = 'github' | 'google' | 'reddit' | 'notion';
 
 export type ProviderRevocationResult = {
@@ -47,11 +47,11 @@ function decodeToken(token: string | null | undefined) {
 }
 
 export function providerForPlatform(platform: RevocablePlatform): ProviderName {
-  if (platform === 'gmail' || platform === 'google_calendar') {
+  if (platform === 'gmail' || platform.startsWith('google_') || platform === 'youtube') {
     return 'google';
   }
 
-  return platform;
+  return platform as ProviderName;
 }
 
 function buildTokenDecodeError(platform: RevocablePlatform, provider: ProviderName, accessError: string | null, refreshError: string | null) {
@@ -380,5 +380,5 @@ export async function revokeProviderAccess(params: {
 }
 
 export function isRevocablePlatform(platform: string): platform is RevocablePlatform {
-  return ['github', 'gmail', 'google_calendar', 'reddit', 'notion'].includes(platform);
+  return ['github', 'gmail', 'google_calendar', 'google_docs', 'google_sheets', 'google_slides', 'google_meet', 'google_chat', 'google_maps', 'youtube', 'reddit', 'notion'].includes(platform);
 }

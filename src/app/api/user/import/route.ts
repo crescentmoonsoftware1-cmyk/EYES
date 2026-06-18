@@ -40,8 +40,8 @@ export async function POST(request: Request) {
       platform,
     }));
 
-    // Trigger vector embeddings generation and upsert
-    const result = await upsertMemoriesSafely(supabase, rowsToUpsert);
+    // Trigger vector embeddings generation and upsert (skip real-time entity extraction to avoid API rate limits)
+    const result = await upsertMemoriesSafely(supabase, rowsToUpsert, { skipEntityExtraction: true });
 
     // Retrieve cumulative count of memories indexed for this manual platform
     const { count } = await supabase

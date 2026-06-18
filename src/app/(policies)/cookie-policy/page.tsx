@@ -60,7 +60,7 @@ export default function CookiePolicy() {
       content: (
         <>
           <Paragraph>
-            To deliver a premium, fluid user experience, we cache your interface state in your browser's local memory. This includes:
+            To deliver a premium, fluid user experience, we cache your interface state in your browser&apos;s local memory. This includes:
           </Paragraph>
           <UnorderedList>
             <ListItem>Your active tab and selection within the Privacy and Security index panels.</ListItem>

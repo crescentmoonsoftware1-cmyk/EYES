@@ -82,7 +82,7 @@ describe('POST /api/sync/all', () => {
     };
 
     resolveSyncActorMock.mockResolvedValue({
-      supabase: supabase as any,
+      supabase: supabase as never,
       userId: '11111111-1111-4111-8111-111111111111',
       userEmail: 'test@example.com',
       userName: 'Test User',

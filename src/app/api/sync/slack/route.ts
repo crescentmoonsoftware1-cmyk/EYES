@@ -96,8 +96,25 @@ export async function POST(request: Request) {
     const channelLimit = depth === 'deep' ? 20 : 5;
     const messageLimit = depth === 'deep' ? 100 : 20;
 
+    // Fetch privacy exclusions from the database table (GDPR Privacy Shield Integration)
+    const { data: dbExclusions } = await supabase
+      .from('privacy_excludes')
+      .select('exclude_value')
+      .eq('user_id', userId)
+      .eq('connector_id', 'slack')
+      .eq('exclude_type', 'slack_channel');
+
+    const excludedChannels = new Set(
+      (dbExclusions ?? []).map((e: { exclude_value: string }) => e.exclude_value.toLowerCase())
+    );
+
     const activeChannels = allConversations
-      .filter((conversation) => conversation.is_member && !conversation.is_im && !conversation.is_mpim)
+      .filter((conversation) => {
+        if (!conversation.is_member || conversation.is_im || conversation.is_mpim) return false;
+        const nameLower = (conversation.name || '').toLowerCase();
+        const idLower = conversation.id.toLowerCase();
+        return !excludedChannels.has(nameLower) && !excludedChannels.has(idLower);
+      })
       .slice(0, channelLimit);
     const activeDMs = allConversations
       .filter((conversation) => conversation.is_im || conversation.is_mpim)

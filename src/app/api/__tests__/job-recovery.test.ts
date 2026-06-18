@@ -71,7 +71,7 @@ describe('POST /api/cron/job-recovery', () => {
       }),
     };
 
-    createAdminClientMock.mockReturnValue(mockSupabase as any);
+    createAdminClientMock.mockReturnValue(mockSupabase as unknown as ReturnType<typeof createAdminClient>);
 
     getRecoverableFailedJobsMock.mockResolvedValue([
       {
@@ -90,7 +90,7 @@ describe('POST /api/cron/job-recovery', () => {
       new Response(JSON.stringify({ ok: true }), { status: 200 })
     );
 
-    syncGithubMock.mockResolvedValue(NextResponse.json({ ok: true }) as any);
+    syncGithubMock.mockResolvedValue(NextResponse.json({ ok: true, syncedRepos: 0, hasMore: false }) as any);
     markJobAsRecoveredMock.mockResolvedValue({ success: true });
 
     const response = await POST(

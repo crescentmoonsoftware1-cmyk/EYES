@@ -3,11 +3,13 @@ import { createClient } from '@/utils/supabase/server';
 import { getValidGoogleToken, getValidLinearToken, getValidSlackToken } from '@/services/auth/oauth';
 
 type ActionBody = {
+  id?: string;
   actionId?: string;
   actionType?: 'CALENDAR' | 'LINEAR_TICKET' | 'SLACK_REPLY' | 'REMINDER' | 'EMAIL_REPLY';
   method?: string;
   eventId?: string;
   memoryId?: string;
+  memory_id?: string;
   title?: string;
   description?: string;
   date?: string;
@@ -19,6 +21,7 @@ type ActionBody = {
   reminderDate?: string;
   text?: string;
   suggestedAction?: string;
+  suggested_action?: string;
 };
 
 function buildActionTitle(actionType: string, title?: string, description?: string) {
@@ -34,7 +37,7 @@ async function executeEmailReplyAction(supabase: Awaited<ReturnType<typeof creat
     return NextResponse.json({ error: 'Gmail is not connected or token expired' }, { status: 400 });
   }
 
-  let messageId = body.eventId || body.memoryId || (body as any).memory_id;
+  let messageId = body.eventId || body.memoryId || body.memory_id;
   if (!messageId) {
     return NextResponse.json({ error: 'Missing messageId/memoryId' }, { status: 400 });
   }
@@ -63,11 +66,10 @@ async function executeEmailReplyAction(supabase: Awaited<ReturnType<typeof creat
     return NextResponse.json({ error: 'Failed to fetch original message headers' }, { status: 500 });
   }
 
-  const parentData = await parentRes.json();
+  const parentData = (await parentRes.json()) as { threadId?: string; payload?: { headers?: Array<{ name: string; value: string }> } };
   const headers = parentData.payload?.headers || [];
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getHeaderVal = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value;
+  const getHeaderVal = (name: string) => headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value;
 
   const originalMsgId = getHeaderVal('message-id');
   const originalSubject = getHeaderVal('subject') || 'No subject';
@@ -87,7 +89,7 @@ async function executeEmailReplyAction(supabase: Awaited<ReturnType<typeof creat
   }
 
   // Construct email body
-  const replyText = body.text || body.suggestedAction || (body as any).suggested_action || body.description || '';
+  const replyText = body.text || body.suggestedAction || body.suggested_action || body.description || '';
 
   // RFC 2822 Headers
   const mailHeaders = [
@@ -132,7 +134,7 @@ async function executeEmailReplyAction(supabase: Awaited<ReturnType<typeof creat
     .from('action_sent_log')
     .insert({
       user_id: userId,
-      action_id: body.actionId || (body as any).id || null,
+      action_id: body.actionId || body.id || null,
       platform: 'gmail',
       recipient,
       subject,
@@ -324,7 +326,7 @@ async function executeSlackReplyAction(supabase: Awaited<ReturnType<typeof creat
   let channel = body.channelId;
   let threadTs = body.threadTs;
 
-  const messageId = body.eventId || body.memoryId || (body as any).memory_id;
+  const messageId = body.eventId || body.memoryId || body.memory_id;
   if (messageId && !channel) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(messageId)) {
@@ -335,7 +337,7 @@ async function executeSlackReplyAction(supabase: Awaited<ReturnType<typeof creat
         .maybeSingle();
 
       if (memory?.metadata) {
-        const meta = memory.metadata as any;
+        const meta = memory.metadata as Record<string, string | undefined>;
         if (meta.channel_id) {
           channel = meta.channel_id;
         }
@@ -354,7 +356,7 @@ async function executeSlackReplyAction(supabase: Awaited<ReturnType<typeof creat
     return NextResponse.json({ error: 'Missing Slack channelId. Pass channelId or set SLACK_DEFAULT_CHANNEL_ID.' }, { status: 400 });
   }
 
-  const text = body.text || body.suggestedAction || (body as any).suggested_action || body.description || body.title;
+  const text = body.text || body.suggestedAction || body.suggested_action || body.description || body.title;
   if (!text) {
     return NextResponse.json({ error: 'Missing Slack reply text.' }, { status: 400 });
   }

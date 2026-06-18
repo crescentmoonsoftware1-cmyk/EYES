@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const PageTitle = ({ children }: { children: React.ReactNode }) => (
@@ -124,7 +124,7 @@ const getSectionIcon = (id: string) => {
 
 export const PolicyPageTemplate = ({
   title,
-  lastUpdated,
+  lastUpdated: _lastUpdated,
   sections
 }: {
   title: string;

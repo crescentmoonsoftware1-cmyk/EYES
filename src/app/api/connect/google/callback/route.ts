@@ -55,7 +55,9 @@ export async function GET(request: Request) {
       const accessToken = encryptToken('mock_access_token');
       const refreshToken = encryptToken('mock_refresh_token');
 
-      const platforms = ['gmail', 'google-calendar'];
+      const platforms = [
+        'gmail', 'google_calendar', 'google_docs', 'google_sheets', 'google_slides', 'google_meet', 'google_chat', 'google_maps', 'youtube'
+      ];
 
       const tokenUpserts = platforms.map((dbPlatform) =>
         mockSupabase.from('oauth_tokens').upsert({
@@ -240,7 +242,7 @@ export async function GET(request: Request) {
     const refreshToken = tokenBody.refresh_token ? encryptToken(tokenBody.refresh_token) : null;
 
     const platforms = [
-      'gmail', 'google-calendar'
+      'gmail', 'google_calendar', 'google_docs', 'google_sheets', 'google_slides', 'google_meet', 'google_chat', 'google_maps', 'youtube'
     ];
 
     console.log('[Google OAuth] Persisting to Supabase...');

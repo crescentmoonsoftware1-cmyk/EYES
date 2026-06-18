@@ -16,6 +16,12 @@ const eslintConfig = defineConfig([
     "check-db.js",
     "run-live-audit.js",
     "scripts/embed-memories.mjs",
+    "check_*.js",
+    "scratch_*.js",
+    "test_*.js",
+    "test_*.ts",
+    "run_*.ts",
+    "request_*.js",
   ]),
 ]);
 

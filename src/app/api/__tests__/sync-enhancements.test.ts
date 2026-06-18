@@ -148,13 +148,13 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
       }
 
       if (table === 'raw_events' || table === 'memories') {
-        const queryChain: any = {
+        const queryChain: Record<string, unknown> = {
           eq: vi.fn(() => queryChain),
           in: vi.fn(() => queryChain),
           not: vi.fn(() => queryChain),
           order: vi.fn(() => queryChain),
           limit: vi.fn(() => queryChain),
-          then: (resolve: any) => resolve({ count: totalMemories, data: [], error: null }),
+          then: (resolve: (val: { count: number; data: unknown[]; error: null }) => void) => resolve({ count: totalMemories, data: [], error: null }),
         };
         return {
           select: vi.fn(() => queryChain),
@@ -191,6 +191,18 @@ function createSupabaseMock(options: SupabaseOptions = {}) {
           })),
           update: vi.fn(() => ({
             eq: vi.fn(async () => ({ error: null })),
+          })),
+        };
+      }
+
+      if (table === 'privacy_excludes') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn(async () => ({ data: [], error: null })),
+              })),
+            })),
           })),
         };
       }

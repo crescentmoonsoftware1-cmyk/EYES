@@ -33,6 +33,27 @@ type EntityCorrelation = {
   sample_size: number;
 };
 
+type Cluster = {
+  id: string;
+  title: string;
+  description: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  totalEvents: number;
+  platforms: string[];
+};
+
+type NextState = {
+  cluster_label: string;
+  probability: number;
+};
+
+type Inference = {
+  current_cluster_label: string;
+  next_states: NextState[];
+  total_data_points: number;
+  transition_confidence: number;
+};
+
 // Stable colour palette for clusters
 const CLUSTER_COLORS = [
   '#6366f1', '#10b981', '#f59e0b', '#ef4444',
@@ -52,6 +73,8 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
   const [loops, setLoops] = useState<Loop[]>([]);
   const [driftGaps, setDriftGaps] = useState<DriftGap[]>([]);
   const [correlations, setCorrelations] = useState<EntityCorrelation[]>([]);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [inference, setInference] = useState<Inference | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -59,10 +82,12 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
     const load = async () => {
       setLoading(true);
-      const [vecRes, statusRes, corrRes] = await Promise.allSettled([
+      const [vecRes, statusRes, corrRes, clustersRes, inferenceRes] = await Promise.allSettled([
         fetch('/api/cognitive/state-vectors?days=90').then(r => r.json()),
         fetch('/api/cognitive/status').then(r => r.json()),
         fetch('/api/cognitive/entity-correlations').then(r => r.json()),
+        fetch('/api/topic-clusters').then(r => r.json()),
+        fetch('/api/cognitive/next-state').then(r => r.json()),
       ]);
 
       if (vecRes.status === 'fulfilled') {
@@ -77,6 +102,12 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
       }
       if (corrRes.status === 'fulfilled') {
         setCorrelations(corrRes.value.correlations ?? []);
+      }
+      if (clustersRes.status === 'fulfilled') {
+        setClusters(clustersRes.value.clusters ?? []);
+      }
+      if (inferenceRes.status === 'fulfilled') {
+        setInference(inferenceRes.value ?? null);
       }
       setLoading(false);
     };
@@ -162,7 +193,14 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
         )}
 
         {!loading && activeTab === 'mindmap' && (
-          <MindMapTab vectors={vectors} clusterIds={clusterIds} getColor={getClusterColor} />
+          <MindMapTab 
+            vectors={vectors} 
+            clusterIds={clusterIds} 
+            getColor={getClusterColor} 
+            clusters={clusters}
+            setClusters={setClusters}
+            inference={inference}
+          />
         )}
         {!loading && activeTab === 'loops' && <LoopsTab loops={loops} />}
         {!loading && activeTab === 'drift' && <DriftTab gaps={driftGaps} />}
@@ -174,40 +212,197 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 }
 
 // ── Mind Map Tab ──────────────────────────────────────────────────────────────
-function MindMapTab({ vectors, clusterIds, getColor }: {
+function MindMapTab({ 
+  vectors, 
+  clusterIds, 
+  getColor,
+  clusters,
+  setClusters,
+  inference
+}: {
   vectors: StateVectorDay[];
   clusterIds: string[];
   getColor: (id: string | null, ids: string[]) => string;
+  clusters: Cluster[];
+  setClusters: React.Dispatch<React.SetStateAction<Cluster[]>>;
+  inference: Inference | null;
 }) {
-  if (!vectors.length) return <EmptyState text="Need 21+ days of data to show cluster timeline." />;
+  if (!vectors.length && !clusters.length) return <EmptyState text="Need 21+ days of data to show cluster timeline." />;
+
+  const SENTIMENT_COLOR: Record<string, string> = {
+    positive: '#22c55e', neutral: '#a78bfa', negative: '#f87171',
+  };
 
   return (
-    <div>
-      <p style={{ color: '#6b7280', fontSize: '11px', marginBottom: '12px' }}>
-        Last {vectors.length} days — each bar = one day, colored by behavioral cluster
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-        {vectors.map(v => (
-          <div
-            key={v.date}
-            title={`${v.date}: ${v.dominant_topic ?? 'no topic'} (vol: ${v.message_volume})`}
-            style={{
-              width: '12px', height: '28px', borderRadius: '2px',
-              background: getColor(v.cluster_id, clusterIds),
-              opacity: v.message_volume > 0 ? 1 : 0.2,
-              cursor: 'default',
-            }}
-          />
-        ))}
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '16px' }}>
-        {clusterIds.map((id, i) => (
-          <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#9ca3af' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CLUSTER_COLORS[i % CLUSTER_COLORS.length] }} />
-            Cluster {i + 1}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      
+      {/* Proportional Horizontal cluster timeline */}
+      {clusters.length > 0 && (
+        <div style={{
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px', padding: '14px',
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 800, color: '#9ca3af', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
+            STATE PATTERNS TIMELINE
           </div>
-        ))}
-      </div>
+          <div style={{ display: 'flex', gap: '2px', height: '28px', borderRadius: '6px', overflow: 'hidden' }}>
+            {clusters.map((c, i) => {
+              const color = SENTIMENT_COLOR[c.sentiment] ?? '#a78bfa';
+              const weight = c.totalEvents || 1;
+              return (
+                <div key={c.id} title={`${c.title} (${c.totalEvents} memories)`} style={{
+                  flex: weight, background: color, opacity: 0.7 + (i === 0 ? 0.3 : 0),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '8px', fontWeight: 800, color: '#000',
+                  cursor: 'pointer', transition: 'opacity 0.2s',
+                  minWidth: '20px',
+                }}
+                  onMouseEnter={e => { (e.target as HTMLDivElement).style.opacity = '1'; }}
+                  onMouseLeave={e => { (e.target as HTMLDivElement).style.opacity = '0.7'; }}
+                >
+                  {c.title.length <= 8 ? c.title : ''}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '8px', color: '#9ca3af' }}>
+            <span>Oldest</span><span>Current</span>
+          </div>
+        </div>
+      )}
+
+      {/* 90-day Daily grid */}
+      {vectors.length > 0 && (
+        <div style={{
+          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '12px', padding: '14px',
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 800, color: '#9ca3af', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
+            90-DAY BEHAVIORAL GRID
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+            {vectors.map(v => (
+              <div
+                key={v.date}
+                title={`${v.date}: ${v.dominant_topic ?? 'no topic'} (vol: ${v.message_volume})`}
+                style={{
+                  width: '12px', height: '28px', borderRadius: '2px',
+                  background: getColor(v.cluster_id, clusterIds),
+                  opacity: v.message_volume > 0 ? 1 : 0.2,
+                  cursor: 'default',
+                }}
+              />
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+            {clusterIds.map((id, i) => (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#9ca3af' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: CLUSTER_COLORS[i % CLUSTER_COLORS.length] }} />
+                Cluster {i + 1}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Validation cards */}
+      {clusters.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 800, color: '#9ca3af', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '2px' }}>
+            PATTERN VALIDATION
+          </div>
+          {clusters.map(c => {
+            const color = SENTIMENT_COLOR[c.sentiment] ?? '#a78bfa';
+            return (
+              <div key={c.id} style={{
+                background: `${color}06`, border: `1px solid ${color}1e`,
+                borderRadius: '10px', padding: '12px 14px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: '#fff' }}>{c.title}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af', lineHeight: 1.5 }}>
+                  {c.description}
+                </p>
+                <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {c.platforms.slice(0, 3).map((p: string) => (
+                    <span key={p} style={{
+                      fontSize: '9px', background: 'rgba(255,255,255,0.05)', color: '#9ca3af',
+                      padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)',
+                      fontWeight: 600, textTransform: 'uppercase',
+                    }}>{p}</span>
+                  ))}
+                  <span style={{ fontSize: '9px', color: '#6b7280' }}>{c.totalEvents} mem</span>
+                  
+                  {/* Validation buttons */}
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                    <button onClick={async () => {
+                      const newLabel = window.prompt('Rename this cluster:', c.title);
+                      if (newLabel && newLabel.trim()) {
+                        await fetch(`/api/cognitive/clusters/${c.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ user_label: newLabel.trim(), status: 'confirm' }),
+                        });
+                        setClusters(prev => prev.map(cl => cl.id === c.id ? { ...cl, title: newLabel.trim() } : cl));
+                      }
+                    }} style={{
+                      fontSize: '9px', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#e5e7eb', fontWeight: 600,
+                    }}>✏️ Rename</button>
+                    
+                    <button onClick={async () => {
+                      if (window.confirm('Reject this cluster? It will be hidden.')) {
+                        await fetch(`/api/cognitive/clusters/${c.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ is_current: false, status: 'reject' }),
+                        });
+                        setClusters(prev => prev.filter(cl => cl.id !== c.id));
+                      }
+                    }} style={{
+                      fontSize: '9px', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer',
+                      background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                      color: '#f87171', fontWeight: 600,
+                    }}>✕ Reject</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Forward state inference predictor */}
+      {inference && (
+        <div style={{
+          padding: '14px', borderRadius: '12px',
+          background: 'rgba(147,51,234,0.08)', border: '1px solid rgba(147,51,234,0.2)',
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: 800, color: '#c084fc', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '8px' }}>
+            🔮 WHERE AM I HEADED?
+          </div>
+          <div style={{ fontSize: '12px', marginBottom: '8px', color: '#e5e7eb' }}>
+            Current: <strong style={{ color: '#a78bfa' }}>{inference.current_cluster_label}</strong>
+          </div>
+          {inference.next_states.slice(0, 3).map((ns, i) => (
+            <div key={i} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '6px 0', fontSize: '12px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+              color: '#9ca3af'
+            }}>
+              <span>{ns.cluster_label}</span>
+              <span style={{ fontWeight: 800, color: '#c084fc' }}>{ns.probability}%</span>
+            </div>
+          ))}
+          <div style={{ fontSize: '9px', color: '#6b7280', marginTop: '8px' }}>
+            Based on {inference.total_data_points} data points · {Math.round(inference.transition_confidence * 100)}% confidence
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

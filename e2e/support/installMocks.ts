@@ -142,8 +142,8 @@ export async function installSupabaseClientMock(page: Page) {
       removeChannel: async () => ({ error: null }),
     };
 
-    (window as any).__THE_MONITOR_SUPABASE_CLIENT__ = mockClient;
-    (window as any).__THE_EYES_SUPABASE_CLIENT__ = mockClient;
+    (window as unknown as Record<string, unknown>).__THE_MONITOR_SUPABASE_CLIENT__ = mockClient;
+    (window as unknown as Record<string, unknown>).__THE_EYES_SUPABASE_CLIENT__ = mockClient;
   }, MOCK_USER);
 }
 

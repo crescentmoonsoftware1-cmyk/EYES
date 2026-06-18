@@ -21,9 +21,11 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   const [auditHistory, setAuditHistory] = useState<ReputationAudit[]>([]);
 
-  // Fetch the latest audit on mount, and poll if returning from Stripe
+  // Fetch the latest or selected audit on mount, and poll if returning from Stripe
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    const searchParams = new URLSearchParams(window.location.search);
+    const targetAuditId = searchParams.get('auditId');
     const checkIsSuccessRedirect = typeof window !== 'undefined' && window.location.search.includes('audit=success');
     
     if (checkIsSuccessRedirect) {
@@ -32,7 +34,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
     const fetchLatest = async () => {
       try {
-        const auditRes = await fetch('/api/audit/latest');
+        const auditRes = await fetch(targetAuditId ? `/api/audit/${targetAuditId}` : '/api/audit/latest');
         if (auditRes.ok) {
           const data = await auditRes.json();
           if (data && data.id) {
@@ -49,11 +51,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
             setActiveAudit(data);
             
-            // If we came from Stripe, and the audit is now found, clean the URL
-            if (checkIsSuccessRedirect) {
-              const url = new URL(window.location.href);
-              url.searchParams.delete('audit');
-              window.history.replaceState({}, document.title, url.pathname + url.search);
+            // If we came from Stripe, or loaded a specific history item, set correct mode
+            if (checkIsSuccessRedirect || targetAuditId) {
+              if (checkIsSuccessRedirect) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('audit');
+                window.history.replaceState({}, document.title, url.pathname + url.search);
+              }
               if (data.status === 'completed') {
                 setAuditMode('completed');
               } else {
@@ -62,12 +66,16 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             } else if (data.status === 'analysis' || data.status === 'pending') {
               // If the latest audit is active, automatically show the progress screen
               setAuditMode('running');
+            } else if (data.status === 'completed') {
+              // If the latest audit is already completed, allow viewing it directly in completed view if they choose
+              // but default dashboard view is fine unless they requested a specific ID
+              setAuditMode('completed');
             }
             return true; // Found the correct audit
           }
         }
       } catch (err) {
-        console.error('Failed to fetch latest audit:', err);
+        console.error('Failed to fetch audit:', err);
       }
       return false; // Not found yet
     };
@@ -191,15 +199,15 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           <div className={`${styles.secondaryAuditGrid} stagger-3`}>
             <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('reputation')}>
               <h4>Investor / Reputation</h4>
-              <p>"What will someone find when they run diligence on me?" Cold, clinical analysis of unfulfilled commitments, contradictions, and external risks.</p>
+              <p>&quot;What will someone find when they run diligence on me?&quot; Cold, clinical analysis of unfulfilled commitments, contradictions, and external risks.</p>
             </div>
             <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('behavioral')}>
               <h4>Behavioral / Self</h4>
-              <p>"What did I actually accomplish, and what slipped?" Analysis of follow-through, task loops, drift, and dropped commitments.</p>
+              <p>&quot;What did I actually accomplish, and what slipped?&quot; Analysis of follow-through, task loops, drift, and dropped commitments.</p>
             </div>
             <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('hiring')}>
               <h4>Hiring / Professional</h4>
-              <p>"What does a recruiter or employer see?" Analysis of reliability, stakeholder communication quality, and professional red flags.</p>
+              <p>&quot;What does a recruiter or employer see?&quot; Analysis of reliability, stakeholder communication quality, and professional red flags.</p>
             </div>
           </div>
         </div>

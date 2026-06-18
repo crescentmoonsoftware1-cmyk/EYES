@@ -8,7 +8,7 @@ import { createClient } from '@/utils/supabase/server';
 import { getBaseUrl } from '@/utils/url';
 
 const allowedPlatforms = new Set([
-  'gmail', 'google-calendar'
+  'gmail', 'google-calendar', 'google-docs', 'google-sheets', 'google-slides', 'google-meet', 'google-chat', 'google-maps', 'youtube'
 ]);
 
 const googleSharedScopes = [
@@ -18,6 +18,12 @@ const googleSharedScopes = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/documents.readonly',
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/presentations.readonly',
+  'https://www.googleapis.com/auth/youtube.readonly',
+  'https://www.googleapis.com/auth/chat.spaces.readonly'
 ];
 
 

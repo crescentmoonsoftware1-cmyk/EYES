@@ -74,30 +74,33 @@ export function TimelineView({ onBack }: TimelineViewProps) {
              {/* Dynamic Bar Series */}
              {data.map((d, i) => {
                 const h = (d.count / maxCount) * graphHeight;
+                const xPos = startX + i * (barWidth + gap);
                 return (
-                  <rect 
-                    key={d.year}
-                    x={startX + i * (barWidth + gap)} 
-                    y={320 - h} 
-                    width={barWidth} 
-                    height={h} 
-                    rx="4" 
-                    fill="url(#barG)" 
-                  />
+                  <React.Fragment key={d.year}>
+                    <rect 
+                      x={xPos} 
+                      y={320 - h} 
+                      width={barWidth} 
+                      height={h} 
+                      rx="4" 
+                      fill="url(#barG)" 
+                    />
+                    <text
+                      x={xPos + barWidth / 2}
+                      y={340}
+                      textAnchor="middle"
+                      className={styles.axisScaleText}
+                      style={{ fontWeight: 700 }}
+                    >
+                      {d.year}
+                    </text>
+                  </React.Fragment>
                 )
              })}
           </svg>
           <div className={styles.xAxisLabel}>Indexing Timeline (Year)</div>
-          <div className={styles.timelineLabels}>
-             {data.map((d) => (
-                <span key={d.year} className={styles.timelineLabelItem}>
-                  {d.year}
-                </span>
-             ))}
-          </div>
         </div>
       )}
     </div>
   );
 }
-

@@ -26,7 +26,7 @@ function sleep(ms: number) {
 async function writeRefreshTelemetry(params: {
   supabase: SupabaseClient;
   userId: string;
-  platform: 'gmail' | 'google_calendar';
+  platform: string;
   status: 'success' | 'error' | 'skipped';
   attempt: number;
   latencyMs: number;
@@ -86,7 +86,7 @@ export function isRetryableGoogleRefreshFailure(status: number | null, body: unk
 export async function getValidGoogleToken(
   supabase: SupabaseClient,
   userId: string,
-  platform: 'gmail' | 'google_calendar'
+  platform: string
 ): Promise<string | null> {
   const { data: tokenRow } = await supabase
     .from('oauth_tokens')

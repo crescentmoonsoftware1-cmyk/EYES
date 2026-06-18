@@ -2,12 +2,22 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import styles from './ChatPage.module.css';
 import { 
   SearchIcon, 
-  ArrowRightIcon
+  ArrowRightIcon,
+  GmailIconOfficial,
+  GitHubIconOfficial,
+  SlackIconOfficial,
+  DiscordIconOfficial,
+  NotionIconOfficial,
+  CalendarIconOfficial,
+  LinearIconOfficial,
+  TrelloIconOfficial,
+  DropboxIconOfficial
 } from '@/components/common/icons/PlatformIcons';
 import type { Message, Citation } from '@/types/dashboard';
 import { AlertsBanner } from '@/components/chat/AlertsBanner';
@@ -16,17 +26,142 @@ import { CognitiveRightPanel } from '@/components/chat/CognitiveRightPanel';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+const PLATFORM_ICONS: Record<string, React.ReactElement> = {
+  gmail: <GmailIconOfficial size={16} />,
+  'google-calendar': <CalendarIconOfficial size={16} />,
+  github: <GitHubIconOfficial size={16} />,
+  linear: <LinearIconOfficial size={16} />,
+  trello: <TrelloIconOfficial size={16} />,
+  slack: <SlackIconOfficial size={16} />,
+  notion: <NotionIconOfficial size={16} />,
+  discord: <DiscordIconOfficial size={16} />,
+  dropbox: <DropboxIconOfficial size={16} />,
+};
 
+function CitationDockChat({ 
+  citations, 
+  excludedMemories, 
+  setExcludedMemories 
+}: { 
+  citations: Citation[]; 
+  excludedMemories: Set<string>; 
+  setExcludedMemories: React.Dispatch<React.SetStateAction<Set<string>>>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const resolveSourceUrl = (c: Citation): string | null => {
+    if (c.sourceUrl) return c.sourceUrl;
+    const platform = (c.platform || '').toLowerCase();
+    const id = c.sourceId;
+    if (!id) return null;
+    if (platform === 'gmail')            return `https://mail.google.com/mail/u/0/#all/${id}`;
+    if (platform === 'github')           return `https://github.com/${id}`;
+    if (platform === 'slack')            return `https://slack.com/app_redirect?channel=${id}`;
+    if (platform === 'notion')           return `https://notion.so/${id.replace(/-/g, '')}`;
+    if (platform === 'linear')           return `https://linear.app/issue/${id}`;
+    if (platform === 'google-calendar')  return `https://calendar.google.com/calendar/r/eventedit?eid=${id}`;
+    if (platform === 'discord')          return `https://discord.com/channels/${id}`;
+    if (platform === 'reddit')           return `https://reddit.com/${id}`;
+    if (platform === 'twitter')          return `https://x.com/i/web/status/${id}`;
+    return null;
+  };
+
+  return (
+    <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center' }}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          width: '28px', height: '28px', borderRadius: '14px',
+          background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+          color: 'var(--text-secondary)', fontSize: '12px',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.3s ease', zIndex: 2
+        }}
+        title={`${citations.length} Sources`}
+      >
+        🔗
+      </button>
+
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+        borderLeft: 'none',
+        borderRadius: '0 14px 14px 0', padding: '0', height: '28px',
+        marginLeft: '-14px', paddingLeft: '18px', // Tuck behind the button
+        width: expanded ? `${(citations.length * 44) + 20}px` : '0px',
+        opacity: expanded ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        zIndex: 1,
+        whiteSpace: 'nowrap'
+      }}>
+        {citations.map((c, i) => {
+          const url = resolveSourceUrl(c);
+          const isExcluded = c.memoryId ? excludedMemories.has(c.memoryId) : false;
+          return (
+            <div key={i} style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: '2px', 
+              marginRight: '8px', position: 'relative' 
+            }}>
+              <div
+                title={`${c.title || c.snippet?.slice(0, 40) || ''} (Click to open)`}
+                onClick={() => {
+                  if (url) window.open(url, '_blank');
+                }}
+                style={{
+                  width: '24px', height: '24px', borderRadius: '12px',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontSize: '14px',
+                  transition: 'transform 0.2s',
+                  background: isExcluded ? 'rgba(239,68,68,0.2)' : 'var(--bg-secondary)',
+                  opacity: isExcluded ? 0.4 : 1,
+                  border: '1px solid var(--border-subtle)'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                {PLATFORM_ICONS[c.platform.toLowerCase()] ?? '🔗'}
+              </div>
+              {c.memoryId && (
+                <button
+                  disabled={isExcluded}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!c.memoryId) return;
+                    await fetch(`/api/memories/${c.memoryId}/exclude`, { method: 'PATCH' });
+                    setExcludedMemories(prev => {
+                      const next = new Set(prev);
+                      next.add(c.memoryId!);
+                      return next;
+                    });
+                  }}
+                  title={isExcluded ? 'Excluded' : 'Exclude from patterns'}
+                  style={{
+                    border: 'none', background: 'none', color: isExcluded ? '#10b981' : '#ef4444',
+                    cursor: isExcluded ? 'default' : 'pointer', fontSize: '10px', padding: '0 2px',
+                    lineHeight: 1, display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  {isExcluded ? '✓' : '⊘'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ChatPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
+  const { user, isLoading } = useAuth();
   
   const [query, setQuery] = useState(initialQuery);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [threadId, setThreadId] = useState('');       // local key
   const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
   const [brainPanelOpen, setBrainPanelOpen] = useState(false);
   const [excludedMemories, setExcludedMemories] = useState<Set<string>>(new Set());
@@ -55,6 +190,9 @@ function ChatPageInner() {
         });
         if (res.ok) {
           const data = await res.json();
+          if (data.summary !== undefined) {
+            rollingSummaryRef.current = data.summary || '';
+          }
           if (!existingDbId && data.threadId) {
             setDbThreadId(data.threadId);
           }
@@ -64,23 +202,6 @@ function ChatPageInner() {
       }
     }, 1000);
   };
-
-
-  // Initialize
-  useEffect(() => {
-    setThreadId(Math.random().toString(36).substring(7));
-
-    // If there's an initial query, trigger it (once)
-    if (initialQuery && !hasSubmittedRef.current) {
-      hasSubmittedRef.current = true;
-      handleSubmit(initialQuery);
-    }
-  }, []);
-
-  // Scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const handleSubmit = async (text: string) => {
     const prompt = text.trim();
@@ -115,7 +236,11 @@ function ChatPageInner() {
         let citations: Citation[] = [];
         if (citationsHeader) {
           try {
-            citations = JSON.parse(atob(citationsHeader.replace(/-/g, '+').replace(/_/g, '/'))) as Citation[];
+            let base64 = citationsHeader.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64.length % 4) {
+              base64 += '=';
+            }
+            citations = JSON.parse(decodeURIComponent(escape(atob(base64)))) as Citation[];
           } catch (e) {
             console.warn('[Chat] Failed to parse citations header:', e);
           }
@@ -184,6 +309,119 @@ function ChatPageInner() {
     }
   };
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isLoading, router]);
+
+  // Initialize
+  useEffect(() => {
+    // If there's an initial query, trigger it (once)
+    if (initialQuery && !hasSubmittedRef.current) {
+      hasSubmittedRef.current = true;
+      handleSubmit(initialQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Scroll to bottom (using 'auto' behavior to prevent animation stutter during streaming)
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [messages]);
+
+  // Show a premium black screen while loading auth session to prevent flashes
+  if (isLoading) {
+    return (
+      <div style={{
+        background: '#080808',
+        height: '100vh',
+        width: '100vw',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          color: '#E06A3B',
+          fontFamily: 'var(--font-display)',
+          fontWeight: 600,
+          fontSize: '12px',
+          letterSpacing: '0.15em',
+          marginBottom: '16px',
+        }}>
+          Connecting…
+        </div>
+        <div style={{
+          width: '120px',
+          height: '1px',
+          background: 'rgba(255,255,255,0.06)',
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '2px',
+        }}>
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            height: '100%',
+            width: '40%',
+            background: '#E06A3B',
+            animation: 'loadingSweep 1.2s infinite ease-in-out',
+          }} />
+        </div>
+        <style>{`
+          @keyframes loadingSweep {
+            0% { left: -40%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const chatInputEl = (
+    <div className={styles.inputBox} style={{ width: '100%', maxWidth: '680px' }}>
+      <SearchIcon />
+      <input 
+        type="text" 
+        className={styles.input}
+        placeholder="Ask me anything about your life…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) handleSubmit(query.trim()); }}
+        disabled={isStreaming}
+      />
+      <button 
+        className={styles.sendBtn}
+        onClick={() => { if (query.trim()) handleSubmit(query.trim()); }}
+        disabled={!query.trim() || isStreaming}
+      >
+        <ArrowRightIcon />
+      </button>
+      {/* Brain Panel Toggle */}
+      <button
+        onClick={() => setBrainPanelOpen(p => !p)}
+        title="Intelligence Layer"
+        style={{
+          background: brainPanelOpen ? 'rgba(99,102,241,0.2)' : 'none',
+          border: '1px solid rgba(99,102,241,0.3)',
+          borderRadius: '8px', padding: '6px 10px',
+          color: '#818cf8', cursor: 'pointer', fontSize: '16px',
+          marginLeft: '4px', flexShrink: 0,
+        }}
+      >🧠</button>
+    </div>
+  );
+
+
+
   return (
     <div className={styles.chatRoot}>
       <ClusterValidationModal />
@@ -197,13 +435,16 @@ function ChatPageInner() {
         <AlertsBanner />
         
         <div className={styles.chatContentContainer}>
-          <div className={styles.chatColumn}>
+          <div className={`${styles.chatColumn} ${brainPanelOpen ? styles.chatColumnWithPanel : ''}`}>
             {messages.length === 0 ? (
               <div className={styles.emptyState}>
                 <h1 className={styles.brandTitle} style={{ fontSize: 'clamp(24px, 5vw, 32px)', lineHeight: 1.2 }}>
                   Everything You Ever Said
                 </h1>
                 <p className={styles.brandSubtitle}>Ask me anything about your life.</p>
+                <div style={{ width: '100%', maxWidth: '680px', marginTop: '24px' }}>
+                  {chatInputEl}
+                </div>
               </div>
             ) : (
               <div className={styles.messageList}>
@@ -225,7 +466,7 @@ function ChatPageInner() {
                                 table: ({node, ...props}) => <div style={{overflowX: 'auto', margin: '16px 0', borderRadius: '8px', border: '1px solid var(--border-subtle)'}}><table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}} {...props} /></div>,
                                 th: ({node, ...props}) => <th style={{borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', textAlign: 'left', background: 'var(--bg-secondary)', fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
                                 td: ({node, ...props}) => <td style={{borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', color: 'var(--text-secondary)'}} {...props} />,
-                                code: ({node, inline, ...props}: any) => 
+                                code: ({node, inline, ...props}: React.HTMLAttributes<HTMLElement> & { node?: unknown; inline?: boolean }) => 
                                   inline 
                                     ? <code style={{background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace'}} {...props} />
                                     : <span style={{display: 'block', background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)'}}><code {...props} /></span>,
@@ -238,108 +479,23 @@ function ChatPageInner() {
                                 blockquote: ({node, ...props}) => <blockquote style={{margin: '12px 0', paddingLeft: '12px', borderLeft: '3px solid var(--border-subtle)', color: 'var(--text-secondary)', fontStyle: 'italic'}} {...props} />
                               }}
                             >{m.content}</ReactMarkdown>
+                            {m.pending && <span className={styles.typingCursor}>▊</span>}
                           </div>
                         ) : (
-                          m.content
+                          <>
+                            {m.content}
+                            {m.pending && <span className={styles.typingCursor}>▊</span>}
+                          </>
                         )}
-                        {m.pending && <span className={styles.typingCursor}>▊</span>}
                       </div>
-                      {/* C9: Citation chips — open real source */}
-                      {m.role === 'assistant' && !m.pending && m.citations && m.citations.length > 0 && (() => {
-                        /** Build the best real URL for a citation */
-                        const resolveSourceUrl = (c: Citation): string | null => {
-                          if (c.sourceUrl) return c.sourceUrl;
-                          const platform = (c.platform || '').toLowerCase();
-                          const id = c.sourceId;
-                          if (!id) return null;
-                          if (platform === 'gmail')            return `https://mail.google.com/mail/u/0/#all/${id}`;
-                          if (platform === 'github')           return `https://github.com/${id}`;
-                          if (platform === 'slack')            return `https://slack.com/app_redirect?channel=${id}`;
-                          if (platform === 'notion')           return `https://notion.so/${id.replace(/-/g, '')}`;
-                          if (platform === 'linear')           return `https://linear.app/issue/${id}`;
-                          if (platform === 'google-calendar')  return `https://calendar.google.com/calendar/r/eventedit?eid=${id}`;
-                          if (platform === 'discord')          return `https://discord.com/channels/${id}`;
-                          if (platform === 'reddit')           return `https://reddit.com/${id}`;
-                          if (platform === 'twitter')          return `https://x.com/i/web/status/${id}`;
-                          return null;
-                        };
-
-                        return (
-                          <div style={{ marginTop: '10px' }}>
-                            {/* Source chips row */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
-                              {m.citations.map((c, idx) => {
-                                const url = resolveSourceUrl(c);
-                                const label = c.title
-                                  ? (c.title.length > 40 ? c.title.slice(0, 40) + '…' : c.title)
-                                  : c.platform;
-                                const chip = (
-                                  <span style={{
-                                    background: url ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '6px', padding: '3px 8px',
-                                    fontSize: '11px', color: url ? '#a3b3cc' : '#4b5563',
-                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                    cursor: url ? 'pointer' : 'default',
-                                    textDecoration: 'none',
-                                    transition: 'background 0.15s',
-                                    maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                  }}>
-                                    <span style={{ opacity: 0.7, fontSize: '10px' }}>↗</span>
-                                    {label}
-                                  </span>
-                                );
-                                return url ? (
-                                  <a
-                                    key={idx}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title={`Open in ${c.platform}`}
-                                    style={{ textDecoration: 'none' }}
-                                  >
-                                    {chip}
-                                  </a>
-                                ) : (
-                                  <span key={idx} title="Source no longer available">{chip}</span>
-                                );
-                              })}
-                            </div>
-                            {/* Secondary: memory exclude buttons */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {m.citations.filter(c => c.memoryId).map(c => {
-                                const isExcluded = excludedMemories.has(c.memoryId!);
-                                return (
-                                  <button
-                                    key={c.memoryId}
-                                    title={isExcluded ? 'Memory excluded from patterns' : `Don't use "${c.platform}" memory in clustering`}
-                                    onClick={async () => {
-                                      if (isExcluded) return;
-                                      await fetch(`/api/memories/${c.memoryId}/exclude`, { method: 'PATCH' });
-                                      setExcludedMemories(prev => new Set([...prev, c.memoryId!]));
-                                    }}
-                                    style={{
-                                      background: isExcluded ? 'rgba(16,185,129,0.1)' : 'transparent',
-                                      border: `1px solid ${isExcluded ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                                      color: isExcluded ? '#10b981' : '#4b5563',
-                                      borderRadius: '6px', padding: '2px 7px',
-                                      fontSize: '10px', cursor: isExcluded ? 'default' : 'pointer',
-                                      display: 'flex', alignItems: 'center', gap: '4px',
-                                    }}
-                                  >
-                                    {isExcluded ? '✓ Excluded' : `⊘ ${c.platform}`}
-                                  </button>
-                                );
-                              })}
-                              {m.citations.some(c => c.memoryId && !excludedMemories.has(c.memoryId)) && (
-                                <span style={{ fontSize: '10px', color: '#374151', alignSelf: 'center', marginLeft: '2px' }}>
-                                  exclude from patterns
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                      {/* C9: Animated expanding Citation Dock — unified with SynthesisView */}
+                      {m.role === 'assistant' && !m.pending && m.citations && m.citations.length > 0 && (
+                        <CitationDockChat 
+                          citations={m.citations} 
+                          excludedMemories={excludedMemories}
+                          setExcludedMemories={setExcludedMemories}
+                        />
+                      )}
 
                     </div>
                   </div>
@@ -349,40 +505,11 @@ function ChatPageInner() {
             )}
 
             {/* Floating Input Area */}
-            <div className={styles.inputStickyContainer}>
-              <div className={styles.inputBox}>
-                <SearchIcon />
-                <input 
-                  type="text" 
-                  className={styles.input}
-                  placeholder="Ask me anything about your life…"
-
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit(query)}
-                  disabled={isStreaming}
-                />
-                <button 
-                  className={styles.sendBtn}
-                  onClick={() => handleSubmit(query)}
-                  disabled={!query.trim() || isStreaming}
-                >
-                  <ArrowRightIcon />
-                </button>
-                {/* Brain Panel Toggle */}
-                <button
-                  onClick={() => setBrainPanelOpen(p => !p)}
-                  title="Intelligence Layer"
-                  style={{
-                    background: brainPanelOpen ? 'rgba(99,102,241,0.2)' : 'none',
-                    border: '1px solid rgba(99,102,241,0.3)',
-                    borderRadius: '8px', padding: '6px 10px',
-                    color: '#818cf8', cursor: 'pointer', fontSize: '16px',
-                    marginLeft: '4px', flexShrink: 0,
-                  }}
-                >🧠</button>
+            {messages.length > 0 && (
+              <div className={styles.inputStickyContainer}>
+                {chatInputEl}
               </div>
-            </div>
+            )}
           </div>
           <CognitiveRightPanel isOpen={brainPanelOpen} onClose={() => setBrainPanelOpen(false)} />
         </div>

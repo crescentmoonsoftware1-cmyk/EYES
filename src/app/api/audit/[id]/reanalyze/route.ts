@@ -44,7 +44,7 @@ export async function POST(
       return NextResponse.json({ error: 'Audit is already running.' }, { status: 409 });
     }
 
-    const auditType = (audit.metadata as Record<string, any>)?.audit_type || 'full';
+    const auditType = (audit.metadata as Record<string, string | undefined>)?.audit_type || 'full';
 
     // Switch to Admin Client for database operations (RLS bypass) to avoid any potential update permissions issues
     const adminSupabase = await createAdminClient();

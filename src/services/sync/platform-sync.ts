@@ -110,29 +110,106 @@ export async function runPlatformSyncViaHttp(
  * Run platform sync directly (used by cron to avoid HTTP overhead)
  * Priority 2 optimization: Direct call instead of HTTP fetch
  *
- * NOTE: This function is NOT YET IMPLEMENTED. It is a reserved stub for
- * Priority 2 work. It intentionally returns success=false so that if it is
- * accidentally wired into the cron path it fails loudly rather than silently
- * reporting success while doing nothing. Use runPlatformSyncViaHttp() instead.
+ * This function dynamically imports the corresponding route module and executes
+ * the POST handler in-process, bypassing the network interface.
  */
 export async function runPlatformSyncDirect(
   supabase: SupabaseClient,
   platform: string,
-  _userId: string  // Reserved for Priority 2 direct-call implementation
+  userId: string
 ): Promise<PlatformOutcome> {
-  void supabase; // Will be used by the direct sync implementation
+  void supabase;
   const routePlatform = toSyncRoutePlatform(platform);
   const startedAt = Date.now();
 
-  // Priority 2 stub — direct platform invocation not yet implemented.
-  // Do NOT return success=true here: the caller must use runPlatformSyncViaHttp().
-  console.error(`[PlatformSync] runPlatformSyncDirect() called for '${platform}' but is not implemented. Use runPlatformSyncViaHttp() instead.`);
-  return {
-    platform,
-    routePlatform,
-    success: false,
-    status: null,
-    durationMs: Date.now() - startedAt,
-    error: 'runPlatformSyncDirect() is not yet implemented. Use runPlatformSyncViaHttp().',
-  };
+  try {
+    let handler: ((request: Request) => Promise<Response>) | null = null;
+
+    switch (routePlatform) {
+      case 'github': {
+        const mod = await import('@/app/api/sync/github/route');
+        handler = mod.POST;
+        break;
+      }
+      case 'gmail': {
+        const mod = await import('@/app/api/sync/gmail/route');
+        handler = mod.POST;
+        break;
+      }
+      case 'google-calendar': {
+        const mod = await import('@/app/api/sync/google-calendar/route');
+        handler = mod.POST;
+        break;
+      }
+      case 'notion': {
+        const mod = await import('@/app/api/sync/notion/route');
+        handler = mod.POST;
+        break;
+      }
+      case 'reddit': {
+        const mod = await import('@/app/api/sync/reddit/route');
+        handler = mod.POST;
+        break;
+      }
+      case 'slack': {
+        const mod = await import('@/app/api/sync/slack/route');
+        handler = mod.POST;
+        break;
+      }
+      case 'discord': {
+        const mod = await import('@/app/api/sync/discord/route');
+        handler = mod.POST;
+        break;
+      }
+    }
+
+    if (!handler) {
+      // Fallback for newer platforms or platforms without direct imports
+      const secret = process.env.CRON_SECRET || '';
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      return await runPlatformSyncViaHttp(baseUrl, platform, userId, secret);
+    }
+
+    const requestUrl = `http://localhost:3000/api/sync/${routePlatform}`;
+    const req = new Request(requestUrl, {
+      method: 'POST',
+      headers: {
+        'x-cron-secret': process.env.CRON_SECRET || '',
+        'x-cron-user-id': userId,
+      },
+    });
+
+    const response = await handler(req);
+    const rawBody = await response.text();
+    const body = parseResponsePayload(rawBody);
+
+    if (!response.ok) {
+      return {
+        platform,
+        routePlatform,
+        success: false,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+        error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Sync failed (${response.status})`,
+      };
+    }
+
+    return {
+      platform,
+      routePlatform,
+      success: true,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      platform,
+      routePlatform,
+      success: false,
+      status: null,
+      durationMs: Date.now() - startedAt,
+      error: message,
+    };
+  }
 }

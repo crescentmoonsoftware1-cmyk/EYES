@@ -4,14 +4,14 @@
   background-color: var(--bg-secondary);
   display: flex;
   flex-direction: column;
-  padding: 16px 12px;
+  padding: 12px 10px;
   overflow: hidden;
   border-right: 1px solid var(--border-subtle);
 }
 
 .newChatBtn {
   width: 100%;
-  padding: 10px 18px;
+  padding: 8px 14px;
   background-color: var(--accent-primary);
   color: var(--bg-primary);
   border: none;
@@ -22,7 +22,7 @@
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow-sm);
   transition: var(--transition-main);
 }
@@ -75,7 +75,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
 .sectionTitle {
@@ -92,7 +92,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: 9px 12px;
+  padding: 6px 10px;
   cursor: pointer;
   color: var(--text-secondary);
   gap: 10px;
@@ -125,8 +125,8 @@
 }
 
 .itemIcon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   position: relative;
   display: flex;
   align-items: center;
@@ -176,7 +176,7 @@
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-primary);
-  padding: 12px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: var(--transition-main);
   box-shadow: var(--shadow-sm);
@@ -189,7 +189,7 @@
   box-shadow: var(--shadow-lg);
 }
 
-.readinessHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.readinessHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .readinessTitle { font-size: 9px; font-weight: 800; color: var(--text-secondary); letter-spacing: 1.5px; }
 
 .readinessContent { display: flex; align-items: center; gap: 12px; }
@@ -206,3 +206,113 @@
 /* ── Ember theme overrides ── */
 [data-theme='ember'] .newChatBtn { background: var(--accent-primary); color: #FFFFFF; box-shadow: 0 4px 20px rgba(224, 106, 59, 0.4); }
 [data-theme='ember'] .itemActive { background-color: rgba(224, 106, 59, 0.12); border-color: var(--border-primary); }
+
+.chatHistoryContainer {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatHistoryDivider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: 8px 4px;
+  opacity: 0.3;
+}
+
+.historyHeader {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 8px 4px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  margin: 1px 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.chatItem:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.chatItemActive {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  font-weight: 700;
+  border: 1px solid var(--border-primary);
+}
+
+[data-theme='light'] .chatItemActive {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.chatTitle {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+}
+
+.chatActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chatItem:hover .chatActions {
+  opacity: 1;
+}
+
+/* Star is always visible if it is starred */
+.chatItemStarred .chatActions {
+  opacity: 1;
+}
+
+.chatActionBtn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.chatActionBtn:hover {
+  color: var(--text-primary);
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.starBtnActive {
+  color: #fbbf24 !important;
+  opacity: 1;
+}

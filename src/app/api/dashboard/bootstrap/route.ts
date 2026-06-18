@@ -59,6 +59,19 @@ const platformLabelMap: Record<string, string> = {
   posthog:          'PostHog',
   devin:            'Devin',
   cursor:           'Cursor',
+  'google-docs':    'Google Docs',
+  google_docs:      'Google Docs',
+  'google-sheets':  'Google Sheets',
+  google_sheets:    'Google Sheets',
+  'google-slides':  'Google Slides',
+  google_slides:    'Google Slides',
+  'google-meet':    'Google Meet',
+  google_meet:      'Google Meet',
+  'google-chat':    'Google Chat',
+  google_chat:      'Google Chat',
+  'google-maps':    'Google Maps',
+  google_maps:      'Google Maps',
+  youtube:          'YouTube',
 };
 
 function getOverallRisk(heavy: number, direct: number): AuditSummary['overallRisk'] {
@@ -132,7 +145,7 @@ function mapPlatforms(syncRows: SyncStatusRow[]): PlatformStatus[] {
     // Normalise the DB underscore format to the hyphen format used in ALL_POSSIBLE_PLATFORMS.
     // Without this, 'google_calendar' from the DB never matches 'google-calendar' in the
     // connector hub filter, causing it to appear in both the hub AND managed connections.
-    const id = row.platform === 'google_calendar' ? 'google-calendar' : row.platform;
+    const id = row.platform.startsWith('google_') ? row.platform.replace(/_/g, '-') : row.platform;
     const name = platformLabelMap[row.platform] ?? row.platform;
     const status = (row.status ?? 'idle') as PlatformStatus['status'];
     const items = row.total_items ?? 0;

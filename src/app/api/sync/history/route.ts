@@ -92,6 +92,13 @@ export async function GET() {
         const durationMs = runRows.reduce((total, row) => total + Math.max(0, row.duration_ms || 0), 0);
         const trigger = runRows[0]?.trigger ?? 'cron';
 
+        const platforms = runRows.map((row) => ({
+          name: row.platform,
+          status: row.status,
+          durationMs: row.duration_ms,
+          errorMessage: row.error_message,
+        }));
+
         return {
           runId,
           createdAt,
@@ -101,6 +108,7 @@ export async function GET() {
           failedPlatforms,
           durationMs,
           errorCount: runRows.filter((row) => !!row.error_message).length,
+          platforms,
         };
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

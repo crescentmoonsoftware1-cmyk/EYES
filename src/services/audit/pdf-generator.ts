@@ -1,6 +1,33 @@
 import PDFDocument from 'pdfkit';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { createAdminClient } from '@/utils/supabase/server';
 import { ReputationAudit } from '@/types/dashboard';
+
+interface Opportunity {
+  title: string;
+  description: string;
+  source: string;
+  priority?: string;
+  scoreReduction?: string;
+}
+
+interface Commitment {
+  text: string;
+  status: 'pending' | 'overdue' | 'completed';
+  citation: string;
+  platform: string;
+  date: string;
+}
+
+interface RiskFinding {
+  severity: string;
+  finding: string;
+  evidence: string;
+  impact: string;
+  platform?: string;
+}
 
 export interface NormalizedAuditData {
   id: string;
@@ -14,11 +41,11 @@ export interface NormalizedAuditData {
   complianceRate: string;
   failureRate: string;
   sentimentBalance: number;
-  opportunities: any[];
+  opportunities: Opportunity[];
   topEntities: string[];
-  commitments: any[];
-  riskFindings: any[];
-  platformData: Record<string, { count: number; category?: string; memories?: any[]; sentiment?: any; entities?: string[] }>;
+  commitments: Commitment[];
+  riskFindings: RiskFinding[];
+  platformData: Record<string, { count: number; category?: string; memories?: unknown[]; sentiment?: unknown; entities?: string[] }>;
   auditType?: string;
   crossLensConsistency?: {
     consistencyRating: string;
@@ -27,12 +54,12 @@ export interface NormalizedAuditData {
     consistencyNarrative: string;
     improvementRecommendation: string;
   };
-  platformSentiment?: any;
-  allExtractedFindings?: any[];
+  platformSentiment?: unknown;
+  allExtractedFindings?: RiskFinding[];
   memoryContentMap?: Record<string, string>;
 }
 
-function extractEntitiesFromTitles(titles: string[], platform: string): string[] {
+function extractEntitiesFromTitles(titles: string[]): string[] {
   const EXCLUDED = new Set([
     'gmail', 'slack', 'discord', 'github', 'notion', 'vercel', 'google_calendar', 'google-calendar', 'clickup', 'linear', 'claude',
     're', 'fwd', 'subject', 'the', 'and', 'for', 'you', 'your', 'with', 'from', 'this', 'that', 'our', 'what', 'how', 'why', 'who',
@@ -356,7 +383,7 @@ export class PDFGenerationService {
       
       rowY += 15;
       const platformKey = p.toLowerCase();
-      const platformSentimentData = data.platformSentiment?.[platformKey];
+      const platformSentimentData = (data.platformSentiment as Record<string, Record<string, { positive: number; neutral: number; negative: number; total: number }>> | undefined)?.[platformKey];
       const hasRealSentiment = platformSentimentData && Object.keys(platformSentimentData).length > 0;
 
       const quarters = ['Q3-Q4 2024', 'Q1-Q2 2025', 'Q3-Q4 2025', 'Q1-Q2 2026'];
@@ -471,7 +498,7 @@ export class PDFGenerationService {
     const colGap = 25;
     const col1X = 50;
     const col2X = col1X + colWidth + colGap;
-    let listY = 115;
+    const listY = 115;
 
     // Left Column: Detected Commitments
     doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('DETECTED COMMITMENTS', col1X, listY);
@@ -484,7 +511,7 @@ export class PDFGenerationService {
       commitments.slice(0, 7).forEach((c) => {
         doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(c.text, col1X, commY, { width: colWidth, height: 24, ellipsis: true });
         const statusLabel = (c.status || 'pending').toUpperCase();
-        const statusColor = (c.status === 'completed' || c.status === 'fulfilled') ? FOREST_GREEN : c.status === 'overdue' ? MUTED_RED : '#B8860B';
+        const statusColor = c.status === 'completed' ? FOREST_GREEN : c.status === 'overdue' ? MUTED_RED : '#B8860B';
         
         doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Status: `, col1X, commY + 26);
         const stW = doc.widthOfString('Status: ');
@@ -505,7 +532,7 @@ export class PDFGenerationService {
     } else {
       opportunities.slice(0, 5).forEach((o) => {
         if (typeof o === 'object' && o !== null) {
-          const opt = o as any;
+          const opt = o;
           const title = opt.title || '';
           const originalDesc = opt.description || '';
           
@@ -682,7 +709,7 @@ export class PDFGenerationService {
         doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('NO CONTRADICTIONS IDENTIFIED', 65, clY + 18);
         clY += 60;
       } else {
-        flags.slice(0, 3).forEach((flag: any) => {
+        flags.slice(0, 3).forEach((flag) => {
           const titleText = `${flag.platformA || 'Platform A'} vs ${flag.platformB || 'Platform B'}`;
           doc.font(FONT_BOLD).fontSize(8.5);
           const titleHeight = doc.heightOfString(titleText, { width: 410 });
@@ -756,11 +783,10 @@ export class PDFGenerationService {
     };
 
     // 1. Gather commitment citations
-    commitments.forEach((c: any) => {
+    commitments.forEach((c: Commitment) => {
       let citId = (c.citation || '').slice(0, 8).toUpperCase();
-      let hasRealId = citId && citId !== 'N/A';
+      const hasRealId = citId && citId !== 'N/A';
       if (!citId || citId === 'N/A') {
-        const crypto = require('crypto');
         citId = crypto.createHash('sha256').update(c.text).digest('hex').slice(0, 8).toUpperCase();
       }
       const rawText = hasRealId ? (memoryContentMap[citId.toLowerCase()] || c.text) : c.text;
@@ -775,7 +801,7 @@ export class PDFGenerationService {
 
     // 2. Gather risk finding citations from evidence
     const riskFindingsForCitations = data.riskFindings || [];
-    riskFindingsForCitations.forEach((f: any) => {
+    riskFindingsForCitations.forEach((f: RiskFinding) => {
       const match = (f.evidence || '').match(/\b([a-f0-9]{8,36})\b/i);
       if (match) {
         const refId = match[1].slice(0, 8).toUpperCase();
@@ -810,7 +836,7 @@ export class PDFGenerationService {
       citY += 25;
     } else {
       const displayCitations = citationsList.slice(0, 6);
-      displayCitations.forEach((c: any) => {
+      displayCitations.forEach((c) => {
         doc.font(FONT_MONO).fontSize(7.5).fillColor(INK_BLACK).text(`[${c.id}]  ${(c.platform || 'Unknown').toUpperCase()}  ·  ${c.date}`, 50, citY);
         doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Excerpt: "${c.text}"`, 65, citY + 10, { width: 480, height: 10, ellipsis: true });
         citY += 24;
@@ -839,7 +865,7 @@ export class PDFGenerationService {
     citY += 15;
 
     doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text('CRYPTOGRAPHIC SIGNATURE & VERIFICATION HASH (SHA-256)', 50, citY);
-    const shaHash = require('crypto').createHash('sha256').update(data.id + data.createdAt + data.riskScore).digest('hex');
+    const shaHash = crypto.createHash('sha256').update(data.id + data.createdAt + data.riskScore).digest('hex');
     const hashPart1 = shaHash.slice(0, 32);
     const hashPart2 = shaHash.slice(32);
     doc.font(FONT_MONO).fontSize(8.5).fillColor(GRAY_FOOTER).text(hashPart1, 50, citY + 14);
@@ -894,20 +920,8 @@ export class PDFGenerationService {
             });
           }
 
-          const memoriesByPlatform: Record<string, any[]> = {};
+          const memoriesByPlatform: Record<string, unknown[]> = {};
           
-          // Compile platform data coverage structures using actual counts if positive, else fall back to default
-          const platformVolumeMap: Record<string, number> = {
-            gmail: 240,
-            slack: 180,
-            discord: 150,
-            notion: 120,
-            github: 100,
-            vercel: 80,
-            google_calendar: 60,
-            clickup: 45,
-            linear: 25,
-          };
           const platformCategories: Record<string, string> = {
             gmail: 'Productivity',
             slack: 'Productivity',
@@ -916,15 +930,22 @@ export class PDFGenerationService {
             github: 'Development',
             vercel: 'Development',
             google_calendar: 'Productivity',
+            google_docs: 'Productivity',
+            google_sheets: 'Productivity',
+            google_slides: 'Productivity',
+            google_meet: 'Productivity',
+            google_chat: 'Productivity',
+            google_maps: 'Productivity',
+            youtube: 'Social',
             clickup: 'Productivity',
             linear: 'Productivity',
           };
 
-          const platformData: Record<string, any> = {};
+          const platformData: NormalizedAuditData['platformData'] = {};
           targetConnectors.forEach((platform) => {
             const key = platform.toLowerCase();
             const realCount = platformCounts[platform];
-            const connectorEntities = extractEntitiesFromTitles(platformTitles[key] || [], key);
+            const connectorEntities = extractEntitiesFromTitles(platformTitles[key] || []);
             platformData[key] = {
               count: realCount || 0,
               category: platformCategories[key] || 'Ecosystem',
@@ -935,11 +956,11 @@ export class PDFGenerationService {
 
           // Fetch original contents from memories table for citations
           const citationsToFetch: string[] = [];
-          audit.metadata.commitments?.forEach((c: any) => {
+          ((audit.metadata as Record<string, unknown>)?.commitments as Commitment[])?.forEach((c) => {
             const citId = (c.citation || '').trim();
             if (citId && citId.toLowerCase() !== 'n/a') citationsToFetch.push(citId);
           });
-          audit.metadata.riskFindings?.forEach((f: any) => {
+          ((audit.metadata as Record<string, unknown>)?.riskFindings as RiskFinding[])?.forEach((f) => {
             const match = (f.evidence || '').match(/\b([a-f0-9-]{8,36})\b/i);
             if (match) {
               citationsToFetch.push(match[1]);
@@ -1033,15 +1054,31 @@ export class PDFGenerationService {
             complianceRate: audit.metadata.complianceRate || '100.00',
             failureRate: audit.metadata.failureRate || '0.00',
             sentimentBalance: audit.metadata.sentimentBalance || 1.0,
-            opportunities: audit.metadata.opportunities || [],
+            opportunities: (audit.metadata.opportunities || []).map((o: unknown) => {
+              if (typeof o === 'object' && o !== null) {
+                const opt = o as Record<string, unknown>;
+                return {
+                  title: String(opt.title || ''),
+                  description: String(opt.description || ''),
+                  source: String(opt.source || 'Reputation Audit Insights'),
+                  priority: opt.priority ? String(opt.priority) : undefined,
+                  scoreReduction: opt.scoreReduction ? String(opt.scoreReduction) : undefined
+                };
+              }
+              return {
+                title: String(o),
+                description: String(o),
+                source: 'Reputation Audit Insights'
+              };
+            }),
             topEntities: audit.metadata.topEntities || [],
             commitments: audit.metadata.commitments || [],
             riskFindings: audit.metadata.riskFindings || [],
-            allExtractedFindings: (audit.metadata as any).allExtractedFindings || audit.metadata.riskFindings || [],
+            allExtractedFindings: ((audit.metadata as Record<string, unknown>).allExtractedFindings as RiskFinding[]) || audit.metadata.riskFindings || [],
             platformData: platformData,
             auditType: audit.metadata.audit_type || 'full',
-            crossLensConsistency: (audit.metadata as any).crossLensConsistency || null,
-            platformSentiment: (audit.metadata as any).platformSentiment || null,
+            crossLensConsistency: ((audit.metadata as Record<string, unknown>).crossLensConsistency as NormalizedAuditData['crossLensConsistency']) || undefined,
+            platformSentiment: (audit.metadata as Record<string, unknown>).platformSentiment || null,
             memoryContentMap: memoryContentMap
           };
 
@@ -1103,8 +1140,6 @@ export class PDFGenerationService {
       // Save local copy in development or test modes
       if (process.env.NODE_ENV === 'development' || process.env.TEST_PDF === 'true' || true) {
         try {
-          const fs = require('fs');
-          const path = require('path');
           const localPath = path.join(process.cwd(), 'test_audit.pdf');
           fs.writeFileSync(localPath, pdfBuffer);
           console.log('[PDF] Saved local copy to:', localPath);
@@ -1118,7 +1153,7 @@ export class PDFGenerationService {
       // Create bucket if missing
       try {
         await supabase.storage.createBucket('audits', { public: false });
-      } catch (_e) {
+      } catch {
         // Ignore if bucket exists
       }
 

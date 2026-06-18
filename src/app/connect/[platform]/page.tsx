@@ -2,6 +2,7 @@
 
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 // ─── Platform → sync route mapping ───────────────────────────────────────────
 const PLATFORM_SYNC_ROUTES: Record<string, string[]> = {
@@ -52,12 +53,22 @@ function ConnectPlatformInner() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const { user, isLoading } = useAuth();
 
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorReason, setErrorReason] = useState('');
   const [platform, setPlatform] = useState('');
 
+  // Redirect to login if not authenticated
   useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isLoading, router]);
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+
     const p = typeof params?.platform === 'string' ? params.platform : '';
     const oauthStatus = searchParams?.get('oauth');
     const reason = searchParams?.get('reason') ?? '';
@@ -86,7 +97,7 @@ function ConnectPlatformInner() {
       // No oauth param = direct visit, just redirect
       router.replace('/?view=readiness');
     }
-  }, [router, params, searchParams]);
+  }, [router, params, searchParams, user, isLoading]);
 
   const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-eyes-gamma.vercel.app'}/api/connect/${platform}/callback`;
   const readableReason = ERROR_REASON_LABELS[errorReason] ?? errorReason ?? 'An unknown error occurred during the OAuth flow.';
@@ -174,6 +185,60 @@ function ConnectPlatformInner() {
   }
 
   // ── Loading / Redirect State ───────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div style={{
+        background: '#080808',
+        height: '100vh',
+        width: '100vw',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          color: '#E06A3B',
+          fontFamily: 'var(--font-display)',
+          fontWeight: 600,
+          fontSize: '12px',
+          letterSpacing: '0.15em',
+          marginBottom: '16px',
+        }}>
+          Connecting…
+        </div>
+        <div style={{
+          width: '120px',
+          height: '1px',
+          background: 'rgba(255,255,255,0.06)',
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '2px',
+        }}>
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            height: '100%',
+            width: '40%',
+            background: '#E06A3B',
+            animation: 'loadingSweep 1.2s infinite ease-in-out',
+          }} />
+        </div>
+        <style>{`
+          @keyframes loadingSweep {
+            0% { left: -40%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',

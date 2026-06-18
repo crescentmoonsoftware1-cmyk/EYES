@@ -5,6 +5,7 @@ import styles from './ActionQueue.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import { BoltIcon } from '../common/icons/PlatformIcons';
 import { createClient } from '@/utils/supabase/client';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface ActionItem {
   id: string;
@@ -239,9 +240,9 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'action_queue' },
-        (payload: any) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           if (payload.eventType === 'INSERT') {
-            const newAction = payload.new as ActionItem;
+            const newAction = payload.new as unknown as ActionItem;
             if (newAction.status === 'pending') {
               setActions(prev => {
                 if (prev.find(a => a.id === newAction.id)) return prev;
@@ -249,7 +250,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
               });
             }
           } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as ActionItem;
+            const updated = payload.new as unknown as ActionItem;
             if (updated.status !== 'pending') {
               // Remove from UI if no longer pending
               setActions(prev => prev.filter(a => a.id !== updated.id));
@@ -257,7 +258,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
               setActions(prev => prev.map(a => a.id === updated.id ? updated : a));
             }
           } else if (payload.eventType === 'DELETE') {
-            setActions(prev => prev.filter(a => a.id !== (payload.old as ActionItem).id));
+            setActions(prev => prev.filter(a => a.id !== (payload.old as unknown as ActionItem).id));
           }
         }
       )
@@ -510,7 +511,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                                     <strong style={{ fontSize: '0.8rem', letterSpacing: '0.05em', color: 'var(--accent-blue, #3b82f6)' }}>EYES ASSISTANT</strong>
                                   </div>
                                   <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: '1.5', fontWeight: '500' }}>
-                                    Hey! <strong style={{ color: 'var(--text-primary)' }}>{sender}</strong> sent {platformName}: <em style={{ color: 'var(--accent-blue, #2563eb)', fontStyle: 'normal', fontWeight: 'bold' }}>"{cleanDesc}"</em>. What do you want to say?
+                                    Hey! <strong style={{ color: 'var(--text-primary)' }}>{sender}</strong> sent {platformName}: <em style={{ color: 'var(--accent-blue, #2563eb)', fontStyle: 'normal', fontWeight: 'bold' }}>&quot;{cleanDesc}&quot;</em>. What do you want to say?
                                   </p>
                                 </div>
                               );

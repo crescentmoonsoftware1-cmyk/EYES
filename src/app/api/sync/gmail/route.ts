@@ -141,6 +141,19 @@ export async function POST(request: Request) {
       } catch {}
     }
 
+    // Fetch privacy exclusions from database table (GDPR Privacy Shield Integration)
+    const { data: dbExclusions } = await supabase
+      .from('privacy_excludes')
+      .select('exclude_value')
+      .eq('user_id', userId)
+      .eq('connector_id', 'gmail')
+      .eq('exclude_type', 'email_address');
+
+    if (dbExclusions && dbExclusions.length > 0) {
+      const dbExcludedSenders = dbExclusions.map((e: { exclude_value: string }) => e.exclude_value.toLowerCase());
+      excludedSenders = Array.from(new Set([...excludedSenders, ...dbExcludedSenders]));
+    }
+
     // 1. Get existing sync status to find the cursor
     const { data: currentStatus } = await supabase
       .from('sync_status')

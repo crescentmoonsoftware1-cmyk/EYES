@@ -8,6 +8,7 @@ type PlatformId =
   | 'vercel' | 'netlify' | 'supabase' | 'sentry' | 'posthog' | 'webflow' | 'devin' | 'cursor'
   | 'canva'
   | 'strava' | 'fitbit' | 'withings'
+  | 'google-docs' | 'google-sheets' | 'google-slides' | 'google-meet' | 'google-chat' | 'google-maps' | 'youtube'
   | 'sonos' | 'philips-hue' | 'zoom' | 'hubspot' | 'salesforce' | 'jira' | 'confluence' | 'aws' | 'gcp' | 'azure' | 'quickbooks' | 'xero' | 'sap' | 'excel' | 'stripe' | 'tableau' | 'monday' | 'mailchimp' | 'google-analytics' | 'meta-ads' | 'linkedin-ads' | 'productboard' | 'figma' | 'mixpanel' | 'datadog' | 'linkedin-sales-navigator' | 'ms-project' | 'azure-devops' | 'miro' | 'gitlab' | 'vscode' | 'postman' | 'docker' | 'stack-overflow';
 
 type PlatformReadiness = {
@@ -51,6 +52,48 @@ const platformConfigs: Array<{
     name: 'Google Calendar',
     env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
     scopes: ['calendar.readonly', 'openid', 'email', 'profile'],
+  },
+  {
+    id: 'google-docs',
+    name: 'Google Docs',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['drive.readonly', 'documents.readonly', 'openid', 'email', 'profile'],
+  },
+  {
+    id: 'google-sheets',
+    name: 'Google Sheets',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['drive.readonly', 'spreadsheets.readonly', 'openid', 'email', 'profile'],
+  },
+  {
+    id: 'google-slides',
+    name: 'Google Slides',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['drive.readonly', 'presentations.readonly', 'openid', 'email', 'profile'],
+  },
+  {
+    id: 'google-meet',
+    name: 'Google Meet',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['calendar.readonly', 'openid', 'email', 'profile'],
+  },
+  {
+    id: 'google-chat',
+    name: 'Google Chat',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['chat.spaces.readonly', 'openid', 'email', 'profile'],
+  },
+  {
+    id: 'google-maps',
+    name: 'Google Maps',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['openid', 'email', 'profile'],
+  },
+  {
+    id: 'youtube',
+    name: 'YouTube',
+    env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'NEXT_PUBLIC_SITE_URL', 'TOKEN_ENCRYPTION_KEY'],
+    scopes: ['youtube.readonly', 'openid', 'email', 'profile'],
   },
   {
     id: 'notion',

@@ -8,6 +8,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { decryptToken, encryptToken } from "./services/auth/tokens.js";
 // No provider SDK — embedding via Gemini REST (K1)
 import * as dotenv from "dotenv";
 
@@ -23,7 +24,8 @@ if (fs.existsSync(".env.local")) {
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const LITELLM_BASE_URL = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+const LITELLM_KEY = process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Supabase credentials in .env file.");
@@ -32,36 +34,35 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Gemini embedding via REST (no SDK — K1 compliant)
-const EMBED_REST_MODEL = 'text-embedding-004'; // maps to gemini-embedding-001 1024d
 const EMBED_DIMS = 1024;
 
-async function generateGeminiEmbedding(text: string): Promise<number[] | null> {
-  if (!GEMINI_API_KEY) {
-    console.error('[MCP] GEMINI_API_KEY not set — cannot generate embeddings.');
+async function generateGatewayEmbedding(text: string): Promise<number[] | null> {
+  if (!LITELLM_BASE_URL || !LITELLM_KEY) {
+    console.error('[MCP] LITELLM_BASE_URL or LITELLM_KEY not set — cannot generate embeddings.');
     return null;
   }
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_REST_MODEL}:embedContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: `models/${EMBED_REST_MODEL}`,
-          content: { parts: [{ text: text.slice(0, 8000) }] },
-          taskType: 'RETRIEVAL_QUERY',
-          outputDimensionality: EMBED_DIMS,
-        }),
+    const res = await fetch(`${LITELLM_BASE_URL}/embeddings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LITELLM_KEY}`,
       },
-    );
-    if (!res.ok) { console.error('[MCP] Gemini embed REST error:', res.status); return null; }
+      body: JSON.stringify({
+        model: 'auto-embed',
+        input: text.slice(0, 8000),
+      }),
+    });
+    if (!res.ok) {
+      console.error('[MCP] LiteLLM Gateway embed REST error:', res.status);
+      return null;
+    }
     const data = await res.json();
-    const values: number[] = data?.embedding?.values;
+    const values: number[] = data?.data?.[0]?.embedding;
     if (values?.length !== EMBED_DIMS) return null;
     return values;
   } catch (err) {
-    console.error('[MCP] Gemini embedding failed:', err instanceof Error ? err.message : err);
+    console.error('[MCP] LiteLLM Gateway embedding failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -75,16 +76,93 @@ async function getValidGoogleToken(
   userId: string,
   service: string
 ): Promise<string | null> {
-  interface OAuthTokenRow { access_token: string | null; }
-  const { data, error } = await client
+  interface OAuthTokenRow { access_token: string | null; refresh_token: string | null; expires_at: string | null; }
+  const { data: tokenRow, error } = await client
     .from('oauth_tokens')
-    .select('access_token')
+    .select('access_token,refresh_token,expires_at')
     .eq('user_id', userId)
-    .eq('provider', service)
+    .eq('platform', service)
     .maybeSingle() as { data: OAuthTokenRow | null; error: unknown };
 
-  if (error || !data?.access_token) return null;
-  return data.access_token;
+  if (error || !tokenRow || !tokenRow.access_token) return null;
+
+  const now = new Date();
+  const expiresAt = tokenRow.expires_at ? new Date(tokenRow.expires_at) : null;
+
+  // Use current token if valid for at least 5 minutes
+  if (expiresAt && (expiresAt.getTime() - now.getTime()) > 5 * 60 * 1000) {
+    try {
+      return decryptToken(tokenRow.access_token);
+    } catch {
+      return null;
+    }
+  }
+
+  // Otherwise, refresh token
+  if (!tokenRow.refresh_token) {
+    try {
+      return decryptToken(tokenRow.access_token);
+    } catch {
+      return null;
+    }
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    try {
+      return decryptToken(tokenRow.access_token);
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: decryptToken(tokenRow.refresh_token),
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!response.ok) {
+      return decryptToken(tokenRow.access_token);
+    }
+
+    const payload = await response.json();
+    if (!payload?.access_token) {
+      return decryptToken(tokenRow.access_token);
+    }
+
+    const encryptedAccess = encryptToken(payload.access_token);
+    const newExpires = payload.expires_in
+      ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
+      : null;
+
+    // Write back to DB so the web app has the refreshed token too
+    await client
+      .from('oauth_tokens')
+      .update({
+        access_token: encryptedAccess,
+        expires_at: newExpires,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('platform', service);
+
+    return payload.access_token;
+  } catch (err) {
+    console.error('[MCP] Token refresh failed:', err);
+    try {
+      return decryptToken(tokenRow.access_token);
+    } catch {
+      return null;
+    }
+  }
 }
 
 
@@ -166,18 +244,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { query, limit = 5 } = request.params.arguments as { query: string; limit?: number };
 
     try {
-      // 1. Generate embedding using Gemini (1024d) — matches the main app's vector store.
-      // DO NOT use OpenAI here: the memories table uses vector(1024) from Gemini gemini-embedding-001.
-      const embedding = await generateGeminiEmbedding(query);
-      if (!embedding) throw new Error('Gemini embedding failed. Check GEMINI_API_KEY in .env.');
+      const userId = process.env.MCP_DEFAULT_USER_ID;
+      if (!userId) throw new Error("MCP_DEFAULT_USER_ID is not configured in environment variables.");
+
+      // 1. Generate embedding using LiteLLM Gateway (1024d) — matches the main app's vector store.
+      const embedding = await generateGatewayEmbedding(query);
+      if (!embedding) throw new Error('Gateway embedding failed. Check LITELLM_BASE_URL and LITELLM_KEY in .env.');
 
       // 2. Search Supabase via match_memories RPC (match_embeddings was dropped in migration 030)
       // match_memories: vector(1024), threshold, count, user_id_arg
       const { data: matches, error } = await supabase.rpc("match_memories", {
         query_embedding: embedding,
-        match_threshold: 0.4,
+        match_threshold: 0.35,
         match_count: limit,
-        user_id_arg: process.env.MCP_DEFAULT_USER_ID, // Local MCP runs for a single owner
+        user_id_arg: userId, // Local MCP runs for a single owner
       });
 
       if (error) throw error;
@@ -345,11 +425,14 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   if (request.params.uri === "eyes://recent-memories") {
+    const userId = process.env.MCP_DEFAULT_USER_ID;
+    if (!userId) throw new Error("MCP_DEFAULT_USER_ID is not configured in environment variables.");
+
     // Use 'memories' table (the canonical store) — 'raw_events' table does not exist.
     const { data, error } = await supabase
       .from("memories")
       .select("platform, title, content, timestamp, event_type")
-      .eq("user_id", process.env.MCP_DEFAULT_USER_ID)
+      .eq("user_id", userId)
       .not("content", "is", null)
       .order("timestamp", { ascending: false })
       .limit(10);

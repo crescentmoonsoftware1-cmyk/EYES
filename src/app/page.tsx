@@ -20,10 +20,12 @@ function HomeInner() {
 
   // Redirect admin users immediately to admin funnel analytics
   useEffect(() => {
-    if (!isLoading && user) {
+    if (!isLoading && user && user.email) {
       const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-      const adminEmails = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
-      if (adminEmails.includes(user.email.toLowerCase())) {
+      const adminEmails = adminEmailsEnv.split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email !== '');
+      if (adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase())) {
         router.replace('/admin/funnel');
       }
     }
@@ -98,8 +100,10 @@ function HomeInner() {
 
   // Check if authenticated user is admin
   const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-  const adminEmails = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
-  const isAdmin = user && adminEmails.includes(user.email.toLowerCase());
+  const adminEmails = adminEmailsEnv.split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(email => email !== '');
+  const isAdmin = user && user.email && adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase());
 
   // Show clean transition screen for admins while redirecting
   if (isAdmin) {

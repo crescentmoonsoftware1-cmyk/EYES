@@ -2,10 +2,23 @@ import { NextResponse } from 'next/server';
 
 import { createClient } from '@/utils/supabase/server';
 
-const SUPPORTED_PLATFORMS = new Set(['github', 'gmail', 'google-calendar', 'google_calendar', 'reddit', 'notion']);
+const SUPPORTED_PLATFORMS = new Set([
+  'github',
+  'gmail',
+  'google-calendar', 'google_calendar',
+  'google-docs', 'google_docs',
+  'google-sheets', 'google_sheets',
+  'google-slides', 'google_slides',
+  'google-meet', 'google_meet',
+  'google-chat', 'google_chat',
+  'google-maps', 'google_maps',
+  'youtube',
+  'reddit',
+  'notion'
+]);
 
 function toDbPlatform(platform: string) {
-  return platform === 'google-calendar' ? 'google_calendar' : platform;
+  return platform.startsWith('google-') ? platform.replace(/-/g, '_') : platform;
 }
 
 function isMissingTable(errorCode?: string) {

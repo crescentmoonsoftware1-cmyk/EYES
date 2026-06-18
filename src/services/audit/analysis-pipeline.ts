@@ -63,7 +63,7 @@ export class AuditAnalysisService {
         .select('metadata')
         .eq('id', auditId)
         .single();
-      const auditType = (auditRecord?.metadata as Record<string, any>)?.audit_type || 'full';
+      const auditType = ((auditRecord?.metadata as Record<string, unknown>)?.audit_type as string) || 'full';
 
       // Get User Settings for Risk Sensitivity
       const { data: settingsData } = await supabase
@@ -103,7 +103,7 @@ export class AuditAnalysisService {
       const twoYearsAgo = new Date();
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
-      let { data: rawEvents, error: fetchError } = await supabase
+      const { data: rawEvents, error: fetchError } = await supabase
         .from('memories')
         .select('id, platform, timestamp, title, content, author')
         .eq('user_id', userId)
@@ -231,7 +231,7 @@ export class AuditAnalysisService {
         batches.push(analysisInput.slice(i, i + BATCH_SIZE));
       }
 
-      const subjectName = (auditRecord?.metadata as Record<string, any>)?.subjectName || 'unknown user';
+      const subjectName = ((auditRecord?.metadata as Record<string, unknown>)?.subjectName as string) || 'unknown user';
       const buildExtractionPrompt = (batch: typeof analysisInput) => `
 You are a forensic digital analyst. Classify each record below. Return JSON only.
 The subject of this audit is: "${subjectName}".
@@ -298,7 +298,6 @@ Return JSON ONLY:
       let weightedTotalMentions = 0;
       let weightedNegativeMentions = 0;
       let weightedNeutralMentions = 0;
-      let weightedUnfulfilledCommitments = 0;
       let negativeMentions = 0;
       let unfulfilledCommitmentsCount = 0;
       const extractedCommitments: Commitment[] = [];
@@ -386,7 +385,6 @@ Return JSON ONLY:
 
         if (a.isCommitment) {
           unfulfilledCommitmentsCount++;
-          weightedUnfulfilledCommitments += weight;
           extractedCommitments.push({
             text: a.commitmentText || 'Commitment detected',
             status: 'pending',
@@ -626,11 +624,11 @@ Return JSON ONLY:
           
         if (siblingAudits && siblingAudits.length > 0) {
           siblingLensesText = siblingAudits.map(s => {
-            const sType = s.metadata?.audit_type || 'unknown';
-            const sFindings = s.metadata?.riskFindings || [];
+            const sType = ((s.metadata as Record<string, unknown>)?.audit_type as string) || 'unknown';
+            const sFindings = ((s.metadata as Record<string, unknown>)?.riskFindings as Array<{ finding: string }>) || [];
             return `Sibling Lens: ${sType.toUpperCase()}
 - Risk Score: ${s.risk_score}/10
-- Key Findings: ${JSON.stringify(sFindings.slice(0, 3).map((f: any) => f.finding))}`;
+- Key Findings: ${JSON.stringify(sFindings.slice(0, 3).map(f => f.finding))}`;
           }).join('\n\n');
         }
       }
@@ -1036,15 +1034,23 @@ Return JSON ONLY (no markdown, no explanation):
 
       const summaryRawStr = typeof summaryRaw === 'string' ? summaryRaw : null;
       const summaryMatch = summaryRawStr?.match(/\{[\s\S]*\}/);
+      interface Opportunity {
+        title: string;
+        description: string;
+        source: string;
+        priority?: string;
+        scoreReduction?: string;
+      }
+
       let summaryResult: {
         narrative?: string;
         trajectory?: string;
         dominantPattern?: string;
         reputationProjection?: string;
-        opportunities?: any[];
+        opportunities?: Opportunity[];
         topEntities?: string[];
         riskScore?: number;
-        riskFindings?: { severity: string; finding: string; evidence: string; impact: string }[];
+        riskFindings?: RiskFinding[];
         crossLensConsistency?: {
           consistencyRating: string;
           dimensionScoreVariance: string;
@@ -1093,7 +1099,7 @@ Return JSON ONLY (no markdown, no explanation):
         : [...extractedFindings];
 
       // Resolve platforms for all final findings
-      finalFindings.forEach((f: any) => {
+      finalFindings.forEach((f: RiskFinding) => {
         if (!f.platform) {
           const match = (f.evidence || '').match(/\b([a-f0-9]{8,36})\b/i);
           if (match) {
@@ -1181,7 +1187,7 @@ Return JSON ONLY (no markdown, no explanation):
       // PROACTIVE SELF-CORRECTING VALIDATION LAYER (Checks and aligns platforms, citations, and metrics before writing to DB)
       
       // 1. Correct findings and platform mismatches
-      finalFindings.forEach((f: any) => {
+      finalFindings.forEach((f: RiskFinding) => {
         // Enforce proper capitalization of severities (Low, Medium, High)
         if (f.severity) {
           const s = f.severity.toLowerCase();
@@ -1267,7 +1273,7 @@ Return JSON ONLY (no markdown, no explanation):
 
       // 2. Correct Opportunities platforms and source strings
       if (summaryResult.opportunities && Array.isArray(summaryResult.opportunities)) {
-        summaryResult.opportunities.forEach((o: any) => {
+        summaryResult.opportunities.forEach((o: Opportunity) => {
           const textToSearch = `${o.title} ${o.description}`.toLowerCase();
           if (textToSearch.includes('datadog') && textToSearch.includes('trial')) {
             o.source = `Gmail connector (Record window: ${actualScanWindow})`;

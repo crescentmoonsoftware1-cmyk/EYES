@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { invokeModel } from '@/services/ai/ai';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Platforms that generate actionable tasks — noise excluded
 const ACTIONABLE_PLATFORMS = [
@@ -16,9 +17,7 @@ function isAuthorizedCron(request: Request): boolean {
   return auth === `Bearer ${expected}`;
 }
 
-// Core extraction logic — reusable for both session and cron auth paths
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function extractForUser(userId: string, supabase: any, force = false) {
+export async function extractForUser(userId: string, supabase: SupabaseClient, force = false) {
   // Check if extraction is needed (skip if run within last 25 minutes + no new memories)
   const { data: log } = await supabase
     .from('action_extraction_log')
@@ -135,7 +134,64 @@ ${memoryContext}`;
   // --- SECOND PASS: Vector Citation Chain ---
   // For each extracted action, find past commitments using Gemini embeddings
   if (extractedActions.length > 0) {
+    let sentSample = '';
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('email, display_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profile?.email || profile?.display_name) {
+        const emailFilter = profile.email || 'xxxxxxxx';
+        const nameFilter = profile.display_name || 'xxxxxxxx';
+        const { data: sentMemories } = await supabase
+          .from('memories')
+          .select('content')
+          .eq('user_id', userId)
+          .eq('platform', 'gmail')
+          .or(`author.ilike.%${emailFilter}%,author.ilike.%${nameFilter}%`)
+          .limit(5);
+        if (sentMemories && sentMemories.length > 0) {
+          sentSample = sentMemories.map(m => m.content.slice(0, 500)).join('\n\n---\n\n');
+        }
+      }
+    } catch (e) {
+      console.warn('[ActionExtract] Could not fetch sent sample:', e);
+    }
+
     for (const action of extractedActions) {
+      // Draft Generation (System Prompt 5)
+      if (action.actionType === 'EMAIL_REPLY' || action.actionType === 'SLACK_REPLY') {
+        try {
+          const voicePrompt = `You are EYES. A high-confidence commitment or ask has been detected in the user's incoming mail.
+Draft a reply the user could send, in their own voice as inferred from their past sent messages.
+The draft is a STARTING POINT for the user to edit and approve — it is never sent automatically. Keep it concise, match the register of the original thread, and never invent facts the user has not expressed. Output only the draft body.
+
+Original Message Context:
+Title: ${action.title}
+Context: ${action.description}
+
+User's Past Sent Messages (for tone and voice style):
+${sentSample || 'No prior samples available. Keep it direct and professional.'}
+
+Draft Reply:`;
+
+          const draftResult = await invokeModel({
+            capability: 'chat',
+            preference: 'gemini',
+            capture: false,
+            messages: [{ role: 'user', content: voicePrompt }]
+          });
+
+          if (typeof draftResult === 'string' && draftResult.trim().length > 0) {
+            action.suggestedAction = draftResult.trim();
+          }
+        } catch (e) {
+          console.warn(`[ActionExtract] Draft generation failed for action ${action.id}:`, e);
+        }
+      }
+
       try {
         const embedInput = `${action.title} ${action.description}`;
         const embedRes = await invokeModel({ capability: 'embed', messages: [{ role: 'user', content: embedInput }] });
@@ -149,7 +205,7 @@ ${memoryContext}`;
           });
 
           if (matches && matches.length > 0) {
-            const historyContext = matches.map((m: any) => `[${m.platform}] ${m.title || 'Event'}: ${m.content}`).join('\n');
+            const historyContext = matches.map((m: { platform: string; title?: string; content?: string }) => `[${m.platform}] ${m.title || 'Event'}: ${m.content}`).join('\n');
             const synthesisPrompt = `You are building a citation chain for a task. 
 Task: ${action.title} - ${action.description}
 User's History:

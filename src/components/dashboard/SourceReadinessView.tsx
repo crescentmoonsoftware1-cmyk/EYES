@@ -99,7 +99,7 @@ export function SourceReadinessView({ platforms, totalMemories }: SourceReadines
 
       // Trigger another refresh to show the updated data
       window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
-    } catch (error: any) {
+    } catch (error) {
       console.warn('Force sync failed:', error);
       alert(`Failed to manually sync ${id}.`);
     }

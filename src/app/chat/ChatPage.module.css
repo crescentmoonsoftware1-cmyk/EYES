@@ -42,6 +42,19 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 0 24px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chatColumnWithPanel {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 1025px) {
+  .chatColumnWithPanel {
+    margin-left: 24px;
+    margin-right: 468px; /* 420px panel + 24px spacing + 24px padding/margin */
+    max-width: calc(100% - 492px);
+  }
 }
 
 .messageList {
@@ -131,7 +144,9 @@
   margin: 0 0 10px 0;
 }
 
-.markdownContent p:last-child {
+.markdownContent p:last-child,
+.markdownContent li:last-child {
+  display: inline;
   margin-bottom: 0;
 }
 
@@ -182,10 +197,10 @@
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-xl);
-  padding: 8px 12px 8px 24px;
+  padding: 6px 8px 6px 18px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   transition: var(--transition-main);
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(20px);
@@ -202,13 +217,13 @@
   border: none;
   color: var(--text-primary);
   font-size: 16px;
-  padding: 12px 0;
+  padding: 8px 0;
   outline: none;
 }
 
 .sendBtn {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--accent-primary);
   color: var(--bg-primary);

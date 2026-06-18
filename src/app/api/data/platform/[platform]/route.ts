@@ -11,17 +11,11 @@ import { createClient } from '@/utils/supabase/server';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 
 function toDbPlatform(platform: string) {
-  return platform === 'google-calendar' ? 'google_calendar' : platform.replace(/-/g, '_');
+  return platform.startsWith('google-') ? platform.replace(/-/g, '_') : platform;
 }
 
 function toRoutePlatform(platform: string) {
-  return platform === 'google_calendar' ? 'google-calendar' : platform.replace(/_/g, '-');
-}
-
-function toGoogleSibling(platform: string) {
-  if (platform === 'gmail') return 'google_calendar';
-  if (platform === 'google_calendar') return 'gmail';
-  return null;
+  return platform.startsWith('google_') ? platform.replace(/_/g, '-') : platform;
 }
 
 type TokenRow = {
@@ -110,14 +104,17 @@ export async function DELETE(
     let revocation: ProviderRevocationResult | null = null;
 
     if (disconnect && token && isRevocablePlatform(platform)) {
-      const googleSibling = toGoogleSibling(platform);
+      const googleDbPlatforms = new Set([
+        'gmail', 'google_calendar', 'google_docs', 'google_sheets', 'google_slides', 'google_meet', 'google_chat', 'google_maps', 'youtube'
+      ]);
+      const isGoogle = googleDbPlatforms.has(platform);
 
-      if (googleSibling) {
+      if (isGoogle) {
         const { count: siblingTokenCount, error: siblingCountError } = await supabase
           .from('oauth_tokens')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
-          .eq('platform', googleSibling);
+          .in('platform', Array.from(googleDbPlatforms).filter(p => p !== platform));
 
         if (siblingCountError) {
           throw siblingCountError;
@@ -130,7 +127,7 @@ export async function DELETE(
             attempted: false,
             status: 'skipped',
             httpStatus: null,
-            message: `Skipped remote revoke because ${toRoutePlatform(googleSibling)} remains connected.`,
+            message: `Skipped remote revoke because other Google platforms remain connected.`,
           };
         }
       }

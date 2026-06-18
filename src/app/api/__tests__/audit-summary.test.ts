@@ -14,13 +14,6 @@ type QueryResult<T> = {
   error: { message?: string } | null;
 };
 
-function createThenableResult<T>(result: QueryResult<T>) {
-  return {
-    then: (resolve: (value: QueryResult<T>) => void, reject: (reason?: unknown) => void) => {
-      Promise.resolve(result).then(resolve, reject);
-    },
-  };
-}
 
 function createSupabaseFixture(params?: {
   syncStatus?: QueryResult<Array<{ platform: string; total_items: number | null; last_sync_at: string | null }>>;

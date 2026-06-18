@@ -12,10 +12,10 @@ import { MemoryFeedView } from './dashboard/MemoryFeedView';
 import { TimelineView } from './dashboard/TimelineView';
 import { AuditView } from './dashboard/AuditView';
 import { SynthesisView } from './dashboard/SynthesisView';
-import { HistoryView } from './dashboard/HistoryView';
 import { ActionQueueView } from './dashboard/ActionQueueView';
+import { AIIntegrationView } from './dashboard/AIIntegrationView';
 
-type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'history' | 'action-queue';
+type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'action-queue' | 'integrations';
 
 function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const searchParams = useSearchParams();
@@ -24,11 +24,14 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const activeView = viewParam || 'dashboard';
   const newChatTrigger = searchParams.get('new');
 
+  const rollingSummaryRef = useRef('');
+
   // Reset chat if 'new' trigger is present
   useEffect(() => {
     if (newChatTrigger) {
       setMessages([]);
       setThreadId(Math.random().toString(36).substring(7));
+      rollingSummaryRef.current = '';
     }
   }, [newChatTrigger]);
 
@@ -52,7 +55,35 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   // Initialize thread ID on client
   useEffect(() => {
     setThreadId(Math.random().toString(36).substring(7));
+    rollingSummaryRef.current = '';
   }, []);
+
+  // Load thread from URL query param if present
+  const threadIdParam = searchParams.get('threadId');
+  useEffect(() => {
+    if (threadIdParam) {
+      const loadSelectedThread = async () => {
+        try {
+          const res = await fetch(`/api/chat/threads?threadId=${threadIdParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.thread) {
+              const msgs = (data.thread.chat_messages || []).map((m: any) => ({
+                role: m.role,
+                content: m.content
+              }));
+              setMessages(msgs);
+              setThreadId(data.thread.id);
+              rollingSummaryRef.current = data.thread.summary || '';
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load thread from URL param:', e);
+        }
+      };
+      loadSelectedThread();
+    }
+  }, [threadIdParam]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);
@@ -161,6 +192,37 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     router.push(`?view=${v}`, { scroll: false });
   };
 
+  const saveThread = async (msgs: Message[], currentThreadId: string | null) => {
+    try {
+      const firstUserMsg = msgs.find(m => m.role === 'user')?.content || 'New Chat';
+      const payload = {
+        threadId: currentThreadId,
+        title: firstUserMsg.slice(0, 60) || 'New Chat',
+        messages: msgs
+          .filter(m => m.content && !m.pending)
+          .map(m => ({ role: m.role, content: m.content })),
+      };
+      const res = await fetch('/api/chat/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.summary !== undefined) {
+          rollingSummaryRef.current = data.summary || '';
+        }
+        if (!currentThreadId && data.threadId) {
+          setThreadId(data.threadId);
+          router.replace(`/?view=dashboard&threadId=${data.threadId}`, { scroll: false });
+        }
+        window.dispatchEvent(new CustomEvent('eyes-chat-saved'));
+      }
+    } catch (err) {
+      console.warn('[Chat] Failed to persist thread:', err);
+    }
+  };
+
   const handleSubmit = async (text: string) => {
     const prompt = text.trim();
     if (!prompt) return;
@@ -169,11 +231,12 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     const controller = new AbortController();
     activeStreamRef.current = controller;
     
-    setMessages((prev) => [...prev, { role: 'user', content: prompt }, { role: 'assistant', content: '', pending: true }]);
+    setMessages((prev) => [...prev, { role: 'user' as const, content: prompt }, { role: 'assistant' as const, content: '', pending: true }]);
     setQuery('');
     setIsStreaming(true);
-
+ 
     try {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(threadId);
       const response = await fetch('/api/chat?stream=1', {
         method: 'POST',
         headers: { 
@@ -181,17 +244,19 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
           'x-timezone-offset': String(new Date().getTimezoneOffset()),
         },
         signal: controller.signal,
-      body: JSON.stringify({ 
-        message: prompt,
-        history: messages.map(m => ({ role: m.role, content: m.content })) 
-      }),
+        body: JSON.stringify({ 
+          message: prompt,
+          history: messages.map(m => ({ role: m.role, content: m.content })),
+          threadId: isUUID ? threadId : null,
+          summary: rollingSummaryRef.current,
+        }),
       });
 
       if (!response.ok) {
         const errText = response.status === 401
           ? 'Session expired — please refresh the page and log in again.'
           : `Chat failed (${response.status}). Please try again.`;
-        setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', content: errText, pending: false }]);
+        setMessages(prev => [...prev.slice(0, -1), { role: 'assistant' as const, content: errText, pending: false }]);
         return;
       }
 
@@ -200,7 +265,11 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         let citations: Citation[] = [];
         if (citationsHeader) {
           try {
-            citations = JSON.parse(atob(citationsHeader.replace(/-/g, '+').replace(/_/g, '/'))) as Citation[];
+            let base64 = citationsHeader.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64.length % 4) {
+              base64 += '=';
+            }
+            citations = JSON.parse(decodeURIComponent(escape(atob(base64)))) as Citation[];
           } catch (e) {
             console.warn('[Dashboard] Failed to parse citations header:', e);
           }
@@ -220,7 +289,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
             const last = prev[prev.length - 1];
             if (last.role === 'assistant') {
               return [...prev.slice(0, -1), { 
-                role: 'assistant', 
+                role: 'assistant' as const, 
                 content: streamedReply, 
                 pending: true,
                 citations: citations.length > 0 ? citations : undefined
@@ -231,12 +300,15 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         }
         
         setMessages((prev) => {
-          return [...prev.slice(0, -1), { 
-            role: 'assistant', 
+          const finalMessages = [...prev.slice(0, -1), { 
+            role: 'assistant' as const, 
             content: streamedReply, 
             pending: false,
             citations: citations.length > 0 ? citations : undefined
           }];
+          const isCurrentlyUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(threadId);
+          void saveThread(finalMessages, isCurrentlyUUID ? threadId : null);
+          return finalMessages;
         });
       }
     } catch (err) {
@@ -282,16 +354,6 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         <AuditView onBack={() => setView('dashboard')} summary={summary} />
       )}
 
-      {activeView === 'history' && (
-        <HistoryView 
-          onBack={() => setView('dashboard')} 
-          onLoadThread={(msgs) => {
-            setMessages(msgs);
-            setThreadId(Math.random().toString(36).substring(7)); // branch out a new thread if continued
-            setView('dashboard');
-          }}
-        />
-      )}
 
       {activeView === 'readiness' && (
         <SourceReadinessView platforms={platforms} totalMemories={syncStatus?.memoriesIndexed ?? summary.totalMemories ?? 0} />
@@ -302,6 +364,11 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       )}
       {activeView === 'action-queue' && (
         <ActionQueueView 
+          onBack={() => router.push('/?view=dashboard')}
+        />
+      )}
+      {activeView === 'integrations' && (
+        <AIIntegrationView 
           onBack={() => router.push('/?view=dashboard')}
         />
       )}

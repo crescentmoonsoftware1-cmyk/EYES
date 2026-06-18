@@ -34,8 +34,10 @@ export default function AdminFunnelPage() {
 
   // Check if current user is authorized as admin
   const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-  const adminEmails = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
-  const isAdmin = user && user.email && adminEmails.includes(user.email.toLowerCase());
+  const adminEmails = adminEmailsEnv.split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(email => email !== '');
+  const isAdmin = user && user.email && adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase());
 
   useEffect(() => {
     // If auth is loaded and user is not admin, redirect to dashboard or home

@@ -5,7 +5,6 @@ import styles from '../MainContent.module.css';
 import {
   SearchIcon,
   ArrowRightIcon,
-  ShieldIcon,
   GmailIconOfficial,
   GitHubIconOfficial,
   SlackIconOfficial,
@@ -17,7 +16,7 @@ import {
   DropboxIconOfficial,
   VercelIconOfficial
 } from '../common/icons/PlatformIcons';
-import type { Message } from '@/types/dashboard';
+import type { Message, Citation } from '@/types/dashboard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -175,13 +174,30 @@ export function SynthesisView({
     { id: 'people', label: 'People & Places', icon: '👥' },
   ];
 
+  const chatInputEl = (
+    <div className={styles.commandContainer} style={{ maxWidth: '800px', margin: '0 auto', background: 'var(--bg-primary)' }}>
+      <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}>
+        <div className={styles.searchIcon}><SearchIcon /></div>
+        <input type="text" className={styles.commandInput}
+          placeholder={messages.length > 0 ? "Ask a follow up..." : "Ask me anything about your life..."}
+          value={query} onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) onSubmit(query.trim()); }}
+          disabled={isStreaming}
+        />
+        <button className={styles.commandSendBtn}
+          onClick={() => { if (query.trim()) onSubmit(query.trim()); }}
+          disabled={!query.trim() || isStreaming}
+        ><ArrowRightIcon /></button>
+      </div>
+    </div>
+  );
+
   return (
     <div className={styles.synthesisLayout} style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%' }}>
       {/* ═══════════ CENTER PANE — CHAT ═══════════ */}
       <div
         className={styles.centerPane}
         style={{
-          justifyContent: messages.length > 0 ? 'flex-start' : 'center',
           paddingTop: messages.length > 0 ? '20px' : '0',
           alignItems: 'center',
           display: 'flex',
@@ -192,91 +208,66 @@ export function SynthesisView({
         }}
       >
         {/* Hero (no messages) */}
-        {messages.length === 0 && (
+        {messages.length === 0 ? (
           <div style={{
-            width: '100%',
-            maxWidth: '800px',
+            flex: 1,
             display: 'flex',
             flexDirection: 'column',
+            justifyContent: 'center',
             alignItems: 'center',
-            textAlign: 'center'
+            width: '100%',
+            maxWidth: '800px',
+            margin: '0 auto',
+            padding: '0 20px',
           }}>
-            <h1 className={styles.brandDisplayTitle} style={{
-              fontSize: 'clamp(28px, 6vw, 44px)',
-              lineHeight: 1.2,
-              textAlign: 'center',
+            <div style={{
               width: '100%',
-              margin: '0 0 20px 0'
-            }}>
-              Everything You Ever Said
-            </h1>
-            <div className={styles.heroSummary} style={{
               display: 'flex',
-              flexDirection: 'row',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-              gap: '8px',
-              margin: '0 0 28px 0'
+              textAlign: 'center'
             }}>
-              <div className={styles.shieldIcon} style={{ display: 'flex', alignItems: 'center' }}><ShieldIcon size={18} /></div>
-              <span>Indexed <strong>{totalMemories.toLocaleString()}</strong> records across your connected sources.</span>
-            </div>
+              <h1 className={styles.brandDisplayTitle} style={{
+                fontSize: 'clamp(28px, 6vw, 44px)',
+                lineHeight: 1.2,
+                textAlign: 'center',
+                width: '100%',
+                margin: '0 0 20px 0'
+              }}>
+                Everything You Ever Said
+              </h1>
 
-            {/* Alerts banner */}
-            {alerts.length > 0 && (
-              <div style={{ maxWidth: '680px', margin: '0 auto 20px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
-                {alerts.slice(0, 3).map(alert => (
-                  <div key={alert.id} style={{
-                    background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)',
-                    borderRadius: '12px', padding: '12px 16px',
-                    display: 'flex', gap: '10px', alignItems: 'flex-start',
-                  }}>
-                    <span style={{ fontSize: '18px' }}>{ALERT_ICON[alert.alert_type] ?? '🔔'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '12px', color: '#fbbf24', marginBottom: '3px' }}>{alert.title}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{alert.body}</div>
+              {/* Alerts banner */}
+              {alerts.length > 0 && (
+                <div style={{ maxWidth: '680px', margin: '0 auto 20px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
+                  {alerts.slice(0, 3).map(alert => (
+                    <div key={alert.id} style={{
+                      background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)',
+                      borderRadius: '12px', padding: '12px 16px',
+                      display: 'flex', gap: '10px', alignItems: 'flex-start',
+                    }}>
+                      <span style={{ fontSize: '18px' }}>{ALERT_ICON[alert.alert_type] ?? '🔔'}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '12px', color: '#fbbf24', marginBottom: '3px' }}>{alert.title}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{alert.body}</div>
+                      </div>
+                      <button onClick={() => dismissAlert(alert.id)} style={{
+                        background: 'none', border: 'none', color: 'var(--text-secondary)',
+                        cursor: 'pointer', fontSize: '14px', padding: '2px', opacity: 0.4,
+                      }}>✕</button>
                     </div>
-                    <button onClick={() => dismissAlert(alert.id)} style={{
-                      background: 'none', border: 'none', color: 'var(--text-secondary)',
-                      cursor: 'pointer', fontSize: '14px', padding: '2px', opacity: 0.4,
-                    }}>✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            {/* Search input */}
-            <div className={styles.commandContainer}>
-              <div className={styles.commandInputBox}>
-                <div className={styles.searchIcon}><SearchIcon /></div>
-                <input id="memory-search" name="query" type="text" className={styles.commandInput}
-                  placeholder="Ask me anything about your life..."
-                  value={query} onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) onSubmit(query.trim()); }}
-                  disabled={isStreaming}
-                />
-                <button className={styles.commandSendBtn}
-                  onClick={() => { if (query.trim()) onSubmit(query.trim()); }}
-                  disabled={!query.trim() || isStreaming} aria-label="Send query"
-                ><ArrowRightIcon /></button>
+              {/* Chat Input Centered */}
+              <div style={{ width: '100%', marginTop: '24px' }}>
+                {chatInputEl}
               </div>
-            </div>
-
-            {/* Quick actions */}
-            <div className={styles.quickActions}>
-              <div className={styles.actionCard} onClick={() => setView('feed')}><span>Source Feed</span></div>
-              <div className={styles.actionCard} onClick={() => setView('timeline')}><span>Time Line</span></div>
-              <div className={styles.actionCard} onClick={() => setView('audit')}><span>Audit</span></div>
-              {/* Commented out Mind Map quick action card:
-              <div className={styles.actionCard} onClick={() => setRightPanelOpen(true)}><span>🧠 Mind Map</span></div>
-              */}
             </div>
           </div>
-        )}
-
-        {/* Chat messages */}
-        {messages.length > 0 && (
+        ) : (
+          /* Chat messages */
           <div className={styles.chatOutput}>
             {messages.map((m, i) => (
               <div key={i} className={`${styles.chatMessage} ${m.role === 'user' ? styles.userMsg : styles.aiMsg}`}>
@@ -293,7 +284,7 @@ export function SynthesisView({
                           table: ({ node, ...props }) => <div style={{ overflowX: 'auto', margin: '16px 0', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }} {...props} /></div>,
                           th: ({ node, ...props }) => <th style={{ borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', textAlign: 'left', background: 'var(--bg-secondary)', fontWeight: 600, color: 'var(--text-primary)' }} {...props} />,
                           td: ({ node, ...props }) => <td style={{ borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', color: 'var(--text-secondary)' }} {...props} />,
-                          code: ({ node, inline, ...props }: any) =>
+                          code: ({ node, inline, ...props }: React.HTMLAttributes<HTMLElement> & { node?: unknown; inline?: boolean }) =>
                             inline
                               ? <code style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace' }} {...props} />
                               : <span style={{ display: 'block', background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)' }}><code {...props} /></span>,
@@ -320,28 +311,12 @@ export function SynthesisView({
           </div>
         )}
 
-        {/* Floating chat input */}
+        {/* Floating chat input - ONLY rendered at the bottom when messages.length > 0 */}
         {messages.length > 0 && (
-          <div className={styles.chatCommandWrapper}>
-            <div className={styles.commandContainer} style={{ maxWidth: '800px', margin: '0 auto', background: 'var(--bg-primary)' }}>
-              <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}>
-                <div className={styles.searchIcon}><SearchIcon /></div>
-                <input type="text" className={styles.commandInput}
-                  placeholder="Ask a follow up..."
-                  value={query} onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) onSubmit(query.trim()); }}
-                  disabled={isStreaming}
-                />
-                <button className={styles.commandSendBtn}
-                  onClick={() => { if (query.trim()) onSubmit(query.trim()); }}
-                  disabled={!query.trim() || isStreaming}
-                ><ArrowRightIcon /></button>
-              </div>
-            </div>
+          <div className={styles.chatCommandWrapper} style={{ width: '100%' }}>
+            {chatInputEl}
           </div>
         )}
-
-
       </div>
 
       {/* ═══════════ RIGHT PANE — COLLAPSIBLE TABS ═══════════ */}
@@ -634,7 +609,7 @@ function MiniClusterCard({ cluster, onRename, onReject }: { cluster: StateCluste
   );
 }
 
-function CitationDock({ citations, setView }: { citations: any[], setView: (v: ViewMode) => void }) {
+function CitationDock({ citations, setView }: { citations: Citation[], setView: (v: ViewMode) => void }) {
   const [expanded, setExpanded] = React.useState(false);
 
   return (

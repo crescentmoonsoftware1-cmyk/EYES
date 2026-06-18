@@ -5,6 +5,7 @@ import styles from '../MainContent.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { PlatformStatus } from '@/types/dashboard';
 import { AnimatedNumber } from '../common/AnimatedNumber';
+import { AIIntegrationView } from './AIIntegrationView';
 
 interface PlatformConfig {
   id: string;
@@ -25,6 +26,7 @@ interface DashboardHomeViewProps {
 export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewProps) {
   const [activeCategory, setActiveCategory] = React.useState<string>('All');
   const [googleInterstitial, setGoogleInterstitial] = React.useState<string | null>(null); // stores startUrl
+  const [showAIUpload, setShowAIUpload] = React.useState<boolean>(false);
   const liveStatus = syncStatus ?? null;
   
   const remainingPlatforms = ALL_POSSIBLE_PLATFORMS.filter(p => !platforms.find(ap => ap.id === p.id)?.connected);
@@ -38,10 +40,18 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
   const apiKeyRemaining    = filteredRemaining.filter(p => !(p as PlatformConfig).comingSoon && (p as PlatformConfig).apiKeyOnly);
   const comingSoonPlatforms = filteredRemaining.filter(p => (p as PlatformConfig).comingSoon);
 
+  if (showAIUpload) {
+    return <AIIntegrationView onBack={() => setShowAIUpload(false)} />;
+  }
+
   const renderPlatformCard = (p: PlatformConfig) => {
     const isApiKey = Boolean(p.apiKeyOnly);
 
     const startAuth = () => {
+      if (p.id === 'chatgpt' || p.id === 'claude') {
+        setShowAIUpload(true);
+        return;
+      }
       if (isApiKey) {
         alert(`${p.name} connects via an API key configured in your environment — no OAuth flow required. Your key is already active.`);
         return;
@@ -61,19 +71,20 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
       <div key={p.id} className={`${styles.readinessCard} magnetic-card`} onClick={startAuth} style={{ cursor: 'pointer' }}>
         <div className={styles.cardHeader}>
           <div
-            className={styles.readinessIcon}
-            style={{
-              backgroundColor: p.color?.startsWith('#') ? `${p.color}15` : 'var(--bg-secondary)',
-              border: p.color?.startsWith('#') ? `1px solid ${p.color}30` : '1px solid var(--border-subtle)',
-            }}
+             className={styles.readinessIcon}
+             style={{
+               backgroundColor: p.color?.startsWith('#') ? `${p.color}15` : 'var(--bg-secondary)',
+               border: p.color?.startsWith('#') ? `1px solid ${p.color}30` : '1px solid var(--border-subtle)',
+             }}
           >
             {p.icon ? React.cloneElement(p.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
           </div>
           <div className={styles.readinessInfo}>
             <strong>{p.name}</strong>
-            <span className={styles.availStatusText}>{isApiKey ? 'API Key' : 'Connect Now'}</span>
+            <span className={styles.availStatusText}>{p.id === 'chatgpt' || p.id === 'claude' ? 'Import Files' : isApiKey ? 'API Key' : 'Connect Now'}</span>
           </div>
-          {!isApiKey && <span className={styles.addIndicator}>+</span>}
+          {p.id !== 'chatgpt' && p.id !== 'claude' && !isApiKey && <span className={styles.addIndicator}>+</span>}
+          {(p.id === 'chatgpt' || p.id === 'claude') && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>📤</span>}
           {isApiKey && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>🔑</span>}
         </div>
         <p className={styles.platformDesc}>{p.description || 'Connect this platform to index more of your life data.'}</p>
@@ -152,7 +163,7 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
             </h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '20px' }}>
               Google may show a notice saying this app is{' '}
-              <strong style={{ color: 'var(--text-primary)' }}>"not verified"</strong>{' '}
+              <strong style={{ color: 'var(--text-primary)' }}>&quot;not verified&quot;</strong>{' '}
               — this appears while our OAuth verification is in review with Google (a process that takes days to weeks).
               It does not mean the connection is unsafe.
             </p>
@@ -190,33 +201,57 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
       <div style={{ marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
         <h1 className={styles.pageHeroTitle} style={{ textAlign: 'left', marginBottom: '16px' }}>Vault</h1>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="stagger-1" style={{ padding: '14px 22px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-             <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Total Memories Indexed</span>
-             <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1 }}>
+          <div className="stagger-1" style={{ padding: '10px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+             <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Total Memories Indexed</span>
+             <div style={{ fontSize: '24px', fontWeight: '900', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1 }}>
                {liveStatus ? <AnimatedNumber value={liveStatus.memoriesIndexed} /> : '---'}
              </div>
           </div>
-          
-
         </div>
       </div>
 
 
       {/* Discovery Hub Layout */}
       <div className={`${styles.readinessSection} stagger-3`}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap', gap: '16px' }}>
           <h3 className={styles.subHeader} style={{ marginBottom: 0 }}>● PRIMARY CONNECTORS</h3>
-          
-          <div className={styles.filterBar} style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
-            {categories.map(cat => (
-              <button 
-                key={cat}
-                className={`${styles.filterChip} ${activeCategory === cat ? styles.filterChipActive : ''}`}
-                onClick={() => setActiveCategory(cat)}
-              >
-                {cat}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div className={styles.filterBar} style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  className={`${styles.filterChip} ${activeCategory === cat ? styles.filterChipActive : ''}`}
+                  onClick={() => setActiveCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border-subtle)' }} />
+            <button 
+              onClick={() => setShowAIUpload(true)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: '10px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.borderColor = 'var(--accent-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.borderColor = 'var(--border-primary)';
+              }}
+            >
+              Import AI History
+            </button>
           </div>
         </div>
 

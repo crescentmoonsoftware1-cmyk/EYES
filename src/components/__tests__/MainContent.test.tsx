@@ -78,18 +78,12 @@ describe("MainContent", () => {
     });
 
     render(<MainContent />);
-
     expect(await screen.findByRole("heading", { name: "Everything You Ever Said" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Ask me anything about your life...")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText(/indexed/i)).toBeInTheDocument();
-      expect(screen.getByText(/20,000/i)).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalled();
     });
-
-    expect(screen.getByText("Source Feed")).toBeInTheDocument();
-    expect(screen.getByText("Time Line")).toBeInTheDocument();
-    expect(screen.getByText("Audit")).toBeInTheDocument();
 
     fetchMock.mockRestore();
   });

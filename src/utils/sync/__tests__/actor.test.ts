@@ -89,7 +89,7 @@ describe('resolveSyncActor — CRON authentication', () => {
       email: 'cron@system.internal',
       user_metadata: { name: 'Cron Worker' },
     });
-    vi.mocked(createAdminClient).mockResolvedValue(adminMock as any);
+    vi.mocked(createAdminClient).mockReturnValue(adminMock as unknown as ReturnType<typeof createAdminClient>);
 
     const req = buildRequest({
       'x-cron-secret': VALID_SECRET,
@@ -108,7 +108,7 @@ describe('resolveSyncActor — CRON authentication', () => {
 
   it('returns 500 when Supabase admin lookup fails', async () => {
     const adminMock = buildAdminMock(null, new Error('DB unavailable'));
-    vi.mocked(createAdminClient).mockResolvedValue(adminMock as any);
+    vi.mocked(createAdminClient).mockReturnValue(adminMock as unknown as ReturnType<typeof createAdminClient>);
 
     const req = buildRequest({
       'x-cron-secret': VALID_SECRET,
@@ -134,7 +134,7 @@ describe('resolveSyncActor — SESSION authentication', () => {
         }),
       },
     };
-    vi.mocked(createUserClient).mockResolvedValue(userClientMock as any);
+    vi.mocked(createUserClient).mockReturnValue(userClientMock as unknown as ReturnType<typeof createUserClient>);
 
     const req = buildRequest(); // no cron headers → session path
     const result = await resolveSyncActor(req);
@@ -160,8 +160,8 @@ describe('resolveSyncActor — SESSION authentication', () => {
     const adminMock = {
       auth: { admin: {} }, // not used in session path
     };
-    vi.mocked(createUserClient).mockResolvedValue(userClientMock as any);
-    vi.mocked(createAdminClient).mockResolvedValue(adminMock as any);
+    vi.mocked(createUserClient).mockReturnValue(userClientMock as unknown as ReturnType<typeof createUserClient>);
+    vi.mocked(createAdminClient).mockReturnValue(adminMock as unknown as ReturnType<typeof createAdminClient>);
 
     const req = buildRequest();
     const result = await resolveSyncActor(req);
@@ -176,7 +176,9 @@ describe('resolveSyncActor — SESSION authentication', () => {
   });
 
   it('returns 500 when createUserClient throws', async () => {
-    vi.mocked(createUserClient).mockRejectedValue(new Error('Supabase init failure'));
+    vi.mocked(createUserClient).mockImplementation(() => {
+      throw new Error('Supabase init failure');
+    });
 
     const req = buildRequest();
     const result = await resolveSyncActor(req);
