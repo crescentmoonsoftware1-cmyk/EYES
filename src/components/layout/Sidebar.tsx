@@ -54,13 +54,24 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch threads
+  // Fetch threads — filter out ghost threads (0 messages) from the broken save period
   const fetchThreads = async () => {
     try {
       const res = await fetch('/api/chat/threads');
       if (res.ok) {
         const data = await res.json();
-        setThreads(data.threads || []);
+        const allThreads: any[] = data.threads || [];
+        
+        // Only show threads that have at least 1 saved message
+        const validThreads = allThreads.filter(t => (t.chat_messages?.length ?? 0) > 0);
+        
+        // Silently delete ghost threads (threads with 0 messages) to keep DB clean
+        const ghostThreads = allThreads.filter(t => (t.chat_messages?.length ?? 0) === 0);
+        for (const ghost of ghostThreads) {
+          fetch(`/api/chat/threads?threadId=${ghost.id}`, { method: 'DELETE' }).catch(() => {});
+        }
+        
+        setThreads(validThreads);
       }
     } catch (e) {
       console.error('[Sidebar] Failed to load threads:', e);
