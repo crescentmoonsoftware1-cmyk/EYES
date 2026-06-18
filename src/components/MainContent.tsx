@@ -41,6 +41,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]); // Always-fresh snapshot of messages
   const [threadId, setThreadId] = useState<string>('');
   const threadIdRef = useRef<string>(''); // Always-fresh ref to avoid stale closure in saveThread
   const [isStreaming, setIsStreaming] = useState(false);
@@ -52,6 +53,11 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   useEffect(() => {
     threadIdRef.current = threadId;
   }, [threadId]);
+
+  // Keep messagesRef in sync with state (for stale-closure-free access)
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Load thread from URL query param if present, or initialize/reset if empty or on new chat trigger
   useEffect(() => {
@@ -67,6 +73,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
                 content: m.content
               }));
               setMessages(msgs);
+              messagesRef.current = msgs;
               setThreadId(data.thread.id);
               threadIdRef.current = data.thread.id;
               rollingSummaryRef.current = data.thread.summary || '';
@@ -226,6 +233,9 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const handleSubmit = async (text: string) => {
     const prompt = text.trim();
     if (!prompt) return;
+
+    // Snapshot current messages before any async state updates
+    const priorMessages = messagesRef.current.filter(m => !m.pending);
     
     activeStreamRef.current?.abort();
     const controller = new AbortController();
@@ -236,7 +246,8 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     setIsStreaming(true);
  
     try {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(threadId);
+      const currentThreadId = threadIdRef.current;
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentThreadId);
       const response = await fetch('/api/chat?stream=1', {
         method: 'POST',
         headers: { 
@@ -246,8 +257,8 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         signal: controller.signal,
         body: JSON.stringify({ 
           message: prompt,
-          history: messages.map(m => ({ role: m.role, content: m.content })),
-          threadId: isUUID ? threadId : null,
+          history: priorMessages.map(m => ({ role: m.role, content: m.content })),
+          threadId: isUUID ? currentThreadId : null,
           summary: rollingSummaryRef.current,
         }),
       });
@@ -300,7 +311,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         }
         
         const finalMessages = [
-          ...messages,
+          ...priorMessages,
           { role: 'user' as const, content: prompt },
           { 
             role: 'assistant' as const, 
@@ -310,10 +321,11 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
           }
         ];
         setMessages(finalMessages);
+        messagesRef.current = finalMessages;
         // Use ref for threadId to avoid stale closure
-        const currentThreadId = threadIdRef.current;
-        const isCurrentlyUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentThreadId);
-        void saveThread(finalMessages, isCurrentlyUUID ? currentThreadId : null);
+        const savedThreadId = threadIdRef.current;
+        const isCurrentlyUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedThreadId);
+        void saveThread(finalMessages, isCurrentlyUUID ? savedThreadId : null);
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {

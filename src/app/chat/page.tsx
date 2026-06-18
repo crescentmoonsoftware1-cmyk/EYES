@@ -161,8 +161,10 @@ function ChatPageInner() {
   
   const [query, setQuery] = useState(initialQuery);
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]); // Always-fresh snapshot
   const [isStreaming, setIsStreaming] = useState(false);
   const [dbThreadId, setDbThreadId] = useState<string | null>(null); // Supabase UUID
+  const dbThreadIdRef = useRef<string | null>(null); // Always-fresh ref
   const [brainPanelOpen, setBrainPanelOpen] = useState(false);
   const [excludedMemories, setExcludedMemories] = useState<Set<string>>(new Set());
   const rollingSummaryRef = useRef('');  // Section 04 — rolling conversation summary
@@ -171,41 +173,49 @@ function ChatPageInner() {
   const hasSubmittedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Persist current messages to Supabase (debounced) */
-  const saveThread = (msgs: Message[], existingDbId: string | null, firstUserMsg: string) => {
+  // Keep refs in sync
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { dbThreadIdRef.current = dbThreadId; }, [dbThreadId]);
+
+  /** Persist current messages to Supabase (immediate — no debounce) */
+  const saveThread = async (msgs: Message[], existingDbId: string | null, firstUserMsg: string) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        const payload = {
-          threadId: existingDbId,
-          title: firstUserMsg.slice(0, 60) || 'New Chat',
-          messages: msgs
-            .filter(m => m.content && !m.pending)
-            .map(m => ({ role: m.role, content: m.content })),
-        };
-        const res = await fetch('/api/chat/threads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.summary !== undefined) {
-            rollingSummaryRef.current = data.summary || '';
-          }
-          if (!existingDbId && data.threadId) {
-            setDbThreadId(data.threadId);
-          }
+    try {
+      const payload = {
+        threadId: existingDbId,
+        title: firstUserMsg.slice(0, 60) || 'New Chat',
+        messages: msgs
+          .filter(m => m.content && !m.pending)
+          .map(m => ({ role: m.role, content: m.content })),
+      };
+      const res = await fetch('/api/chat/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.summary !== undefined) {
+          rollingSummaryRef.current = data.summary || '';
         }
-      } catch (err) {
-        console.warn('[Chat] Failed to persist thread:', err);
+        if (!existingDbId && data.threadId) {
+          setDbThreadId(data.threadId);
+          dbThreadIdRef.current = data.threadId;
+        }
+        window.dispatchEvent(new CustomEvent('eyes-chat-saved'));
       }
-    }, 1000);
+    } catch (err) {
+      console.warn('[Chat] Failed to persist thread:', err);
+    }
   };
 
   const handleSubmit = async (text: string) => {
     const prompt = text.trim();
     if (!prompt) return;
+
+    // Snapshot prior messages before any async state updates (avoids stale closure)
+    const priorMessages = messagesRef.current.filter(m => !m.pending);
+    const currentDbThreadId = dbThreadIdRef.current;
     
     activeStreamRef.current?.abort();
     const controller = new AbortController();
@@ -225,8 +235,8 @@ function ChatPageInner() {
         signal: controller.signal,
         body: JSON.stringify({ 
           message: prompt,
-          history: messages.map(m => ({ role: m.role, content: m.content })),
-          threadId: dbThreadId,
+          history: priorMessages.map(m => ({ role: m.role, content: m.content })),
+          threadId: currentDbThreadId,
           summary: rollingSummaryRef.current,
         }),
       });
@@ -274,15 +284,20 @@ function ChatPageInner() {
           const finalContent = streamedReply.trim() 
             ? streamedReply 
             : '⚠️ All AI providers are currently unavailable (quota or rate limits). Please try again in a few minutes.';
-          const finalMessages = [...prev.slice(0, -1), { 
-            role: 'assistant' as const, 
-            content: finalContent, 
-            pending: false,
-            citations: citations.length > 0 ? citations : undefined
-          }];
+          const finalMessages = [
+            ...priorMessages,
+            { role: 'user' as const, content: prompt },
+            { 
+              role: 'assistant' as const, 
+              content: finalContent, 
+              pending: false,
+              citations: citations.length > 0 ? citations : undefined
+            }
+          ];
+          messagesRef.current = finalMessages;
           // Auto-persist to Supabase after reply completes
-          const firstUser = finalMessages.find(m => m.role === 'user')?.content || 'New Chat';
-          saveThread(finalMessages, dbThreadId, firstUser);
+          const firstUser = priorMessages.find(m => m.role === 'user')?.content || prompt;
+          void saveThread(finalMessages, dbThreadIdRef.current, firstUser);
           return finalMessages;
         });
       } else {
