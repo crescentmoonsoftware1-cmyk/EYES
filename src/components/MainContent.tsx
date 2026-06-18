@@ -59,7 +59,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
     messagesRef.current = messages;
   }, [messages]);
 
-  // Load thread from URL query param if present, or initialize/reset if empty or on new chat trigger
+  // Load thread from URL query param if present
   useEffect(() => {
     if (threadIdParam) {
       const loadSelectedThread = async () => {
@@ -84,12 +84,18 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         }
       };
       loadSelectedThread();
-    } else {
+    }
+  }, [threadIdParam]);
+
+  // Only reset to new chat when the 'new' trigger changes
+  useEffect(() => {
+    if (newChatTrigger) {
       setMessages([]);
+      messagesRef.current = [];
       setThreadId(Math.random().toString(36).substring(7));
       rollingSummaryRef.current = '';
     }
-  }, [threadIdParam, newChatTrigger]);
+  }, [newChatTrigger]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);

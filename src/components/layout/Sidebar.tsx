@@ -246,7 +246,11 @@ export default function Sidebar() {
         <EyesLogo width={92} height={22} />
       </div>
 
-      <button className={styles.newChatBtn} onClick={() => navigateToView('chat')}>
+      <button className={styles.newChatBtn} onClick={async () => {
+        // Refresh sidebar first so current conversation appears as history
+        await fetchThreads();
+        navigateToView('chat');
+      }}>
         <PlusIcon /> New chat
       </button>
 
