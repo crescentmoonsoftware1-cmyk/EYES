@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       .from('chat_threads')
       .select(`
         id, title, created_at, updated_at, summary,
-        chat_messages ( id, role, content, created_at, message_order )
+        chat_messages ( id, role, content, created_at )
       `)
       .eq('id', threadId)
       .eq('user_id', user.id)
@@ -27,67 +27,35 @@ export async function GET(req: NextRequest) {
     let thread: any = result.data;
     let error = result.error;
 
-    // Self-healing fallback if database migration 048 has not run yet
-    if (error && error.code === '42703') {
-      const fallbackResult = await supabase
-        .from('chat_threads')
-        .select(`
-          id, title, created_at, updated_at, summary,
-          chat_messages ( id, role, content, created_at )
-        `)
-        .eq('id', threadId)
-        .eq('user_id', user.id)
-        .single();
-      thread = fallbackResult.data;
-      error = fallbackResult.error;
-    }
-
     if (error) {
       console.error('[Chat History] Failed to load single thread:', error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (thread && thread.chat_messages) {
-      const sortedMessages = [...thread.chat_messages].sort((a: any, b: any) => {
-        if (a.message_order !== undefined && b.message_order !== undefined) {
-          return a.message_order - b.message_order;
-        }
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      });
+      // Sort by created_at for chronological order
+      const sortedMessages = [...thread.chat_messages].sort((a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
       thread = { ...thread, chat_messages: sortedMessages };
     }
 
     return NextResponse.json({ thread });
   }
 
-  // Attempt to select message_order for chronological stability
-  const initialResult = await supabase
+  // Simple query without message_order (column doesn't exist in current schema)
+  const result = await supabase
     .from('chat_threads')
     .select(`
       id, title, created_at, updated_at, summary,
-      chat_messages ( id, role, content, created_at, message_order )
+      chat_messages ( id, role, content, created_at )
     `)
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(30);
 
-  let threads: any[] | null = initialResult.data;
-  let error = initialResult.error;
-
-  // Self-healing fallback if database migration 048 has not run yet
-  if (error && error.code === '42703') {
-    const fallbackResult = await supabase
-      .from('chat_threads')
-      .select(`
-        id, title, created_at, updated_at, summary,
-        chat_messages ( id, role, content, created_at )
-      `)
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(30);
-    threads = fallbackResult.data;
-    error = fallbackResult.error;
-  }
+  let threads: any[] | null = result.data;
+  let error = result.error;
 
   if (error) {
     console.error('[Chat History] Failed to load threads:', error.message);
@@ -157,32 +125,17 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id);
 
   if (messages.length > 0) {
-    const rowsWithOrder = messages.map((m, index) => ({
+    // Insert messages without message_order (column doesn't exist in current schema)
+    const rows = messages.map((m) => ({
       thread_id: finalThreadId!,
       user_id: user.id,
       role: m.role,
       content: m.content,
-      message_order: index,
     }));
 
-    const { error: insertErr } = await supabase.from('chat_messages').insert(rowsWithOrder);
-    
-    // Self-healing fallback if database migration 048 has not run yet
+    const { error: insertErr } = await supabase.from('chat_messages').insert(rows);
     if (insertErr) {
-      if (insertErr.code === '42703') {
-        const rowsWithoutOrder = messages.map((m) => ({
-          thread_id: finalThreadId!,
-          user_id: user.id,
-          role: m.role,
-          content: m.content,
-        }));
-        const { error: fallbackErr } = await supabase.from('chat_messages').insert(rowsWithoutOrder);
-        if (fallbackErr) {
-          return NextResponse.json({ error: fallbackErr.message }, { status: 500 });
-        }
-      } else {
-        return NextResponse.json({ error: insertErr.message }, { status: 500 });
-      }
+      return NextResponse.json({ error: insertErr.message }, { status: 500 });
     }
   }
 
