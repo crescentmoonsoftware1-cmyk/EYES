@@ -316,6 +316,43 @@ function ChatPageInner() {
     }
   }, [user, isLoading, router]);
 
+  // Load thread from URL query param if present
+  const threadIdParam = searchParams.get('threadId');
+  const newChatTrigger = searchParams.get('new');
+
+  useEffect(() => {
+    if (threadIdParam) {
+      const loadSelectedThread = async () => {
+        try {
+          const res = await fetch(`/api/chat/threads?threadId=${threadIdParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.thread) {
+              const msgs = (data.thread.chat_messages || []).map((m: any) => ({
+                role: m.role,
+                content: m.content
+              }));
+              setMessages(msgs);
+              setDbThreadId(data.thread.id);
+              rollingSummaryRef.current = data.thread.summary || '';
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load thread from URL param:', e);
+        }
+      };
+      loadSelectedThread();
+    }
+  }, [threadIdParam]);
+
+  useEffect(() => {
+    if (newChatTrigger) {
+      setMessages([]);
+      setDbThreadId(null);
+      rollingSummaryRef.current = '';
+    }
+  }, [newChatTrigger]);
+
   // Initialize
   useEffect(() => {
     // If there's an initial query, trigger it (once)

@@ -26,14 +26,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
 
   const rollingSummaryRef = useRef('');
 
-  // Reset chat if 'new' trigger is present
-  useEffect(() => {
-    if (newChatTrigger) {
-      setMessages([]);
-      setThreadId(Math.random().toString(36).substring(7));
-      rollingSummaryRef.current = '';
-    }
-  }, [newChatTrigger]);
+
 
   const [summary, setSummary] = useState<AuditSummary>({ 
     totalMemories: 0, 
@@ -52,14 +45,9 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [, setIsLoading] = useState(true);
 
-  // Initialize thread ID on client
-  useEffect(() => {
-    setThreadId(Math.random().toString(36).substring(7));
-    rollingSummaryRef.current = '';
-  }, []);
-
-  // Load thread from URL query param if present
   const threadIdParam = searchParams.get('threadId');
+
+  // Load thread from URL query param if present, or initialize/reset if empty or on new chat trigger
   useEffect(() => {
     if (threadIdParam) {
       const loadSelectedThread = async () => {
@@ -82,8 +70,12 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         }
       };
       loadSelectedThread();
+    } else {
+      setMessages([]);
+      setThreadId(Math.random().toString(36).substring(7));
+      rollingSummaryRef.current = '';
     }
-  }, [threadIdParam]);
+  }, [threadIdParam, newChatTrigger]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeStreamRef = useRef<AbortController | null>(null);

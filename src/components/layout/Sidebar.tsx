@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
   ConnectorsIcon,
@@ -23,6 +23,7 @@ interface Platform {
 
 export default function Sidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeView = searchParams.get('view') || 'dashboard';
   const activeThreadId = searchParams.get('threadId');
@@ -180,7 +181,11 @@ export default function Sidebar() {
 
   const navigateToView = (view: string) => {
     if (view === 'chat') {
-      router.push(`/?view=dashboard&new=${Date.now()}`);
+      if (pathname === '/chat') {
+        router.push(`/chat?new=${Date.now()}`);
+      } else {
+        router.push(`/?view=dashboard&new=${Date.now()}`);
+      }
     } else if (view === 'dashboard') {
       router.push('/');
     } else if (view === 'admin-funnel') {
@@ -193,12 +198,15 @@ export default function Sidebar() {
   const renderThreadItem = (t: any) => {
     const isActive = activeThreadId === t.id;
     const isStarred = starredIds.includes(t.id);
+    const targetUrl = pathname === '/chat'
+      ? `/chat?threadId=${t.id}`
+      : `/?view=dashboard&threadId=${t.id}`;
 
     return (
       <div
         key={t.id}
         className={`${styles.chatItem} ${isActive ? styles.chatItemActive : ''} ${isStarred ? styles.chatItemStarred : ''}`}
-        onClick={() => router.push(`/?view=dashboard&threadId=${t.id}`)}
+        onClick={() => router.push(targetUrl)}
       >
         <span className={styles.chatTitle}>{t.title}</span>
         <div className={styles.chatActions}>
