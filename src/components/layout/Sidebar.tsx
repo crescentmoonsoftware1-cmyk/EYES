@@ -54,31 +54,22 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch threads — filter out ghost threads (0 messages) from the broken save period
+  // Fetch threads — simple and reliable, no auto-deletion
   const fetchThreads = async () => {
     try {
       const res = await fetch('/api/chat/threads');
       if (res.ok) {
         const data = await res.json();
         const allThreads: any[] = data.threads || [];
-        
         // Only show threads that have at least 1 saved message
-        const validThreads = allThreads.filter(t => (t.chat_messages?.length ?? 0) > 0);
-        
-        // Silently delete ghost threads (threads with 0 messages) to keep DB clean
-        const ghostThreads = allThreads.filter(t => (t.chat_messages?.length ?? 0) === 0);
-        for (const ghost of ghostThreads) {
-          fetch(`/api/chat/threads?threadId=${ghost.id}`, { method: 'DELETE' }).catch(() => {});
-        }
-        
-        setThreads(validThreads);
+        setThreads(allThreads.filter(t => (t.chat_messages?.length ?? 0) > 0));
       }
     } catch (e) {
       console.error('[Sidebar] Failed to load threads:', e);
     }
   };
 
-  // Load starred threads from localStorage
+  // Load threads on mount + poll every 8 seconds (like ChatGPT — current convo appears in real-time)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -89,12 +80,14 @@ export default function Sidebar() {
       }
     }
     fetchThreads();
+    const pollInterval = setInterval(fetchThreads, 8000);
 
-    // Listen to chat saves and general refreshes
+    // Also listen for explicit save events for immediate update
     const handleSaved = () => fetchThreads();
     window.addEventListener('eyes-chat-saved', handleSaved);
     window.addEventListener('eyes-realtime-refresh', handleSaved);
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('eyes-chat-saved', handleSaved);
       window.removeEventListener('eyes-realtime-refresh', handleSaved);
     };
