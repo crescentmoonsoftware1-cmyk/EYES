@@ -250,15 +250,15 @@ export function ThinkingVeil({
             ))}
           </div>
 
-          {/* 60-second email handoff */}
+          {/* 60-second handoff — honest: no email system wired, just let them leave */}
           {emailOffered && (
             <div className={styles.emailOffer}>
-              <p>This is taking a while — we&apos;ll email it the moment it&apos;s ready.</p>
+              <p>This is taking a while. Your results will be waiting when you return.</p>
               <button
                 className={styles.emailBtn}
                 onClick={onReturnToDashboard}
               >
-                Send me an email when done
+                Return to dashboard
               </button>
             </div>
           )}

@@ -83,31 +83,7 @@
   border: 1px solid var(--border-subtle);
 }
 
-.telemetryBox {
-  background: #000;
-  border: 1px solid var(--border-primary);
-  padding: 12px 20px;
-  border-radius: 8px;
-  width: 280px;
-  height: 100px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.logLine {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--accent-green);
-  opacity: 0.7;
-  white-space: nowrap;
-}
-
-.logLine:first-child {
-  opacity: 1;
-  font-weight: 800;
-}
+/* .telemetryBox and .logLine removed — JSX is commented out */
 
 /* CONTENT GRID */
 .contentGrid {
@@ -178,45 +154,7 @@
   text-align: center;
 }
 
-.neuralPulseRing {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: rgba(0, 194, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-  position: relative;
-}
-
-.neuralPulseRing::after {
-  content: '';
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 194, 255, 0.2);
-  animation: ripple 2s infinite ease-out;
-}
-
-@keyframes ripple {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-.pulseInner {
-  width: 40px;
-  height: 40px;
-  background: var(--accent-vital);
-  border-radius: 50%;
-  box-shadow: 0 0 30px var(--accent-vital);
-  animation: pulseCore 1.5s infinite ease-in-out;
-}
-
-@keyframes pulseCore {
-  0%, 100% { transform: scale(0.8); opacity: 0.5; }
-  50% { transform: scale(1.1); opacity: 1; }
-}
+/* .neuralPulseRing, .pulseInner and ripple/pulseCore keyframes removed — JSX is commented out */
 
 .loadingTitle {
   font-size: 14px;
@@ -493,42 +431,7 @@
   animation: slideDown 0.4s ease-out;
 }
 
-.scanRingWrap {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scanRing {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid rgba(0, 194, 255, 0.15);
-}
-
-.scanRingInner {
-  position: absolute;
-  inset: 8px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 194, 255, 0.1);
-}
-
-.scanRingPulse {
-  position: absolute;
-  inset: 16px;
-  border-radius: 50%;
-  background: rgba(0, 194, 255, 0.05);
-}
-
-.scanRingIcon {
-  font-size: 24px;
-  z-index: 10;
-  color: var(--accent-vital);
-}
+/* .scanRingWrap / .scanRing* removed — JSX is commented out */
 
 .emptyTitle {
   font-family: var(--font-serif);
@@ -550,112 +453,7 @@
   letter-spacing: 1px;
 }
 
-.scanStatsGrid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 32px;
-  max-width: 700px;
-}
-
-.scanStatItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  padding: 10px 18px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-  backdrop-filter: blur(10px);
-}
-
-.scanStatItem:hover {
-  background: var(--bg-primary);
-  border-color: var(--border-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-  color: var(--text-primary);
-}
-
-.scanStatCount {
-  color: var(--text-primary);
-  background: var(--border-subtle);
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.recentlyHandled {
-  width: 100%;
-  max-width: 500px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 20px;
-  text-align: left;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-}
-
-.recentlyHandledTitle {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  text-transform: uppercase;
-}
-
-.recentItem {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  font-size: 14px;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background 0.2s ease;
-}
-
-.recentItem:hover {
-  background: rgba(0,0,0,0.02);
-}
-
-.recentItem:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.recentIcon {
-  font-size: 14px;
-  font-weight: 800;
-  opacity: 0.8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-}
-
-.recentTitle {
-  flex: 1;
-  color: var(--text-primary);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recentTime {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
+/* .scanStatsGrid, .scanStatItem, .scanStatCount, .recentlyHandled* removed — not rendered */
 
 @media (max-width: 768px) {
   .queueHeader {
@@ -676,13 +474,6 @@
 }
 
 /* ── Ember theme overrides ── */
-/* Hardcoded cyan → orange */
-[data-theme='ember'] .neuralPulseRing { background: rgba(224, 106, 59, 0.08); }
-[data-theme='ember'] .neuralPulseRing::after { border-color: rgba(224, 106, 59, 0.25); }
-[data-theme='ember'] .scanRing { border-color: rgba(224, 106, 59, 0.2); }
-[data-theme='ember'] .scanRingInner { border-color: rgba(224, 106, 59, 0.15); }
-[data-theme='ember'] .scanRingPulse { background: rgba(224, 106, 59, 0.08); }
-
 [data-theme='ember'] .confidence {
   background: rgba(224, 106, 59, 0.12);
   border-color: rgba(224, 106, 59, 0.25);
@@ -692,9 +483,8 @@
   color: #FFFFFF;
   box-shadow: 0 4px 15px rgba(224, 106, 59, 0.35);
 }
-/* Active chip in ActionQueue */
-[data-theme='ember'] .chipActive { 
+[data-theme='ember'] .chipActive {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: #FFFFFF; 
+  color: #FFFFFF;
 }

@@ -17,7 +17,10 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   const [isInitiating, setIsInitiating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [auditMode, setAuditMode] = useState<'dashboard' | 'running' | 'completed'>('dashboard');
-
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+  // Inline confirm state replaces window.confirm()
+  const [rerunConfirming, setRerunConfirming] = useState(false);
 
   const [auditHistory, setAuditHistory] = useState<ReputationAudit[]>([]);
 
@@ -346,7 +349,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Compliance Rate</div>
                   <div className={styles.obsValue}>
-                    {activeAudit.metadata?.complianceRate || `${(100 - activeAudit.riskScore * 6.5).toFixed(1)}%`}
+                    {activeAudit.metadata?.complianceRate ?? '—'}
                   </div>
                 </div>
                 <div className={`${styles.obsCard} magnetic-card`}>
@@ -369,15 +372,17 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 </div>
               </div>
 
-              {/* Premium Cryptographic Seal Banner */}
-              <div className={styles.lockedContainer}>
-                <div className={styles.lockedHeader}>
-                  <strong>SECURE REPORT ACCESS REQUIRED</strong>
+              {/* Lock banner — only show if no PDF has been generated yet */}
+              {!activeAudit.reportUrl && (
+                <div className={styles.lockedContainer}>
+                  <div className={styles.lockedHeader}>
+                    <strong>SECURE REPORT ACCESS REQUIRED</strong>
+                  </div>
+                  <p className={styles.lockedText}>
+                    Full behavioral analysis, cross-platform source citations, exact context logs, and complete risk scoring breakdown are sealed. Download the verified cryptographic PDF report to view full findings.
+                  </p>
                 </div>
-                <p className={styles.lockedText}>
-                  Full behavioral analysis, cross-platform source citations, exact context logs, and complete risk scoring breakdown are sealed. Download the verified cryptographic PDF report to view full findings.
-                </p>
-              </div>
+              )}
             </section>
           </div>
 
@@ -451,7 +456,8 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                     </div>
                     <div className={styles.minimalGridItem}>
                       <span className={styles.gridVal}>{Math.round(safetyVal * 100)}%</span>
-                      <span className={styles.gridLabel}>Mentions</span>
+                      {/* safetyVal = (10 - riskScore) / 10 — correctly measures safety, not raw mention count */}
+                      <span className={styles.gridLabel}>Safety</span>
                       <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${safetyVal * 100}%`, background: riskColor }}/></div>
                     </div>
                   </div>
@@ -465,6 +471,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 disabled={isDownloading}
                 onClick={async () => {
                   if (!activeAudit?.id) return;
+                  setPdfError(null);
                   setIsDownloading(true);
                   try {
                     const supabase = createClient();
@@ -474,7 +481,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                         'Authorization': `Bearer ${session?.access_token || ''}`
                       }
                     });
-                    if (!res.ok) throw new Error('PDF generation failed');
+                    if (!res.ok) throw new Error('PDF generation failed. Please try again.');
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -484,7 +491,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                     setTimeout(() => URL.revokeObjectURL(url), 2000);
                   } catch (err) {
                     console.error('[PDF Download] failed:', err);
-                    alert('PDF generation failed. Please try again.');
+                    setPdfError(err instanceof Error ? err.message : 'PDF generation failed.');
                   } finally {
                     setIsDownloading(false);
                   }
@@ -507,31 +514,65 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 )}
               </button>
 
-              <button
-                className={styles.rerunBtnPremium}
-                onClick={async () => {
-                  if (!activeAudit?.id) return;
-                  if (!confirm('Re-run the AI analysis on this audit? This will refresh all findings, commitments, and risk scores.')) return;
-                  try {
-                    const res = await fetch(`/api/audit/${activeAudit.id}/reanalyze`, { method: 'POST' });
-                    if (!res.ok) {
-                      const errData = await res.json().catch(() => ({}));
-                      throw new Error(errData.detail || errData.error || 'Failed to start re-analysis');
-                    }
-                    setActiveAudit(prev => prev ? { ...prev, status: 'pending' } : null);
-                    setErrorMessage(null);
-                    setAuditMode('running');
-                  } catch (err) {
-                    console.error('[Reanalyze] failed:', err);
-                    alert(err instanceof Error ? err.message : 'Failed to start re-analysis. Please try again.');
-                  }
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                </svg>
-                RE-RUN ANALYSIS
-              </button>
+              {/* Inline PDF error — replaces alert() */}
+              {pdfError && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--accent-red, #ef4444)', marginTop: '6px', lineHeight: 1.4 }}>
+                  {pdfError}
+                </p>
+              )}
+
+              {/* Inline rerun confirm — replaces window.confirm() */}
+              {rerunConfirming ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                    Re-run the AI analysis? This refreshes all findings, commitments, and risk scores.
+                  </p>
+                  {rerunError && (
+                    <p style={{ fontSize: '0.72rem', color: 'var(--accent-red, #ef4444)', margin: 0 }}>{rerunError}</p>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      style={{ flex: 1, background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '6px', padding: '7px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.5px' }}
+                      onClick={async () => {
+                        if (!activeAudit?.id) return;
+                        setRerunError(null);
+                        try {
+                          const res = await fetch(`/api/audit/${activeAudit.id}/reanalyze`, { method: 'POST' });
+                          if (!res.ok) {
+                            const errData = await res.json().catch(() => ({}));
+                            throw new Error(errData.detail || errData.error || 'Failed to start re-analysis');
+                          }
+                          setActiveAudit(prev => prev ? { ...prev, status: 'pending' } : null);
+                          setErrorMessage(null);
+                          setRerunConfirming(false);
+                          setAuditMode('running');
+                        } catch (err) {
+                          console.error('[Reanalyze] failed:', err);
+                          setRerunError(err instanceof Error ? err.message : 'Failed to start re-analysis.');
+                        }
+                      }}
+                    >
+                      CONFIRM
+                    </button>
+                    <button
+                      style={{ flex: 1, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '7px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                      onClick={() => { setRerunConfirming(false); setRerunError(null); }}
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className={styles.rerunBtnPremium}
+                  onClick={() => setRerunConfirming(true)}
+                >
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  </svg>
+                  RE-RUN ANALYSIS
+                </button>
+              )}
             </div>
           </aside>
         </div>

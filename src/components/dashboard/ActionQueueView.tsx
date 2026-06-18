@@ -154,6 +154,9 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [editedAction, setEditedAction] = useState<ActionItem | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [refiningId, setRefiningId] = useState<string | null>(null);
+  // undoToast: holds the dismissed item + its removal timer so Undo can cancel it
+  const [undoToast, setUndoToast] = useState<{ action: ActionItem; timerId: ReturnType<typeof setTimeout> } | null>(null);
   const countdown = useCountdown(lastRunAt);
 
   // ── Step 1: Load instantly from DB ───────────────────────────────────────────
@@ -268,67 +271,75 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   }, []);
 
   // ── Action handlers ──────────────────────────────────────────────────────────
+
+  // Single atomic call: approved → execute → executed|failed
   const handleApprove = async (action: ActionItem) => {
     const finalAction = editingId === action.id ? editedAction || action : action;
     setProcessingId(action.id);
     try {
-      // Update status and edits in DB
-      await fetch('/api/actions/queue', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id: action.id, 
-          status: 'approved',
-          suggested_action: finalAction.suggested_action,
-          title: finalAction.title
-        }),
-      });
-
-      // Attempt execution
-      const response = await fetch('/api/actions/execute', {
+      const res = await fetch('/api/actions/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(finalAction),
-      });
-
-      const finalStatus = response.ok ? 'executed' : 'failed';
-      await fetch('/api/actions/queue', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id: action.id, 
-          status: finalStatus,
+        body: JSON.stringify({
+          id: finalAction.id,
+          title: finalAction.title,
           suggested_action: finalAction.suggested_action,
-          title: finalAction.title
+          startTime: finalAction.startTime,
+          endTime: finalAction.endTime,
         }),
       });
-
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('[ActionQueue] Approve failed:', data.error);
+      }
+      // Realtime subscription will remove the card; do it optimistically too
       setActions(prev => prev.filter(a => a.id !== action.id));
       setEditingId(null);
       setEditedAction(null);
     } catch (e) {
-      console.error('[ActionQueue] Approve failed:', e);
-      await fetch('/api/actions/queue', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: action.id, status: 'failed' }),
-      });
+      console.error('[ActionQueue] Approve network error:', e);
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handleDismiss = async (id: string) => {
-    // Optimistic update
-    setActions(prev => prev.filter(a => a.id !== id));
-    if (editingId === id) { setEditingId(null); setEditedAction(null); }
+  // Dismiss with 3-second undo window before committing to DB
+  const handleDismiss = (action: ActionItem) => {
+    if (editingId === action.id) { setEditingId(null); setEditedAction(null); }
 
-    // Persist to DB
-    await fetch('/api/actions/queue', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: 'dismissed' }),
-    }).catch(e => console.warn('[ActionQueue] Dismiss persist failed:', e));
+    // Cancel any previous pending toast first
+    if (undoToast) {
+      clearTimeout(undoToast.timerId);
+      // Commit the previous one immediately before showing new toast
+      fetch('/api/actions/queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: undoToast.action.id, status: 'dismissed' }),
+      }).catch(e => console.warn('[ActionQueue] Dismiss persist failed:', e));
+    }
+
+    // Optimistically remove from list
+    setActions(prev => prev.filter(a => a.id !== action.id));
+
+    // Schedule DB write after 3 seconds (cancellable)
+    const timerId = setTimeout(() => {
+      fetch('/api/actions/queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: action.id, status: 'dismissed' }),
+      }).catch(e => console.warn('[ActionQueue] Dismiss persist failed:', e));
+      setUndoToast(null);
+    }, 3000);
+
+    setUndoToast({ action, timerId });
+  };
+
+  const handleUndoDismiss = () => {
+    if (!undoToast) return;
+    clearTimeout(undoToast.timerId);
+    // Restore the action to the top of the list
+    setActions(prev => [undoToast.action, ...prev]);
+    setUndoToast(null);
   };
 
   const startEditing = (action: ActionItem) => {
@@ -345,25 +356,30 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
     }
   };
 
-  const applyQuickRefine = (action: ActionItem, type: 'shorter' | 'formal' | 'calendar') => {
-    let currentText = editingId === action.id ? editedAction?.suggested_action || action.suggested_action : action.suggested_action;
-    
-    if (type === 'shorter') {
-      currentText = currentText.split('\n')[0] + '\n\nBest,\nEYES Assistant';
-    } else if (type === 'formal') {
-      currentText = currentText
-        .replace(/^Hi\s+([a-zA-Z]+),/i, 'Dear $1,')
-        .replace(/send it over/i, 'forward the documentation')
-        .replace(/in the next hour/i, 'shortly');
-    } else if (type === 'calendar') {
-      currentText = currentText + '\n\nFeel free to book a slot here if you would like to discuss further: https://calendly.com/eyes-assistant';
-    }
+  const applyQuickRefine = async (action: ActionItem, type: 'shorter' | 'formal' | 'calendar') => {
+    const currentText = editingId === action.id ? editedAction?.suggested_action || action.suggested_action : action.suggested_action;
 
+    // Enter edit mode immediately with the current text so user sees the field
     if (editingId !== action.id) {
       setEditingId(action.id);
-      setEditedAction({ ...action, suggested_action: currentText });
-    } else if (editedAction) {
-      setEditedAction({ ...editedAction, suggested_action: currentText });
+      setEditedAction({ ...action });
+    }
+    setRefiningId(action.id);
+
+    try {
+      const res = await fetch('/api/actions/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: currentText, type }),
+      });
+      const data = await res.json();
+      if (res.ok && data.refined) {
+        setEditedAction(prev => prev ? { ...prev, suggested_action: data.refined } : { ...action, suggested_action: data.refined });
+      }
+    } catch (e) {
+      console.warn('[ActionQueue] Refine failed:', e);
+    } finally {
+      setRefiningId(null);
     }
   };
 
@@ -600,27 +616,34 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                               )}
                             </div>
 
-                            {/* 3. Quick Refine Chips */}
-                            {!isEditing && (action.action_type === 'EMAIL_REPLY' || action.action_type === 'SLACK_REPLY') && (
-                              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); applyQuickRefine(action, 'shorter'); }}
-                                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '6px 14px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
-                                >
-                                  📝 Make Shorter
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); applyQuickRefine(action, 'formal'); }}
-                                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '6px 14px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
-                                >
-                                  👔 More Formal
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); applyQuickRefine(action, 'calendar'); }}
-                                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '6px 14px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
-                                >
-                                  📅 Add Calendar Link
-                                </button>
+                            {/* 3. Quick Refine Chips — powered by /api/actions/refine */}
+                            {(action.action_type === 'EMAIL_REPLY' || action.action_type === 'SLACK_REPLY') && (
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                {refiningId === action.id && (
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>✦ refining…</span>
+                                )}
+                                {refiningId !== action.id && (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); applyQuickRefine(action, 'shorter'); }}
+                                      style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '6px 14px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
+                                    >
+                                      📝 Make Shorter
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); applyQuickRefine(action, 'formal'); }}
+                                      style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '6px 14px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
+                                    >
+                                      👔 More Formal
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); applyQuickRefine(action, 'calendar'); }}
+                                      style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '6px 14px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
+                                    >
+                                      📅 Add Calendar Link
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
                             {(action.action_type === 'CALENDAR' || action.action_type === 'REMINDER') && (
@@ -657,7 +680,14 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                           {isProcessing ? 'EXECUTING...' : isEditing ? 'SAVE & EXECUTE' : 'EXECUTE'}
                         </button>
                         {!isEditing && (
-                          <button className={styles.editBtn} style={{ color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' }} onClick={(e) => { e.stopPropagation(); alert('Automation Rule Saved!'); handleApprove(current); }}>AUTOMATE</button>
+                          <button
+                            className={styles.editBtn}
+                            style={{ color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' }}
+                            disabled={isProcessing}
+                            onClick={(e) => { e.stopPropagation(); handleApprove(current); }}
+                          >
+                            AUTO-APPROVE
+                          </button>
                         )}
                         {!isEditing && (
                           <button className={styles.editBtn} onClick={(e) => { e.stopPropagation(); startEditing(action); }}>REFINE</button>
@@ -686,7 +716,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                             </a>
                           );
                         })()}
-                        <button className={styles.dismissBtn} style={{ padding: '8px 12px', minWidth: 'auto', fontSize: '1rem', marginLeft: 'auto' }} title="Reject & Teach" onClick={(e) => { e.stopPropagation(); handleDismiss(action.id); }}>✕</button>
+                        <button className={styles.dismissBtn} style={{ padding: '8px 12px', minWidth: 'auto', fontSize: '1rem', marginLeft: 'auto' }} title="Dismiss" onClick={(e) => { e.stopPropagation(); handleDismiss(action); }}>✕</button>
                       </div>
                     )}
                   </div>
@@ -696,6 +726,34 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
           )}
         </main>
       </div>
+
+      {/* Undo-dismiss toast */}
+      {undoToast && (
+        <div style={{
+          position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-card, var(--bg-primary))',
+          border: '1px solid var(--border-primary)',
+          borderRadius: '12px', padding: '12px 20px',
+          display: 'flex', alignItems: 'center', gap: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          zIndex: 9999, animation: 'fadeInUp 0.25s ease-out',
+          fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)',
+          whiteSpace: 'nowrap',
+        }}>
+          <span>Action dismissed</span>
+          <button
+            onClick={handleUndoDismiss}
+            style={{
+              background: 'var(--text-primary)', color: 'var(--bg-primary)',
+              border: 'none', borderRadius: '8px', padding: '6px 14px',
+              fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer',
+              letterSpacing: '0.5px', textTransform: 'uppercase',
+            }}
+          >
+            UNDO
+          </button>
+        </div>
+      )}
     </div>
   );
 }
