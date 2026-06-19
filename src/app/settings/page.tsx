@@ -1,13 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import styles from './settings.module.css';
 import { useAuth } from '@/context/AuthContext';
+import { useConfirm } from '@/context/ConfirmContext';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
+  const { openConfirm } = useConfirm();
   const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'theme'>('profile');
   const [riskSensitivity, setRiskSensitivity] = useState('MEDIUM');
   const [syncDepth, setSyncDepth] = useState('balanced');
@@ -83,40 +87,45 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    const confirm1 = window.confirm("WARNING: This will permanently delete your account and all associated data. Are you sure?");
-    if (!confirm1) return;
-    
-    const confirm2 = window.prompt("Type 'DELETE' to confirm.");
-    if (confirm2 !== "DELETE") return;
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [wipeError, setWipeError] = useState<string | null>(null);
 
-    try {
-      const res = await fetch('/api/user/delete', { method: 'DELETE' });
-      if (res.ok) {
-        alert("Account deleted.");
-        window.location.href = '/login';
-      } else {
-        alert("Failed to delete account. Please try again or contact support.");
-      }
-    } catch {
-      alert("Error deleting account.");
-    }
+  const handleDeleteAccount = () => {
+    openConfirm({
+      title: 'Delete Account',
+      description:
+        'This permanently removes your account, all indexed memories, OAuth tokens, and audit history. This action cannot be undone.',
+      confirmLabel: 'Delete Forever',
+      confirmVariant: 'danger',
+      requireTyping: 'DELETE',
+      onConfirm: async () => {
+        setDeleteError(null);
+        const res = await fetch('/api/user/delete', { method: 'DELETE' });
+        if (res.ok) {
+          router.replace('/login');
+        } else {
+          setDeleteError('Failed to delete account. Please contact support.');
+        }
+      },
+    });
   };
 
-  const handleWipeArchive = async () => {
-    const confirm = window.prompt("Type 'WIPE' to completely purge all indexed memories. This cannot be undone.");
-    if (confirm !== 'WIPE') return;
-
-    try {
-      const res = await fetch('/api/user/wipe', { method: 'POST' });
-      if (res.ok) {
-        alert("Data archive successfully purged.");
-      } else {
-        alert("Failed to purge archive.");
-      }
-    } catch {
-      alert("Error purging archive.");
-    }
+  const handleWipeArchive = () => {
+    openConfirm({
+      title: 'Purge Data Archive',
+      description:
+        'This wipes all indexed memories from every connected platform. Your account and settings remain. This cannot be undone.',
+      confirmLabel: 'Wipe Archive',
+      confirmVariant: 'danger',
+      requireTyping: 'WIPE',
+      onConfirm: async () => {
+        setWipeError(null);
+        const res = await fetch('/api/user/wipe', { method: 'POST' });
+        if (!res.ok) {
+          setWipeError('Failed to purge archive. Please try again.');
+        }
+      },
+    });
   };
 
   return (
@@ -406,6 +415,7 @@ export default function SettingsPage() {
                       <div>
                         <strong>Purge Data Archive</strong>
                         <p>Wipe all indexed memories from all connected platforms.</p>
+                        {wipeError && <p style={{ color: 'var(--accent-red, #ef4444)', fontSize: '12px', marginTop: '4px' }}>{wipeError}</p>}
                       </div>
                       <button 
                         className={styles.dangerBtnOutline}
@@ -419,6 +429,7 @@ export default function SettingsPage() {
                       <div>
                         <strong>Delete Account</strong>
                         <p>Permanently remove your account and all associated data.</p>
+                        {deleteError && <p style={{ color: 'var(--accent-red, #ef4444)', fontSize: '12px', marginTop: '4px' }}>{deleteError}</p>}
                       </div>
                       <button className={styles.dangerBtn} onClick={handleDeleteAccount}>Delete Account</button>
                     </div>

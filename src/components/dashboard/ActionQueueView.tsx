@@ -274,7 +274,11 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
 
   // Single atomic call: approved → execute → executed|failed
   const handleApprove = async (action: ActionItem) => {
-    const finalAction = editingId === action.id ? editedAction || action : action;
+    // C5 fix: explicit null guard — editedAction || action would silently discard
+    // user edits if editedAction happened to be null due to a state race.
+    const finalAction = (editingId === action.id && editedAction != null)
+      ? editedAction
+      : action;
     setProcessingId(action.id);
     try {
       const res = await fetch('/api/actions/approve', {

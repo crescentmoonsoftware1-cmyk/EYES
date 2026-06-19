@@ -280,26 +280,29 @@ function ChatPageInner() {
           });
         }
         
-        setMessages((prev) => {
-          const finalContent = streamedReply.trim() 
-            ? streamedReply 
+        const finalContent = streamedReply.trim()
+            ? streamedReply
             : '⚠️ All AI providers are currently unavailable (quota or rate limits). Please try again in a few minutes.';
+
+          // Build final state OUTSIDE the setState callback
           const finalMessages = [
             ...priorMessages,
             { role: 'user' as const, content: prompt },
-            { 
-              role: 'assistant' as const, 
-              content: finalContent, 
+            {
+              role: 'assistant' as const,
+              content: finalContent,
               pending: false,
               citations: citations.length > 0 ? citations : undefined
             }
           ];
+
+          // 1. Update UI
           messagesRef.current = finalMessages;
-          // Auto-persist to Supabase after reply completes
+          setMessages(finalMessages);
+
+          // 2. Persist to Supabase (outside setState — safe async call)
           const firstUser = priorMessages.find(m => m.role === 'user')?.content || prompt;
           void saveThread(finalMessages, dbThreadIdRef.current, firstUser);
-          return finalMessages;
-        });
       } else {
         // Non-200 response
         setMessages((prev) => [  

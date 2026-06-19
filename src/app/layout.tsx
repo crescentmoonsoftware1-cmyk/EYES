@@ -9,6 +9,7 @@ import Script from "next/script";
 import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import { AuthProvider } from "@/context/AuthContext";
+import { ConfirmProvider } from "@/context/ConfirmContext";
 
 export const metadata: Metadata = {
   title: "EYES - Everything You Ever Said",
@@ -46,7 +47,9 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <AuthProvider>
-          {children}
+          <ConfirmProvider>
+            {children}
+          </ConfirmProvider>
         </AuthProvider>
       </body>
     </html>

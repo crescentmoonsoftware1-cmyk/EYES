@@ -323,8 +323,11 @@ export async function GET() {
       
       const status = (sync?.status ?? 'idle') as PlatformReadiness['status'];
       
-      // A platform is connected if we have a token OR it has ever attempted a sync
-      const connected = hasToken || ['connected', 'syncing', 'authenticating', 'connecting', 'error'].includes(status);
+      // A platform is truly connected only if:
+      // 1. It has a valid OAuth token stored, OR
+      // 2. It has an actively good sync status (connected/syncing) — meaning a sync succeeded
+      // NOTE: 'error' alone does NOT mean connected — it could be a cron attempt on an unconfigured API key
+      const connected = hasToken || ['connected', 'syncing'].includes(status);
 
       const missingEnv = cfg.env.filter((key) => !process.env[key]);
       const configured = missingEnv.length === 0;

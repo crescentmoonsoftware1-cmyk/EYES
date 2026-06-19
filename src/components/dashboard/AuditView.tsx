@@ -16,11 +16,12 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   const [activeAudit, setActiveAudit] = useState<ReputationAudit | null>(null);
   const [isInitiating, setIsInitiating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [auditMode, setAuditMode] = useState<'dashboard' | 'running' | 'completed'>('dashboard');
+  const [auditMode, setAuditMode] = useState<'dashboard' | 'running' | 'completed' | 'error'>('dashboard');
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [rerunError, setRerunError] = useState<string | null>(null);
   // Inline confirm state replaces window.confirm()
   const [rerunConfirming, setRerunConfirming] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [auditHistory, setAuditHistory] = useState<ReputationAudit[]>([]);
 
@@ -105,8 +106,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
       .then(d => setAuditHistory((d.audits || []).slice(0, 8)))
       .catch(() => {});
   }, []);
-
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Poll to refresh the activeAudit data when the certificate view is showing
   // (the ThinkingVeil handles all completion detection while running)
@@ -215,6 +214,47 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </div>
         </div>
 
+        {/* Audit History Table — C1 fix: was fetched but never rendered */}
+        {auditHistory.length > 0 && (
+          <div className={`${styles.readinessFooter} stagger-5`} style={{ marginTop: '32px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '2px', color: 'var(--text-secondary)', marginBottom: '12px' }}>PAST AUDITS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {auditHistory.map(a => {
+                const isHigh = a.riskScore > 7;
+                const isMed = a.riskScore > 4;
+                const riskColor = isHigh ? 'var(--accent-red, #ef4444)' : isMed ? '#f59e0b' : 'var(--accent-green, #10b981)';
+                return (
+                  <div
+                    key={a.id}
+                    onClick={() => { setActiveAudit(a); setAuditMode('completed'); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+                      borderRadius: '10px', cursor: 'pointer', transition: 'border-color 0.2s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-primary)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)'; }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'capitalize' }}>
+                        {a.metadata?.audit_type === 'reputation' ? 'Investor / Reputation' :
+                         a.metadata?.audit_type === 'behavioral' ? 'Behavioral / Self' :
+                         a.metadata?.audit_type === 'hiring' ? 'Hiring / Professional' : 'Full Reputation'}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        {new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '18px', fontWeight: 900, fontFamily: 'var(--font-mono)', color: riskColor }}>
+                      {a.riskScore.toFixed(1)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className={`${styles.readinessFooter} stagger-4`}>
           <div className={styles.readinessStatus}>
             <span className={styles.statusDot} />
@@ -248,21 +288,31 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
       <ThinkingVeil
         auditId={activeAudit.id}
         onComplete={() => setAuditMode('completed')}
-        onError={(msg) => { setErrorMessage(msg); setAuditMode('dashboard'); }}
+        onError={(msg) => { setErrorMessage(msg); setAuditMode('error'); }}
         onReturnToDashboard={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
       />
     );
   }
 
-  // 2b. Error fallback (no audit id yet)
-  if (errorMessage) {
+  // C2 fix: error mode renders a static ErrorBanner — no auditId polling, no infinite loop.
+  // Always transition via setAuditMode('error') to reach this branch.
+  if (auditMode === 'error') {
     return (
-      <ThinkingVeil
-        auditId={activeAudit?.id ?? ''}
-        onComplete={() => setAuditMode('completed')}
-        onError={() => {}}
-        onReturnToDashboard={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
-      />
+      <div className={styles.auditContainer} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', gap: '20px' }}>
+        <div style={{ textAlign: 'center', color: '#ef4444', padding: '32px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '16px', maxWidth: '440px' }}>
+          <div style={{ fontSize: '28px', marginBottom: '12px' }}>⚠</div>
+          <h2 style={{ margin: '0 0 8px', fontSize: '17px', color: '#ef4444' }}>Analysis Error</h2>
+          <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#9ca3af', lineHeight: 1.6 }}>
+            {errorMessage || 'The audit encountered an unexpected error.'}
+          </p>
+          <button
+            onClick={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
+            style={{ padding: '10px 24px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', letterSpacing: '0.04em' }}
+          >
+            RETURN TO DASHBOARD
+          </button>
+        </div>
+      </div>
     );
   }
 

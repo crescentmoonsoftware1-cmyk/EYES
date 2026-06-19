@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useState } from 'react';
 import styles from '../MainContent.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { PlatformStatus } from '@/types/dashboard';
+import { useConfirm } from '@/context/ConfirmContext';
 
 interface SourceReadinessViewProps {
   platforms: PlatformStatus[];
@@ -43,6 +45,9 @@ function parseErrorMessage(raw?: string | null): string {
 }
 
 export function SourceReadinessView({ platforms, totalMemories }: SourceReadinessViewProps) {
+  const { openConfirm } = useConfirm();
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   const connectedCount = platforms.filter(p => p.connected).length;
   const connectedList = platforms.filter(p => p.connected);
   const activeSourcesCount = platforms.filter(p => p.connected && (p.items || 0) >= 1).length;
@@ -52,56 +57,44 @@ export function SourceReadinessView({ platforms, totalMemories }: SourceReadines
   // True health score: percentage of connected platforms that are not in an 'error' state
   const healthScore = connectedCount === 0 ? 0 : Math.round(((connectedCount - platforms.filter(p => p.status === 'error').length) / connectedCount) * 100);
 
-  const handleDisconnect = async (platformId: string, platformName: string) => {
-    if (!window.confirm(`Disconnect ${platformName} and remove its active tokens?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/data/platform/${platformId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ disconnect: true }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to disconnect (${response.status})`);
-      }
-
-      // Trigger a global UI refresh
-      window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
-    } catch (error) {
-      console.error('Disconnect error:', error);
-      alert('Failed to disconnect platform.');
-    }
+  const handleDisconnect = (platformId: string, platformName: string) => {
+    openConfirm({
+      title: `Disconnect ${platformName}?`,
+      description: `This removes the active OAuth tokens for ${platformName}. Your indexed memories will remain. You can reconnect anytime.`,
+      confirmLabel: 'Disconnect',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        const response = await fetch(`/api/data/platform/${platformId}?disconnect=true`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to disconnect (${response.status})`);
+        }
+        window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
+      },
+    });
   };
 
   const handleForceSync = async (id: string) => {
-    // Map the UI platform ID to the route platform (e.g., 'google-calendar' to 'google_calendar' handling if needed, though the API usually accepts hyphens or underscores)
+    setSyncError(null);
     const routePlatform = id === 'google-calendar' ? 'google-calendar' : id.replace(/_/g, '-');
-    
     try {
-      // Trigger a global UI refresh to show the syncing state immediately
-      window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
-
       const response = await fetch(`/api/sync/${routePlatform}?depth=shallow`, {
         method: 'POST',
       });
-
       if (response.status === 404) {
-        alert(`Manually syncing ${id} is not supported yet (Integration Coming Soon).`);
+        setSyncError(`Manual sync for ${id} is not supported yet.`);
         return;
       }
-
       if (!response.ok) {
-        throw new Error(`Sync failed (${response.status})`);
+        setSyncError(`Sync failed (${response.status}). Please try again.`);
+        return;
       }
-
-      // Trigger another refresh to show the updated data
+      // Refresh AFTER confirmed success
       window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
     } catch (error) {
+      setSyncError(`Failed to manually sync ${id}.`);
       console.warn('Force sync failed:', error);
-      alert(`Failed to manually sync ${id}.`);
     }
   };
 
@@ -118,6 +111,18 @@ export function SourceReadinessView({ platforms, totalMemories }: SourceReadines
            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: '2px' }}>HEALTH SCORE</div>
         </div>
       </div>
+
+      {syncError && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+          borderRadius: '10px', padding: '10px 16px', marginBottom: '16px',
+          fontSize: '13px', color: '#ef4444',
+        }}>
+          <span>⚠ {syncError}</span>
+          <button onClick={() => setSyncError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 4px' }}>×</button>
+        </div>
+      )}
 
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>

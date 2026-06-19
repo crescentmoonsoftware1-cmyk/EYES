@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 }
 
 // ─── POST /api/chat/threads ───────────────────────────────────────────────────
-// Upserts a thread and its messages.
+// Upserts a thread and appends only NEW messages (append-only, never deletes).
 // Body: { threadId?: string, title?: string, messages: { role, content }[] }
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -98,14 +98,11 @@ export async function POST(req: NextRequest) {
     messages: { role: string; content: string; pending?: boolean }[];
   };
 
-  // 1. Upsert the thread
-  let finalThreadId = threadId;
-
-  // Always attempt to upsert the thread since frontend might send a new UUID
+  // ── 1. Upsert the thread row ───────────────────────────────────────────────
   const { data: threadData, error: threadErr } = await supabase
     .from('chat_threads')
     .upsert({
-      id: finalThreadId || undefined, // undefined lets DB generate if missing
+      id: threadId || undefined,
       user_id: user.id,
       title: title || 'New Chat',
     }, { onConflict: 'id' })
@@ -115,31 +112,44 @@ export async function POST(req: NextRequest) {
   if (threadErr || !threadData) {
     return NextResponse.json({ error: threadErr?.message ?? 'Failed to upsert thread' }, { status: 500 });
   }
-  finalThreadId = threadData.id;
+  const finalThreadId = threadData.id;
 
-  // 2. Delete existing messages for this thread and re-insert (simple full replace)
-  await supabase
+  // ── 2. Count how many messages already exist for this thread ─────────────
+  //    We only insert messages BEYOND the existing count — never delete.
+  const { count: existingCount } = await supabase
     .from('chat_messages')
-    .delete()
+    .select('*', { count: 'exact', head: true })
     .eq('thread_id', finalThreadId)
     .eq('user_id', user.id);
 
-  if (messages.length > 0) {
-    // Insert messages without message_order (column doesn't exist in current schema)
-    const rows = messages.map((m) => ({
-      thread_id: finalThreadId!,
+  const alreadySaved = existingCount ?? 0;
+
+  // Filter out pending messages before comparing
+  const completedMessages = messages.filter(m => !m.pending && m.content);
+
+  // Only the messages we haven't persisted yet
+  const newMessages = completedMessages.slice(alreadySaved);
+
+  // ── 3. Append-only upsert — safe under concurrent saves ──────────────────
+  if (newMessages.length > 0) {
+    const rows = newMessages.map((m, i) => ({
+      thread_id: finalThreadId,
       user_id: user.id,
       role: m.role,
       content: m.content,
+      turn_index: alreadySaved + i,  // stable monotonic key
     }));
 
-    const { error: insertErr } = await supabase.from('chat_messages').insert(rows);
+    const { error: insertErr } = await supabase
+      .from('chat_messages')
+      .upsert(rows, { onConflict: 'thread_id,turn_index' });
+
     if (insertErr) {
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
     }
   }
 
-  // ─── Index completed chat turns into memories for cross-thread search ───────
+  // ── 4. Index completed chat turns into memories for cross-thread search ───
   try {
     const { data: existingMemories } = await supabase
       .from('memories')
@@ -149,13 +159,12 @@ export async function POST(req: NextRequest) {
 
     const existingIds = new Set((existingMemories || []).map((m: any) => m.source_id));
 
-    // Group adjacent user and assistant messages into turns
-    for (let i = 0; i < messages.length - 1; i++) {
-      const current = messages[i];
-      const next = messages[i + 1];
+    for (let i = 0; i < completedMessages.length - 1; i++) {
+      const current = completedMessages[i];
+      const next = completedMessages[i + 1];
       if (current.role === 'user' && next.role === 'assistant') {
         const sourceId = `eyes_chat_${finalThreadId}_turn_${i}`;
-        if (!existingIds.has(sourceId) && next.content && !next.pending) {
+        if (!existingIds.has(sourceId) && next.content) {
           const content = `User: ${current.content}\nEYES: ${next.content}`;
           const title = `Chat Turn: ${current.content.slice(0, 80)}`;
 
@@ -188,16 +197,16 @@ export async function POST(req: NextRequest) {
     console.warn('[Chat Indexing] Failed to index chat turns:', err);
   }
 
-  // Fetch the updated thread summary
+  // ── 5. Return the thread summary ──────────────────────────────────────────
   const { data: threadSummaryData } = await supabase
     .from('chat_threads')
     .select('summary')
     .eq('id', finalThreadId)
     .single();
 
-  return NextResponse.json({ 
-    threadId: finalThreadId, 
-    summary: threadSummaryData?.summary || '' 
+  return NextResponse.json({
+    threadId: finalThreadId,
+    summary: threadSummaryData?.summary || ''
   });
 }
 

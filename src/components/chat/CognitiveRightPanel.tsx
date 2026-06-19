@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useConfirm } from '@/context/ConfirmContext';
 
 type Tab = 'mindmap' | 'loops' | 'drift' | 'people';
 
@@ -227,6 +228,10 @@ function MindMapTab({
   setClusters: React.Dispatch<React.SetStateAction<Cluster[]>>;
   inference: Inference | null;
 }) {
+  const { openConfirm } = useConfirm();
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
   if (!vectors.length && !clusters.length) return <EmptyState text="Need 21+ days of data to show cluster timeline." />;
 
   const SENTIMENT_COLOR: Record<string, string> = {
@@ -336,32 +341,59 @@ function MindMapTab({
                   <span style={{ fontSize: '9px', color: '#6b7280' }}>{c.totalEvents} mem</span>
                   
                   {/* Validation buttons */}
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                    <button onClick={async () => {
-                      const newLabel = window.prompt('Rename this cluster:', c.title);
-                      if (newLabel && newLabel.trim()) {
-                        await fetch(`/api/cognitive/clusters/${c.id}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ user_label: newLabel.trim(), status: 'confirm' }),
-                        });
-                        setClusters(prev => prev.map(cl => cl.id === c.id ? { ...cl, title: newLabel.trim() } : cl));
-                      }
-                    }} style={{
-                      fontSize: '9px', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#e5e7eb', fontWeight: 600,
-                    }}>✏️ Rename</button>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {renamingId === c.id ? (
+                      <>
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={e => setRenameValue(e.target.value)}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter' && renameValue.trim()) {
+                              await fetch(`/api/cognitive/clusters/${c.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user_label: renameValue.trim(), status: 'confirm' }),
+                              });
+                              setClusters(prev => prev.map(cl => cl.id === c.id ? { ...cl, title: renameValue.trim() } : cl));
+                              setRenamingId(null);
+                            }
+                            if (e.key === 'Escape') setRenamingId(null);
+                          }}
+                          style={{
+                            fontSize: '9px', padding: '3px 8px', borderRadius: '4px',
+                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
+                            color: '#e5e7eb', fontWeight: 600, width: '100px', outline: 'none',
+                          }}
+                        />
+                        <button onClick={() => setRenamingId(null)} style={{
+                          fontSize: '9px', padding: '3px 6px', borderRadius: '4px', cursor: 'pointer',
+                          background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af',
+                        }}>✕</button>
+                      </>
+                    ) : (
+                      <button onClick={() => { setRenamingId(c.id); setRenameValue(c.title); }} style={{
+                        fontSize: '9px', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#e5e7eb', fontWeight: 600,
+                      }}>✏️ Rename</button>
+                    )}
                     
-                    <button onClick={async () => {
-                      if (window.confirm('Reject this cluster? It will be hidden.')) {
-                        await fetch(`/api/cognitive/clusters/${c.id}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ is_current: false, status: 'reject' }),
-                        });
-                        setClusters(prev => prev.filter(cl => cl.id !== c.id));
-                      }
+                    <button onClick={() => {
+                      openConfirm({
+                        title: 'Reject Cluster?',
+                        description: `"${c.title}" will be hidden from your intelligence layer. This helps EYES learn your patterns better.`,
+                        confirmLabel: 'Reject',
+                        confirmVariant: 'danger',
+                        onConfirm: async () => {
+                          await fetch(`/api/cognitive/clusters/${c.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_current: false, status: 'reject' }),
+                          });
+                          setClusters(prev => prev.filter(cl => cl.id !== c.id));
+                        },
+                      });
                     }} style={{
                       fontSize: '9px', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer',
                       background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
