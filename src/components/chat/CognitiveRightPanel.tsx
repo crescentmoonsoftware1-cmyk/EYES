@@ -331,7 +331,7 @@ function MindMapTab({
                   {c.description}
                 </p>
                 <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  {c.platforms.slice(0, 3).map((p: string) => (
+                  {(c.platforms ?? []).slice(0, 3).map((p: string) => (
                     <span key={p} style={{
                       fontSize: '9px', background: 'rgba(255,255,255,0.05)', color: '#9ca3af',
                       padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)',
@@ -419,7 +419,7 @@ function MindMapTab({
           <div style={{ fontSize: '12px', marginBottom: '8px', color: '#e5e7eb' }}>
             Current: <strong style={{ color: '#a78bfa' }}>{inference.current_cluster_label}</strong>
           </div>
-          {inference.next_states.slice(0, 3).map((ns, i) => (
+          {(inference.next_states ?? []).slice(0, 3).map((ns, i) => (
             <div key={i} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '6px 0', fontSize: '12px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
