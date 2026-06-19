@@ -90,6 +90,7 @@
   justify-content: flex-start;
 }
 
+/* Message bubbles */
 .messageBubble {
   max-width: 85%;
   padding: 14px 18px;
@@ -106,11 +107,15 @@
   border-bottom-right-radius: 4px;
 }
 
+/* AI messages: no card, no border — clean like Claude/GPT */
 .aiRow .messageBubble {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  border-bottom-left-radius: 4px;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding-left: 0;
+  max-width: 90%;
 }
 
 .msgBody {

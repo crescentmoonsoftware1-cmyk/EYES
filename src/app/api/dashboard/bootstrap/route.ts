@@ -219,13 +219,14 @@ export async function GET() {
         .from('sync_status')
         .select('platform,status,sync_progress,total_items,last_sync_at,error_message')
         .eq('user_id', user.id),
+      // Only fetch flagged items for the dashboard summary — the feed now paginates itself via /api/memories.
       supabase
         .from('memories')
         .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity, flag_reason')
         .eq('user_id', user.id)
-        .not('content', 'is', null)
+        .eq('is_flagged', true)
         .order('timestamp', { ascending: false })
-        .limit(300),
+        .limit(50),
       supabase
         .from('memories')
         .select('id', { count: 'exact', head: true })
@@ -248,7 +249,7 @@ export async function GET() {
       {
         summary: mapSummary(syncRows, flaggedRows, memoriesIndexed),
         platforms: mapPlatforms(syncRows),
-        feedEvents: mapFeed(rawRows),
+        feedEvents: [],   // Feed now self-paginates via /api/memories — kept for backward compat
         syncStatus: { isSyncing, activeSyncs, memoriesIndexed },
       },
       { status: 200 }
