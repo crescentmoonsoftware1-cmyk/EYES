@@ -505,7 +505,10 @@ function ChatPageInner() {
               <div className={styles.messageList}>
                 {messages.map((m, i) => (
                   <div key={i} className={`${styles.messageRow} ${m.role === 'user' ? styles.userRow : styles.aiRow}`}>
-                    <div className={styles.messageBubble}>
+                    <div
+                      className={styles.messageBubble}
+                      data-role={m.role}
+                    >
                       {/* Metadata line — only shown when platforms are actually connected */}
 
                       <div className={styles.msgBody}>

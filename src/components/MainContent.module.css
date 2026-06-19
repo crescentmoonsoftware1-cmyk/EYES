@@ -182,12 +182,13 @@
 
 .aiMsg {
   align-self: flex-start;
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
+  background: transparent;
+  border: none;
   color: var(--text-primary);
-  box-shadow: var(--shadow-lg);
-  border-bottom-left-radius: 4px;
-  backdrop-filter: blur(12px);
+  box-shadow: none;
+  border-bottom-left-radius: 0;
+  backdrop-filter: none;
+  padding-left: 0;
 }
 
 .msgBody {

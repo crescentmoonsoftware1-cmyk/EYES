@@ -271,3 +271,14 @@ h6,
   box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 20px var(--border-subtle);
   z-index: 10;
 }
+
+/* ── AI chat bubble: no card, no border (Claude/GPT style) ─────────────────
+   Using data-role attribute so this rule is immune to CSS module hashing. */
+[data-role="assistant"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+}
