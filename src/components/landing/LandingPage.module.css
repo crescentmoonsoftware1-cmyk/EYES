@@ -206,6 +206,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .heroContainer {
@@ -252,12 +253,15 @@
 }
 
 .heroSubText {
-  font-size: 18px;
+  font-size: clamp(15px, 2.5vw, 18px);
   color: var(--text-secondary);
   line-height: 1.6;
   max-width: 620px;
+  width: 100%;
   text-align: center;
   margin-bottom: 32px;
+  box-sizing: border-box;
+  padding: 0 8px;
 }
 
 .heroCtaRow {
@@ -309,6 +313,7 @@
   max-width: 960px;
   margin: 0 auto;
   perspective: 1500px;
+  box-sizing: border-box;
 }
 
 .sandboxConsole {
@@ -385,7 +390,7 @@
 .consoleBody {
   display: flex;
   flex-direction: column;
-  height: 500px;
+  height: clamp(280px, 55vh, 500px);
 }
 
 .consoleSearchRow {
@@ -640,22 +645,26 @@
 }
 
 @media (max-width: 768px) {
+  .navWrapper {
+    padding: 12px 16px 0;
+  }
   .topNav {
-    padding: 20px;
+    padding: 12px 16px;
   }
   .navLinks {
     display: none;
   }
   .heroSection {
-    padding-top: 120px;
+    padding: 100px 16px 60px;
   }
   .megaHeroTitle {
-    font-size: clamp(32px, 8vw, 56px);
+    font-size: clamp(28px, 9vw, 52px);
+    letter-spacing: -0.03em;
   }
   .heroCtaRow {
     flex-direction: column;
     width: 100%;
-    max-width: 280px;
+    max-width: 300px;
     margin: 0 auto 40px;
     gap: 12px;
   }
@@ -663,18 +672,57 @@
   .heroSecondaryBtn {
     width: 100%;
     text-align: center;
+    padding: 14px 20px;
+  }
+  .mockupSandbox {
+    /* Don't use scale — it doesn't reduce layout size, causes overflow */
+    width: 100%;
+    overflow: hidden;
+  }
+  .sandboxConsole {
+    border-radius: 16px;
   }
   .consoleBody {
-    height: 480px;
+    height: clamp(260px, 50vh, 380px);
+  }
+  .consoleSearchRow {
+    padding: 12px 16px;
+  }
+  .searchBar {
+    padding: 8px 12px;
   }
   .sanctumSidebar {
     display: none;
   }
+  .sanctumMain {
+    padding: 16px;
+  }
   .sanctumGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
-  .mockupSandbox {
-    transform: scale(0.95);
+  .sandboxCard {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroSection {
+    padding: 90px 12px 48px;
+  }
+  .heroBadge {
+    font-size: 10px;
+    padding: 5px 12px;
+  }
+  .heroCtaRow {
+    max-width: 260px;
+  }
+  .navWrapper {
+    padding: 10px 12px 0;
+  }
+  .navBtn {
+    padding: 8px 14px;
+    font-size: 13px;
   }
 }
 
