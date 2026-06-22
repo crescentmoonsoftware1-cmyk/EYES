@@ -51,8 +51,10 @@ export function SourceReadinessView({ platforms, totalMemories }: SourceReadines
   const connectedCount = platforms.filter(p => p.connected).length;
   const connectedList = platforms.filter(p => p.connected);
   const activeSourcesCount = platforms.filter(p => p.connected && (p.items || 0) >= 1).length;
-  const availablePlatformsCount = ALL_POSSIBLE_PLATFORMS.filter(p => !p.comingSoon).length;
-  const coveragePercent = Math.round((connectedCount / availablePlatformsCount) * 100);
+  const availablePlatforms = new Set(ALL_POSSIBLE_PLATFORMS.filter(p => !p.comingSoon).map(p => p.id));
+  const availablePlatformsCount = availablePlatforms.size;
+  const connectedAvailableCount = platforms.filter(p => p.connected && availablePlatforms.has(p.id)).length;
+  const coveragePercent = Math.min(100, Math.round((connectedAvailableCount / availablePlatformsCount) * 100));
 
   // True health score: percentage of connected platforms that are not in an 'error' state
   const healthScore = connectedCount === 0 ? 0 : Math.round(((connectedCount - platforms.filter(p => p.status === 'error').length) / connectedCount) * 100);
