@@ -316,17 +316,28 @@ export async function GET() {
 
     console.log(`[Readiness] Loading state for user ${user.id}. Found ${tokenPlatforms.size} tokens and ${syncMap.size} sync records.`);
 
+    const STALE_SYNC_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+    const now = Date.now();
+
     const platforms: PlatformReadiness[] = platformConfigs.map((cfg) => {
       const dbId = toDbPlatform(cfg.id);
       const sync = syncMap.get(dbId);
       const hasToken = tokenPlatforms.has(dbId);
-      
-      const status = (sync?.status ?? 'idle') as PlatformReadiness['status'];
-      
+
+      let status = (sync?.status ?? 'idle') as PlatformReadiness['status'];
+
+      // If a sync is stuck in 'syncing' with no update for >30 min, treat it as 'error'.
+      // This self-heals the UI when a cron run crashes mid-sync and never completes.
+      if (status === 'syncing' && sync?.last_sync_at) {
+        const lastSyncMs = new Date(sync.last_sync_at).getTime();
+        if (now - lastSyncMs > STALE_SYNC_THRESHOLD_MS) {
+          status = 'error';
+        }
+      }
+
       // A platform is truly connected only if:
       // 1. It has a valid OAuth token stored, OR
-      // 2. It has an actively good sync status (connected/syncing) — meaning a sync succeeded
-      // NOTE: 'error' alone does NOT mean connected — it could be a cron attempt on an unconfigured API key
+      // 2. It has a non-stale syncing / connected status
       const connected = hasToken || ['connected', 'syncing'].includes(status);
 
       const missingEnv = cfg.env.filter((key) => !process.env[key]);
