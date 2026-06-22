@@ -13,9 +13,7 @@ import {
   NetlifyIconOfficial,
   SupabaseIconOfficial,
   SentryIconOfficial,
-  PostHogIconOfficial,
   WebflowIconOfficial,
-  DevinIconOfficial,
   CursorIconOfficial,
   CanvaIconOfficial,
   DropboxIconOfficial,
@@ -65,9 +63,7 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'fitbit',          name: 'Fitbit',          icon: <FitbitIconOfficial />,   category: 'Health',       description: 'Track fitness activities, sleep, and health metrics.',     color: '#00B0B9', comingSoon: true },
   { id: 'withings',        name: 'Withings',        icon: <WithingsIconOfficial />, category: 'Health',       description: 'Connect health and wellness device metrics.',              color: '#00A8A8', comingSoon: true },
 
-  // ─── Missing Nodes (Target 26) ───────────────────────────────────────────
-  { id: 'posthog',         name: 'PostHog',         icon: <PostHogIconOfficial />,  category: 'Development',  description: 'Sync user analytics and product data.',                    color: '#F0F0F0', comingSoon: true },
-  { id: 'devin',           name: 'Devin',           icon: <DevinIconOfficial />,    category: 'Development',  description: 'Monitor autonomous AI engineering agents.',               color: '#1A1A1A', comingSoon: true },
+  // ─── Missing Nodes ────────────────────────────────────────────────────────
   { id: 'cursor',          name: 'Cursor',          icon: <CursorIconOfficial />,   category: 'Development',  description: 'Sync your AI-assisted code evolution history.',            color: 'var(--text-primary)', comingSoon: true },
   { id: 'linkedin',        name: 'LinkedIn',        icon: <LinkedInIconOfficial />, category: 'Social',       description: 'Index professional networking and careers communications.', color: '#0077b5', comingSoon: true },
 
