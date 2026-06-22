@@ -49,6 +49,7 @@ next-env.d.ts
 
 # agent metadata
 /.gemini
+/.cursor
 
 # logs
 server.log
@@ -70,3 +71,4 @@ __pycache__/
 .env.sentry-build-plugin
 
 .env*.local
+.vercel
