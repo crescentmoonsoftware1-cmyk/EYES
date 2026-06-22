@@ -175,6 +175,11 @@ const platformConfigs: Array<{
   },
   {
     id: 'webflow',
+    name: 'Webflow',
+    env: ['WEBFLOW_CLIENT_ID', 'WEBFLOW_CLIENT_SECRET'],
+    scopes: ['read'],
+  },
+  {
     id: 'cursor',
     name: 'Cursor',
     env: ['CURSOR_SESSION_TOKEN'],
