@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server';
 type PlatformId = 
   | 'gmail' | 'github' | 'notion' | 'google-calendar' | 'discord' | 'slack' | 'twitter' | 'dropbox'
   | 'asana' | 'trello' | 'linear' | 'clickup'
-  | 'vercel' | 'netlify' | 'supabase' | 'sentry' | 'posthog' | 'webflow' | 'devin' | 'cursor'
+  | 'vercel' | 'netlify' | 'supabase' | 'sentry' | 'webflow' | 'cursor'
   | 'canva'
   | 'strava' | 'fitbit' | 'withings'
   | 'google-docs' | 'google-sheets' | 'google-slides' | 'google-meet' | 'google-chat' | 'google-maps' | 'youtube'
@@ -174,24 +174,7 @@ const platformConfigs: Array<{
     scopes: ['event:read', 'project:read'],
   },
   {
-    id: 'posthog',
-    name: 'PostHog',
-    env: ['POSTHOG_API_KEY'],
-    scopes: ['read'],
-  },
-  {
     id: 'webflow',
-    name: 'Webflow',
-    env: ['WEBFLOW_CLIENT_ID', 'WEBFLOW_CLIENT_SECRET'],
-    scopes: ['read'],
-  },
-  {
-    id: 'devin',
-    name: 'Devin',
-    env: ['DEVIN_API_KEY'],
-    scopes: ['read'],
-  },
-  {
     id: 'cursor',
     name: 'Cursor',
     env: ['CURSOR_SESSION_TOKEN'],
