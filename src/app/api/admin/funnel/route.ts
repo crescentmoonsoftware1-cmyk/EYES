@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Query tokens in cohort
-    let tokensQuery = adminClient.from('oauth_tokens').select('platform, user_id');
+    let tokensQuery = adminClient.from('oauth_tokens').select('platform, user_id').limit(10000);
     if (period !== 'all') {
       tokensQuery = tokensQuery.in('user_id', cohortUserIds);
     }

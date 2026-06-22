@@ -165,7 +165,9 @@ export async function PATCH(request: Request) {
 
     if (!id || !status) return NextResponse.json({ error: 'id and status required' }, { status: 400 });
 
-    const patch: Record<string, unknown> = { status, ...updates };
+    const ALLOWED_PATCH_FIELDS = new Set(['notes', 'result']);
+    const safeUpdates = Object.fromEntries(Object.entries(updates).filter(([k]) => ALLOWED_PATCH_FIELDS.has(k)));
+    const patch: Record<string, unknown> = { status, ...safeUpdates };
     if (status === 'executed' || status === 'approved') patch.executed_at = new Date().toISOString();
 
     const { error } = await supabase

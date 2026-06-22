@@ -470,8 +470,9 @@ async function storeNote(
   return noteId;
 }
 
-// ── Main handler ──────────────────────────────────────────────────────────────
-export async function POST(request: Request) {
+const CHAT_TIMEOUT_MS = 25_000;
+
+async function handleChat(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const message: string = body.message || '';
@@ -630,3 +631,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Chat failed. Please try again.' }, { status: 500 });
   }
 }
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+export async function POST(request: Request) {
+  const timeout = new Promise<Response>((_, reject) =>
+    setTimeout(() => reject(new Error('Chat request timed out')), CHAT_TIMEOUT_MS)
+  );
+  try {
+    return await Promise.race([handleChat(request), timeout]);
+  } catch (err) {
+    const isTimeout = err instanceof Error && err.message.includes('timed out');
+    console.error('[Chat API] ' + (isTimeout ? 'Timeout' : 'Fatal error') + ':', err);
+    return NextResponse.json(
+      { error: isTimeout ? 'Request timed out. Please try again.' : 'Chat failed. Please try again.' },
+      { status: isTimeout ? 504 : 500 }
+    );
+  }
+}
+

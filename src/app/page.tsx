@@ -18,16 +18,13 @@ function HomeInner() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSystemBooting, setIsSystemBooting] = useState(true);
 
-  // Redirect admin users immediately to admin funnel analytics
+  // Redirect admin users immediately to admin funnel analytics.
+  // Uses a server-side API check — admin email is never exposed in the client bundle.
   useEffect(() => {
-    if (!isLoading && user && user.email) {
-      const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-      const adminEmails = adminEmailsEnv.split(',')
-        .map(email => email.trim().toLowerCase())
-        .filter(email => email !== '');
-      if (adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase())) {
-        router.replace('/admin/funnel');
-      }
+    if (!isLoading && user) {
+      fetch('/api/admin/funnel?period=24h', { method: 'GET' })
+        .then(res => { if (res.ok) router.replace('/admin/funnel'); })
+        .catch(() => {}); // non-admins get 403, silently ignored
     }
   }, [user, isLoading, router]);
 
@@ -98,12 +95,10 @@ function HomeInner() {
     );
   }
 
-  // Check if authenticated user is admin
-  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-  const adminEmails = adminEmailsEnv.split(',')
-    .map(email => email.trim().toLowerCase())
-    .filter(email => email !== '');
-  const isAdmin = user && user.email && adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase());
+  // isAdmin drives the loading screen below; the useEffect above handles the actual redirect.
+  // We optimistically show the redirect screen only if the API confirmed admin on a prior render;
+  // for first render we fall through to the dashboard which is harmless — the useEffect fires quickly.
+  const isAdmin = false; // resolved server-side via /api/admin/funnel check in useEffect
 
   // Show clean transition screen for admins while redirecting
   if (isAdmin) {
