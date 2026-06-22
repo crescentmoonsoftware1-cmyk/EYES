@@ -12,6 +12,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://eyes-app-sigma.vercel.app"),
   title: "EYES - Everything You Ever Said",
   description: "Your digital memory dashboard. Monitor, audit, and explore everything across your connected platforms.",
   keywords: ["digital memory", "reputation monitoring", "audit", "privacy"],
