@@ -66,8 +66,10 @@ export function SourceReadinessView({ platforms, totalMemories }: SourceReadines
       confirmLabel: 'Disconnect',
       confirmVariant: 'danger',
       onConfirm: async () => {
-        const response = await fetch(`/api/data/platform/${platformId}?disconnect=true`, {
+        const response = await fetch(`/api/data/platform/${platformId}`, {
           method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ disconnect: true }),
         });
         if (!response.ok) {
           throw new Error(`Failed to disconnect (${response.status})`);
