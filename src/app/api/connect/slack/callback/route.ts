@@ -28,8 +28,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/connect/slack?oauth=error&reason=invalid_state', baseUrl));
   }
 
-  const clientId = process.env.SLACK_CLIENT_ID;
-  const clientSecret = process.env.SLACK_CLIENT_SECRET;
+  const clientId = process.env.SLACK_CLIENT_ID?.trim();
+  const clientSecret = process.env.SLACK_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL('/connect/slack?oauth=error&reason=missing_config', baseUrl));
@@ -52,8 +52,9 @@ export async function GET(request: Request) {
     const data = await response.json();
 
     if (!response.ok || !data.ok) {
+      const slackError = data?.error || 'unknown';
       console.error('Slack Token Error:', data);
-      return NextResponse.redirect(new URL('/connect/slack?oauth=error&reason=token_exchange_failed', baseUrl));
+      return NextResponse.redirect(new URL(`/connect/slack?oauth=error&reason=token_exchange_failed&slack_error=${slackError}`, baseUrl));
     }
 
     const supabase = await createClient();

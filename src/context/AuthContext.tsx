@@ -21,6 +21,7 @@ export interface User {
   joinedDate: string;
   memoriesIndexed: number;
   behaviorLoggingConsent: boolean;
+  onboardingCompleted: boolean;
 }
 
 export type AuthResult = {
@@ -55,6 +56,7 @@ type UserProfileRow = {
   joined_date: string | null;
   memories_indexed: number | null;
   behavior_logging_consent: boolean | null;
+  onboarding_completed: boolean | null;
 };
 
 type DBResult<T> = {
@@ -147,6 +149,7 @@ const PUBLIC_ROUTES = [
 ];
 
 const GUEST_ONLY_ROUTES = ['/login', '/signup'];
+const ONBOARDING_ROUTE = '/onboarding';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -173,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         joinedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
         memoriesIndexed: 0,
         behaviorLoggingConsent: loadCachedProfile()?.behaviorLoggingConsent ?? true,
+        onboardingCompleted: loadCachedProfile()?.onboardingCompleted ?? false,
       };
     }
 
@@ -192,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
             supabase
               .from('user_profiles')
-              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
+              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
               .eq('user_id', authUser.id)
               .maybeSingle()
               .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -209,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               joinedDate: fetchResult.data.joined_date || joinedDate,
               memoriesIndexed: fetchResult.data.memories_indexed || 0,
               behaviorLoggingConsent: fetchResult.data.behavior_logging_consent ?? true,
+              onboardingCompleted: fetchResult.data.onboarding_completed ?? false,
             };
             saveCachedProfile(fresh);
             setUser(fresh); // M2: update live UI with fresh data (was only updating cache)
@@ -223,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
-          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
           .eq('user_id', authUser.id)
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -245,6 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinedDate: profile.joined_date || joinedDate,
           memoriesIndexed: profile.memories_indexed || 0,
           behaviorLoggingConsent: profile.behavior_logging_consent ?? true,
+          onboardingCompleted: profile.onboarding_completed ?? false,
         };
         saveCachedProfile(result); // ← persist for instant load next time
         return result;
@@ -265,6 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinedDate: joinedDate,
           memoriesIndexed: cached?.memoriesIndexed || 0,
           behaviorLoggingConsent: cached?.behaviorLoggingConsent ?? true,
+          onboardingCompleted: cached?.onboardingCompleted ?? false,
         };
       }
 
@@ -278,13 +285,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         joined_date: joinedDate,
         memories_indexed: 0,
         behavior_logging_consent: true,
+        onboarding_completed: false,
       };
 
       const { data: inserted } = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
           .upsert(newProfile, { onConflict: 'user_id' })
-          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
         5000,
@@ -302,6 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         joinedDate: joinedDate,
         memoriesIndexed: 0,
         behaviorLoggingConsent: final.behavior_logging_consent ?? true,
+        onboardingCompleted: final.onboarding_completed ?? false,
       };
     } catch (err) {
       syncInProgressRef.current = false;
@@ -316,6 +325,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         joinedDate: joinedDate,
         memoriesIndexed: 0,
         behaviorLoggingConsent: true,
+        onboardingCompleted: false,
       };
     }
   }, [supabase]);
@@ -404,8 +414,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           router.replace('/login');
         }
       }, delay);
-    } else if (isPublic && pathname !== '/') {
-      router.replace('/');
+    } else {
+      if (isPublic && pathname !== '/') {
+        router.replace('/');
+      } else if (!user.onboardingCompleted && !pathname.startsWith(ONBOARDING_ROUTE) && !isOAuthCallback) {
+        console.log('[Auth] Redirecting to onboarding');
+        router.replace(ONBOARDING_ROUTE);
+      } else if (user.onboardingCompleted && pathname.startsWith(ONBOARDING_ROUTE)) {
+        router.replace('/');
+      }
     }
 
     return () => clearTimeout(redirectTimer);
@@ -477,6 +494,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isPublicRoute = ['/login', '/signup'].includes(pathname);
     if (isPublicRoute) return;
     if (pathname.startsWith('/connect')) return;
+    if (!user.onboardingCompleted) return; // Prevent 401s in terminal before onboarding is done
 
     let cancelled = false;
     let syncInFlight = false;
@@ -654,7 +672,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('user_profiles')
         .update(dbUpdates)
         .eq('user_id', user.id)
-        .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent')
+        .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
         .single();
 
       if (dbError) throw dbError;
@@ -668,6 +686,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: confirmed.plan || prev.plan,
           memoriesIndexed: confirmed.memories_indexed || prev.memoriesIndexed,
           behaviorLoggingConsent: confirmed.behavior_logging_consent ?? prev.behaviorLoggingConsent,
+          onboardingCompleted: confirmed.onboarding_completed ?? prev.onboardingCompleted,
         } : null);
       }
       
@@ -701,6 +720,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
   if (user && isGuestOnly) return null;
+
+  // Prevent flash of Dashboard before redirect to onboarding completes
+  if (user && !user.onboardingCompleted && !pathname.startsWith(ONBOARDING_ROUTE)) {
+    return (
+      <div className={styles.fallbackScreen}>
+        <div className={styles.loaderLine} />
+        <p>Preparing your experience...</p>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, signup, loginWithGoogle, loginWithGithub, loginWithDiscord, logout, resetPassword, supabase, updateUser, theme, setGlobalTheme }}>

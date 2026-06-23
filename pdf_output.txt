@@ -1,0 +1,84 @@
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Pre-Launch Checklist — June 20, 2026
+CONFIDENTIAL — Crescent Moon engineering. A pre-flight check, not a directive.
+Page 1
+Pre-Launch Checklist
+EYES  ·  June 20, 2026  ·  Launch 17:00 IST / 12:30 CET  ·  A pre-flight check
+This is a calm pre-flight checklist for launch day — not a directive and not a list of demands. Everything here is
+either a fact to verify or a small thing that might want sorting before the doors open. The build is in good shape; this
+is just the walk-around before takeoff. Launch is a soft, public-but-small opening — we're expecting on the order of
+ten to fifty people, not a flood. The checklist is sized for exactly that.
+Two facts that set the frame for today:  (1) Payments run in Stripe TEST mode — the audit flow works end to end
+for users but collects no real money today. That is a deliberate choice; real payments are a calm post-launch step.
+ (2) We are not inviting in waves — it's open — but the realistic volume is small, so concurrent load is a thing to
+watch, not a thing to fear.
+1 — The core flow works cold
+This is the product. A stranger, with no help, gets from the front page to a real cited answer. If everything else on
+this page is perfect and this one isn't, the launch isn't ready — and if this one is solid, most everything else is
+cosmetic. Worth running once, start to finish, on a fresh account before 17:00.
+■  A brand-new account can sign up with no manual help from the team.
+If not — note where it needed a hand, and smooth that one step.
+■  Google (Gmail) and GitHub connect cleanly through OAuth.
+If not — check the OAuth redirect/verification state shows something honest while pending.
+■  Indexing runs and shows truthful progress — no fake 'complete' or 'optimal'.
+If not — a plain 'still indexing' line is better than a number that isn't real.
+■  A question returns a grounded answer with a citation.
+■  Clicking a citation opens the real source (the actual Gmail / GitHub item) — not an internal feed.
+If not — this is the trust moat; if chips still point inward, it's the highest-value thing to sort.
+■  A follow-up question shows the chat remembered the previous turn.
+2 — Nothing leaks between users
+The one gate that isn't cosmetic if it fails. With real strangers connecting real Gmail accounts, the line between one
+person's data and another's has to be absolute. Worth proving directly rather than assuming.
+■  Two test accounts confirmed: User B cannot retrieve any of User A's records, in chat or anywhere else.
+If not — this is the one item on the page that's worth holding the clock for. Everything else can ship imperfect; this can't.
+3 — It holds with a few people at once
+Until now the product has mostly been used by one to three people at a time. Today is the first time a handful of
+strangers may hit it together. At ten-to-fifty scale this is very manageable — just worth a glance at the places that
+behave differently under concurrent use.
+■  The Vercel Pro upgrade is live, so the serverless timeout is 60s — long syncs and audits won't cut off
+mid-run.
+If not — if Vercel is still on free tier, that 10s ceiling is the thing most likely to bite during a first sync. Worth confirming it
+went through.
+■  Several accounts connecting and syncing at once doesn't stall the sync queue.
+If not — if the queue backs up, letting people in a few at a time across the evening keeps every first experience fast —
+no announcement needed, just pacing.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Pre-Launch Checklist — June 20, 2026
+CONFIDENTIAL — Crescent Moon engineering. A pre-flight check, not a directive.
+Page 2
+■  Gateway rate limits sit comfortably above what a dozen concurrent users generate.
+■  The database holds steady with several connections open together (Supabase Pro pooling).
+4 — The payment loop (test mode)
+Stripe is in test mode today, so this is about proving the machinery works — not collecting money. A user can walk
+the whole audit-purchase path and it completes, using a test card. Real charging is a later, deliberate step once the
+entity side is squared away.
+■  The audit checkout opens and completes with test card 4242 4242 4242 4242.
+■  The webhook fires, is signature-verified, and the audit unlocks for that user.
+■  It's clear to a user that they're not being charged today (or the audit is simply framed as free/included for the
+founding group).
+If not — no real card can be charged in test mode, so there's no risk here — just make sure the framing doesn't promise
+a charge that won't happen.
+5 — The first thing people see
+Small, visible things shape the first impression more than anything under the hood. None of these are hard; they're
+just worth a glance because every single user meets them in the first ten seconds.
+■  The text-clipping on EYES messages is sorted — messages start at the first word, not mid-sentence.
+If not — this one shows on every message, so it's the highest-visibility small fix on the page. Likely a
+streaming/markdown trim.
+■  The landing page loads and the value proposition reads clearly in one pass.
+■  No invented metrics or 'optimal' badges are visible anywhere a user lands.
+■  Error and empty states say something honest when data is still syncing.
+The first two hours — who's watching
+Not a checklist item so much as a quiet plan. The first couple of hours after opening are when anything unexpected
+shows up. Two things worth having in place:
+■  Someone is watching the logs for the first ~2 hours and can spot errors as they happen.
+■  There's a way to pause new signups if needed — without taking the product down for people already in.
+If not — if something breaks badly, being able to quietly stop new entries while keeping current users running is the soft
+landing. Good to know it exists before it's needed.
+That's the walk-around. If gate 1 (cold flow) and gate 2 (no leaks) are solid, the launch is genuinely ready — the
+rest is polish that can keep improving after the doors open. It's a soft opening to a small group; the goal today is
+that the people who come in have a real experience, not a perfect one. Good luck — it's a real product, and it's
+close.
+EYES — the questions you never asked.

@@ -1,0 +1,239 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #F8F5F2; /* EYES light theme background */
+  font-family: var(--font-sans, system-ui, sans-serif);
+  padding: 2rem;
+}
+
+.card {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0,0,0,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 2rem;
+  color: #1D1C16;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.optionCard {
+  border: 2px solid #EAEAEA;
+  border-radius: 16px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.optionCard:hover {
+  border-color: #d0d0d0;
+  transform: translateY(-2px);
+}
+
+.optionCard.selected {
+  border-color: #1D1C16;
+  background-color: #fafafa;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.icon {
+  font-size: 1.5rem;
+}
+
+.label {
+  font-weight: 600;
+  color: #1D1C16;
+  font-size: 0.95rem;
+}
+
+/* Goals specific list */
+.goalList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.goalRow {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border: 2px solid #EAEAEA;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.goalRow:hover {
+  border-color: #d0d0d0;
+}
+
+.goalRow.selected {
+  border-color: #1D1C16;
+  background-color: #fafafa;
+}
+
+.goalCheck {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.goalRow.selected .goalCheck {
+  border-color: #E06A3B; /* EYES accent color */
+  background-color: #E06A3B;
+}
+
+.goalCheck::after {
+  content: '';
+  width: 10px;
+  height: 5px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg);
+  margin-top: -2px;
+  opacity: 0;
+}
+
+.goalRow.selected .goalCheck::after {
+  opacity: 1;
+}
+
+.goalText {
+  font-weight: 500;
+  color: #1D1C16;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #eaeaea;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btnPrimary {
+  background: #1D1C16;
+  color: white;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #333;
+}
+
+.btnPrimary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  background: transparent;
+  color: #666;
+}
+
+.btnSecondary:hover {
+  color: #1D1C16;
+  background: rgba(0,0,0,0.05);
+}
+
+.progressBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: #E06A3B;
+  transition: width 0.3s ease;
+}
+
+/* Persona Cards */
+.personaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.personaCard {
+  border: 2px solid #EAEAEA;
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.personaCard:hover {
+  border-color: #d0d0d0;
+}
+
+.personaCard.selected {
+  border-color: #1D1C16;
+  background-color: #fafafa;
+}
+
+.personaTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: #1D1C16;
+}
+
+.personaDesc {
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.4;
+  margin: 0;
+}

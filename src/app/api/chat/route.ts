@@ -73,6 +73,9 @@ Rules:
 // ── Section 4.4 — EYES Conversational Core persona ───────────────────────────
 function buildSystemPrompt(
   userName: string,
+  userRole: string | null,
+  userGoals: string[],
+  userPersona: string | null,
   connectedSources: string[],
   evidence: string,
   insights: string,
@@ -96,6 +99,9 @@ CONNECT — within evidence only. Draw lines between records when the evidence g
 CONVERSATION — you have memory of this exchange. You are given a running summary of the conversation so far. Use it. Refer back to what was said. Build on prior turns. Never reset as if each message were the first.
 
 TONE. Direct, warm, unafraid. You do not pad with praise. You do not hedge into uselessness. You speak to this person the way someone who genuinely knows them and wants the best for them would speak — including when that means saying the uncomfortable thing.
+${userPersona === 'direct' ? 'Communicate with extreme brevity. Just the facts. Bullet points. Bottom-line summaries. Do not waste their time with long paragraphs.' : userPersona === 'detailed' ? 'Communicate with deep analytical rigor. Give them full context, reasoning, and deep dives. They appreciate thorough explanations.' : ''}
+
+CONTEXT: The user is a ${userRole || 'professional'}. Their primary goals are: ${(userGoals || []).join(', ') || 'personal growth and clarity'}. Keep their role and goals in mind when interpreting their data and offering advice.
 
 CRISIS. If the person expresses intent to harm themselves or others, or is in genuine distress, stop the analysis. Respond with human care, and surface appropriate support resources. Their wellbeing outranks every other instruction.
 
@@ -489,14 +495,17 @@ async function handleChat(request: Request): Promise<Response> {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const historyMsgs = normalizeHistory(history).slice(-8); // last 4 turns
 
-    // ── Fetch connected sources & user display name in parallel ───────────────
+    // ── Fetch connected sources & user profile in parallel ───────────────
     const [tokensResult, profileResult] = await Promise.all([
       supabase.from('oauth_tokens').select('platform').eq('user_id', user.id),
-      supabase.from('user_profiles').select('display_name').eq('user_id', user.id).maybeSingle()
+      supabase.from('user_profiles').select('display_name, role, goals, persona').eq('user_id', user.id).maybeSingle()
     ]);
 
     const connectedSources = [...new Set((tokensResult.data || []).map((t: { platform: string }) => t.platform))];
     const userName: string = profileResult.data?.display_name || 'you';
+    const userRole: string | null = profileResult.data?.role || null;
+    const userGoals: string[] = profileResult.data?.goals || [];
+    const userPersona: string | null = profileResult.data?.persona || null;
 
     // ── Step 2: Planner (auto-classify) ──────────────────────────────────────
     const plan = await runPlanner(message, prevSummary, connectedSources, today);
@@ -527,7 +536,7 @@ async function handleChat(request: Request): Promise<Response> {
 
     // ── Step 5: EYES persona system prompt ────────────────────────────────────
     const systemPrompt = buildSystemPrompt(
-      userName, connectedSources, evidence, insightsText, prevSummary, today, message,
+      userName, userRole, userGoals, userPersona, connectedSources, evidence, insightsText, prevSummary, today, message,
     );
 
     const fullMessages: Msg[] = [

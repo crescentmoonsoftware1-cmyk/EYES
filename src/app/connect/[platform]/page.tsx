@@ -72,6 +72,7 @@ function ConnectPlatformInner() {
     const p = typeof params?.platform === 'string' ? params.platform : '';
     const oauthStatus = searchParams?.get('oauth');
     const reason = searchParams?.get('reason') ?? '';
+    const slackError = searchParams?.get('slack_error') ?? '';
 
     if (oauthStatus === 'success' && p) {
       triggerBackgroundSync(p);
@@ -87,7 +88,7 @@ function ConnectPlatformInner() {
     } else if (oauthStatus === 'error') {
       setTimeout(() => {
         setPlatform(p);
-        setErrorReason(reason);
+        setErrorReason(slackError ? `${reason} (slack: ${slackError})` : reason);
         setState('error');
       }, 0);
       // Do NOT auto-redirect on error — let user read the message
