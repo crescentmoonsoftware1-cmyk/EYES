@@ -34,7 +34,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const EMBED_DIMS = 1024;
+const EMBED_DIMS = 1536;
 
 async function generateGatewayEmbedding(text: string): Promise<number[] | null> {
   if (!LITELLM_BASE_URL || !LITELLM_KEY) {

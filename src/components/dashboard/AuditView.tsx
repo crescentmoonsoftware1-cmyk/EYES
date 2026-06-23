@@ -506,8 +506,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                     </div>
                     <div className={styles.minimalGridItem}>
                       <span className={styles.gridVal}>{Math.round(safetyVal * 100)}%</span>
-                      {/* safetyVal = (10 - riskScore) / 10 — correctly measures safety, not raw mention count */}
-                      <span className={styles.gridLabel}>Safety</span>
+                      <span className={styles.gridLabel}>Mentions</span>
                       <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${safetyVal * 100}%`, background: riskColor }}/></div>
                     </div>
                   </div>
