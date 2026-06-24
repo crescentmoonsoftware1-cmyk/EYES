@@ -13,7 +13,7 @@ function discordRedirectUri(baseUrl: string) {
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientId = process.env.DISCORD_CLIENT_ID?.trim();
 
   if (!clientId) {
     return NextResponse.redirect(new URL('/connect/discord?oauth=error&reason=missing_client_id', baseUrl));

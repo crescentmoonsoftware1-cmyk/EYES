@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/connect/discord?oauth=error&reason=invalid_state', siteUrl));
   }
 
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+  const clientId = process.env.DISCORD_CLIENT_ID?.trim();
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL('/connect/discord?oauth=error&reason=missing_config', siteUrl));

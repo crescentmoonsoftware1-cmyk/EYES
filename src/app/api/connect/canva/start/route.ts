@@ -6,7 +6,7 @@ import { getBaseUrl } from '@/utils/url';
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.CANVA_CLIENT_ID;
+  const clientId = process.env.CANVA_CLIENT_ID?.trim();
   if (!clientId) return NextResponse.redirect(new URL('/connect/canva?oauth=error&reason=missing_client_id', baseUrl));
 
   const supabase = await createClient();

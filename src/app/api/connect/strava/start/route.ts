@@ -6,7 +6,7 @@ import { getBaseUrl } from '@/utils/url';
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientId = process.env.STRAVA_CLIENT_ID?.trim();
   if (!clientId) return NextResponse.redirect(new URL('/connect/strava?oauth=error&reason=missing_client_id', baseUrl));
 
   const supabase = await createClient();

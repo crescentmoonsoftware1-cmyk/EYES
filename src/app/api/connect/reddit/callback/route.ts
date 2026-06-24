@@ -19,8 +19,8 @@ export async function GET(request: Request) {
 
   const baseUrl = getAppBaseUrl(request);
 
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const clientId = process.env.REDDIT_CLIENT_ID?.trim();
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL('/connect/reddit?oauth=error&reason=missing_reddit_env', baseUrl));

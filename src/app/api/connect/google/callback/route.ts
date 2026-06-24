@@ -157,8 +157,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(`/connect/${platformFromState}?oauth=success`, await appBaseUrl(request)));
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 
     if (!clientId || !clientSecret) {
       console.error('[Google OAuth] Missing client ID or secret in environment variables.');

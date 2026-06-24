@@ -82,8 +82,10 @@ function ConnectPlatformInner() {
         setPlatform(p);
         setState('success');
       }, 0);
+      
+      const isOnboarding = typeof window !== 'undefined' && sessionStorage.getItem('eyes-is-onboarding');
       // Redirect after brief success flash
-      setTimeout(() => router.replace('/?view=readiness'), 1200);
+      setTimeout(() => router.replace(isOnboarding ? '/onboarding' : '/?view=readiness'), 1200);
 
     } else if (oauthStatus === 'error') {
       setTimeout(() => {
@@ -95,8 +97,9 @@ function ConnectPlatformInner() {
 
     } else {
       setTimeout(() => setPlatform(p), 0);
+      const isOnboarding = typeof window !== 'undefined' && sessionStorage.getItem('eyes-is-onboarding');
       // No oauth param = direct visit, just redirect
-      router.replace('/?view=readiness');
+      router.replace(isOnboarding ? '/onboarding' : '/?view=readiness');
     }
   }, [router, params, searchParams, user, isLoading]);
 
@@ -153,14 +156,17 @@ function ConnectPlatformInner() {
               Try Again
             </button>
             <button
-              onClick={() => router.replace('/?view=connectors')}
+              onClick={() => {
+                const isOnboarding = typeof window !== 'undefined' && sessionStorage.getItem('eyes-is-onboarding');
+                router.replace(isOnboarding ? '/onboarding' : '/?view=connectors');
+              }}
               style={{
                 flex: 1, padding: '12px', background: 'transparent', color: '#1D1C16',
                 border: '1px solid #e5e1dc', borderRadius: '10px', fontWeight: 600,
                 fontSize: '14px', cursor: 'pointer',
               }}
             >
-              Back to Hub
+              Back
             </button>
           </div>
         </div>

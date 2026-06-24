@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server';
 import { getBaseUrl } from '@/utils/url';
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.JIRA_CLIENT_ID;
+  const clientId = process.env.JIRA_CLIENT_ID?.trim();
   if (!clientId) return NextResponse.redirect(new URL('/connect/jira?oauth=error&reason=missing_client_id', baseUrl));
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();

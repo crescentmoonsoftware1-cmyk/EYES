@@ -12,7 +12,7 @@ function spotifyRedirectUri(baseUrl: string) {
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientId = process.env.SPOTIFY_CLIENT_ID?.trim();
 
   if (!clientId) {
     return NextResponse.redirect(new URL('/connect/spotify?oauth=error&reason=missing_client_id', baseUrl));

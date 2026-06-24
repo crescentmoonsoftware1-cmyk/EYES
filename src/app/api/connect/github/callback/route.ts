@@ -31,8 +31,8 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
 
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL('/connect/github?oauth=error&reason=missing_github_env', getAppBaseUrl(request)));

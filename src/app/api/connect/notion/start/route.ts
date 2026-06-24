@@ -15,7 +15,7 @@ function notionRedirectUri(baseUrl: string) {
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
-  const clientId = process.env.NOTION_CLIENT_ID;
+  const clientId = process.env.NOTION_CLIENT_ID?.trim();
 
   if (!clientId) {
     return NextResponse.redirect(new URL('/connect/notion?oauth=error&reason=missing_notion_client_id', baseUrl));

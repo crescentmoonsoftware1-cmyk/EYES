@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(callbackUrl);
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   if (!clientId) {
     return NextResponse.redirect(new URL(`/connect/${platform}?oauth=error&reason=missing_google_client_id`, baseUrl));
   }

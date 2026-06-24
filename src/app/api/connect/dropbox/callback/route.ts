@@ -8,8 +8,8 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
 
-  const clientId = process.env.DROPBOX_CLIENT_ID;
-  const clientSecret = process.env.DROPBOX_CLIENT_SECRET;
+  const clientId = process.env.DROPBOX_CLIENT_ID?.trim();
+  const clientSecret = process.env.DROPBOX_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL('/connect/dropbox?oauth=error&reason=missing_env', url.origin));

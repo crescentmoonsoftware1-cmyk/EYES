@@ -33,11 +33,65 @@ const PERSONAS = [
   }
 ];
 
+const ROLE_CONNECTORS: Record<string, { id: string, label: string, icon: string }[]> = {
+  engineering: [
+    { id: 'github', label: 'GitHub', icon: '🐙' },
+    { id: 'slack', label: 'Slack', icon: '💬' },
+    { id: 'linear', label: 'Linear', icon: '⚡' },
+  ],
+  product: [
+    { id: 'notion', label: 'Notion', icon: '📓' },
+    { id: 'slack', label: 'Slack', icon: '💬' },
+    { id: 'linear', label: 'Linear', icon: '⚡' },
+  ],
+  marketing: [
+    { id: 'twitter', label: 'X (Twitter)', icon: '🐦' },
+    { id: 'notion', label: 'Notion', icon: '📓' },
+    { id: 'webflow', label: 'Webflow', icon: '🌐' },
+  ],
+  sales: [
+    { id: 'google', label: 'Google Workspace', icon: '📧' },
+    { id: 'slack', label: 'Slack', icon: '💬' },
+  ],
+  executive: [
+    { id: 'google', label: 'Google Workspace', icon: '📧' },
+    { id: 'slack', label: 'Slack', icon: '💬' },
+    { id: 'notion', label: 'Notion', icon: '📓' },
+  ],
+  design: [
+    { id: 'canva', label: 'Canva', icon: '🎨' },
+    { id: 'notion', label: 'Notion', icon: '📓' },
+    { id: 'slack', label: 'Slack', icon: '💬' },
+  ]
+};
+
 export default function SandboxOnboarding() {
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const savedStep = sessionStorage.getItem('onboarding_step');
+    if (savedStep) setStep(parseInt(savedStep, 10));
+    const role = sessionStorage.getItem('onboarding_role');
+    if (role) setSelectedRole(role);
+    const goals = sessionStorage.getItem('onboarding_goals');
+    if (goals) setSelectedGoals(JSON.parse(goals));
+    const persona = sessionStorage.getItem('onboarding_persona');
+    if (persona) setSelectedPersona(persona);
+
+    if (sessionStorage.getItem('eyes-post-connect')) {
+       sessionStorage.removeItem('eyes-post-connect');
+       if (!savedStep || savedStep === '1') setStep(2);
+    }
+    sessionStorage.setItem('eyes-is-onboarding', 'true');
+  }, []);
+
+  React.useEffect(() => { sessionStorage.setItem('onboarding_step', step.toString()); }, [step]);
+  React.useEffect(() => { if (selectedRole) sessionStorage.setItem('onboarding_role', selectedRole); }, [selectedRole]);
+  React.useEffect(() => { sessionStorage.setItem('onboarding_goals', JSON.stringify(selectedGoals)); }, [selectedGoals]);
+  React.useEffect(() => { if (selectedPersona) sessionStorage.setItem('onboarding_persona', selectedPersona); }, [selectedPersona]);
 
   const toggleGoal = (id: string) => {
     setSelectedGoals(prev => 
@@ -48,7 +102,7 @@ export default function SandboxOnboarding() {
   };
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
+    if (step < 4) setStep(step + 1);
     else {
       // Final submission (mocked for now)
       alert(`Onboarding Complete!\n\nRole: ${selectedRole}\nGoals: ${selectedGoals.join(', ')}\nPersona: ${selectedPersona}`);
@@ -61,12 +115,12 @@ export default function SandboxOnboarding() {
 
   const isNextDisabled = () => {
     if (step === 1) return !selectedRole;
-    if (step === 2) return selectedGoals.length === 0;
-    if (step === 3) return !selectedPersona;
+    if (step === 3) return selectedGoals.length === 0;
+    if (step === 4) return !selectedPersona;
     return false;
   };
 
-  const progress = (step / 3) * 100;
+  const progress = (step / 4) * 100;
 
   return (
     <div className={styles.container}>
@@ -104,7 +158,39 @@ export default function SandboxOnboarding() {
 
           {step === 2 && (
             <motion.div
-              key="step2"
+              key="step2_connectors"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className={styles.header}>
+                <h1 className={styles.title}>Connect your main tools</h1>
+                <p className={styles.subtitle}>Let's start indexing your digital life securely in the background.</p>
+              </div>
+
+              <div className={styles.grid}>
+                {selectedRole && ROLE_CONNECTORS[selectedRole]?.map(conn => (
+                  <button
+                    key={conn.id}
+                    className={`${styles.optionCard}`}
+                    style={{ justifyContent: 'center', gap: '8px' }}
+                    onClick={() => { window.location.href = `/api/connect/${conn.id}/start`; }}
+                  >
+                    <span className={styles.icon}>{conn.icon}</span>
+                    <span className={styles.label}>Connect {conn.label}</span>
+                  </button>
+                ))}
+              </div>
+              <p style={{ marginTop: '24px', fontSize: '13px', color: '#666', textAlign: 'center' }}>
+                You can always connect more tools later. Feel free to connect one and click Continue.
+              </p>
+            </motion.div>
+          )}
+
+          {step === 3 && (
+            <motion.div
+              key="step3_goals"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -130,9 +216,9 @@ export default function SandboxOnboarding() {
             </motion.div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <motion.div
-              key="step3"
+              key="step4_persona"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -173,7 +259,7 @@ export default function SandboxOnboarding() {
             onClick={handleNext}
             disabled={isNextDisabled()}
           >
-            {step === 3 ? 'Finish Setup' : 'Continue'}
+            {step === 4 ? 'Finish Setup' : 'Continue'}
           </button>
         </div>
       </div>
