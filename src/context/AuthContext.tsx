@@ -11,6 +11,8 @@ import {
   purgeSupabaseLocalAuthArtifacts,
   isRefreshTokenFailure,
 } from './hooks/useAuthSession';
+import { useRealtimeSync } from './hooks/useRealtimeSync';
+import { useBackgroundSync } from './hooks/useBackgroundSync';
 
 export interface User {
   id: string;
@@ -69,21 +71,6 @@ type QueryResult<T> = DBResult<T>;
 type SupabaseQueryLike<T> = DBResult<T>;
 
 const PROFILE_CACHE_KEY = 'eyes-user-profile-v1';
-const AUTO_BACKGROUND_SYNC_ENABLED = process.env.NEXT_PUBLIC_AUTO_BACKGROUND_SYNC === 'true';
-const REALTIME_PULSE_THROTTLE_MS = 10000;
-
-let _lastPulseTime = 0;
-function emitRealtimeRefreshEvent() {
-  if (typeof window === 'undefined') return;
-  const now = Date.now();
-  if (now - _lastPulseTime < REALTIME_PULSE_THROTTLE_MS) return;
-  _lastPulseTime = now;
-  window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
-}
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
 
 // Timeout wrapper for supabase calls — prevents infinite hangs
 async function quickFetch<T>(
@@ -332,9 +319,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── useAuthSession handles session init + rejection guard ───────────────────
   useAuthSession(supabase, syncProfile, setUser, setIsLoading);
-  // NOTE: useRealtimeSync + useBackgroundSync are NOT called here.
-  // The inline useEffects below (lines ~392-526) are the active implementation
-  // and include additional guards (isUuid check, isPublicRoute, OAuth route).
+  
+  // Realtime & Background Sync Hooks
+  useRealtimeSync(supabase, user, isLoading, pathname);
+  useBackgroundSync(supabase, user, isLoading, pathname);
 
   // Theme init — sole purpose of this effect after hook extraction
   useEffect(() => {
@@ -428,142 +416,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(redirectTimer);
   }, [user, isLoading, pathname, router]);
 
-  // Push-based realtime updates: subscribe to user-scoped table changes.
-  useEffect(() => {
-    if (isLoading || !user) {
-      return;
-    }
 
-    const isPublicRoute = ['/login', '/signup'].includes(pathname);
-    if (isPublicRoute) {
-      return;
-    }
-
-    if (!isUuid(user.id)) {
-      return;
-    }
-
-    // Only watch for high-level status changes to prevent refresh spamming.
-    // 'raw_events' is removed to avoid triggering a refresh for every single new memory.
-    const watchedTables = ['sync_status', 'user_profiles', 'oauth_tokens'] as const;
-    const channelName = `eyes-user-live:${user.id}`;
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const queueRefresh = () => {
-      if (refreshTimer) return;
-
-      // Debounce bursts: Only allow UI refresh every 2 seconds to damp the pulse.
-      refreshTimer = setTimeout(() => {
-        refreshTimer = undefined;
-        emitRealtimeRefreshEvent();
-      }, 2000);
-    };
-
-    let channel = supabase.channel(channelName);
-
-    watchedTables.forEach((table) => {
-      channel = channel.on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table,
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queueRefresh();
-        }
-      );
-    });
-
-    channel.subscribe();
-
-    return () => {
-      if (refreshTimer) {
-        clearTimeout(refreshTimer);
-      }
-      void supabase.removeChannel(channel);
-    };
-  }, [isLoading, pathname, supabase, user]);
-
-  // Lightweight realtime orchestrator: periodically fan out connector sync in background.
-  useEffect(() => {
-    if (!AUTO_BACKGROUND_SYNC_ENABLED) return;
-    if (isLoading || !user) return;
-
-    const isPublicRoute = ['/login', '/signup'].includes(pathname);
-    if (isPublicRoute) return;
-    if (pathname.startsWith('/connect')) return;
-    if (!user.onboardingCompleted) return; // Prevent 401s in terminal before onboarding is done
-
-    let cancelled = false;
-    let syncInFlight = false;
-
-    const runBackgroundSync = async () => {
-      if (cancelled || syncInFlight) {
-        return;
-      }
-
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        return;
-      }
-
-      syncInFlight = true;
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          return;
-        }
-
-        const response = await fetch('/api/sync/all?background=1', {
-          method: 'POST',
-          cache: 'no-store',
-          keepalive: true,
-          credentials: 'include',  // L10: ensure session cookie is sent
-        });
-
-        if (!response.ok && response.status !== 202) {
-          console.warn(`[Auth] Background sync fan-out returned ${response.status}.`);
-        }
-      } catch (error) {
-        console.warn('[Auth] Background sync fan-out failed:', error);
-      } finally {
-        syncInFlight = false;
-        // Note: no manual pulse here — the Supabase realtime subscription on
-        // sync_status will fire queueRefresh() automatically when rows change.
-      }
-    };
-
-    const initialDelay = setTimeout(() => {
-      void runBackgroundSync();
-    }, 2500);
-
-    const interval = setInterval(() => {
-      void runBackgroundSync();
-    }, 90000);
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void runBackgroundSync();
-      }
-    };
-
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', onVisibilityChange);
-    }
-
-    return () => {
-      cancelled = true;
-      clearTimeout(initialDelay);
-      clearInterval(interval);
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', onVisibilityChange);
-      }
-    };
-  }, [isLoading, pathname, supabase, user]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
