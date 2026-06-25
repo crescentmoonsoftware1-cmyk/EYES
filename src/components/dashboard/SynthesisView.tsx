@@ -260,10 +260,6 @@ export function SynthesisView({
                 </div>
               )}
 
-              {/* Chat Input Centered */}
-              <div style={{ width: '100%', marginTop: '24px' }}>
-                {chatInputEl}
-              </div>
             </div>
           </div>
         ) : (
@@ -311,12 +307,10 @@ export function SynthesisView({
           </div>
         )}
 
-        {/* Floating chat input - ONLY rendered at the bottom when messages.length > 0 */}
-        {messages.length > 0 && (
-          <div className={styles.chatCommandWrapper} style={{ width: '100%' }}>
-            {chatInputEl}
-          </div>
-        )}
+        {/* Floating chat input - ALWAYS rendered at the bottom */}
+        <div className={styles.chatCommandWrapper} style={{ width: '100%' }}>
+          {chatInputEl}
+        </div>
       </div>
 
       {/* ═══════════ RIGHT PANE — COLLAPSIBLE TABS ═══════════ */}

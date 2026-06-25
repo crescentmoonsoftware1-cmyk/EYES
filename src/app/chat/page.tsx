@@ -497,9 +497,6 @@ function ChatPageInner() {
                   Everything You Ever Said
                 </h1>
                 <p className={styles.brandSubtitle}>Ask me anything about your life.</p>
-                <div style={{ width: '100%', maxWidth: '680px', marginTop: '24px' }}>
-                  {chatInputEl}
-                </div>
               </div>
             ) : (
               <div className={styles.messageList}>
@@ -562,12 +559,10 @@ function ChatPageInner() {
               </div>
             )}
 
-            {/* Floating Input Area */}
-            {messages.length > 0 && (
-              <div className={styles.inputStickyContainer}>
-                {chatInputEl}
-              </div>
-            )}
+            {/* Floating Input Area - Always visible for bottom placement */}
+            <div className={styles.inputStickyContainer} style={{ display: 'flex', justifyContent: 'center' }}>
+              {chatInputEl}
+            </div>
           </div>
           <CognitiveRightPanel isOpen={brainPanelOpen} onClose={() => setBrainPanelOpen(false)} />
         </div>
