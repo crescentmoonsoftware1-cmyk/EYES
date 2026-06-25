@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
-import { waitUntil } from '@vercel/functions';
+import { Client } from '@upstash/qstash';
 
 /**
  * API Route to initiate a Reputation Audit.
@@ -74,9 +74,21 @@ export async function POST(request: Request) {
       .update({ status: 'analysis' })
       .eq('id', audit.id);
 
-    // 5. RUN ANALYSIS (Background - fire and forget via waitUntil)
-    // We do NOT await this because we want to return a response to the user immediately
-    waitUntil(AuditAnalysisService.runAnalysis(audit.id, user.id));
+    // 5. RUN ANALYSIS (Background - fire and forget via Upstash QStash)
+    const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
+    
+    // Fallback to localhost for dev, but in production use the real SITE_URL
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    
+    await qstash.publishJSON({
+      url: `${baseUrl}/api/queue/audit`,
+      body: {
+        auditId: audit.id,
+        userId: user.id
+      },
+      // Give it up to 5 minutes to complete (though QStash supports up to 2 hours)
+      retries: 3
+    });
 
     return NextResponse.json({
       success: true,
