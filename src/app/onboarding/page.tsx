@@ -146,9 +146,8 @@ export default function SandboxOnboarding() {
         localStorage.removeItem('eyes-user-profile-v1');
         sessionStorage.removeItem('eyes-is-onboarding');
 
-        // Smooth transition
-        await updateUser({ onboardingCompleted: true });
-        router.replace('/?view=readiness');
+        // Guarantee navigation without Next.js race conditions
+        window.location.href = '/?view=readiness';
       } catch (err) {
         console.error('Save failed:', err);
         alert(`Failed to save preferences. See console for details.`);
