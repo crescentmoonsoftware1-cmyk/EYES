@@ -176,13 +176,28 @@ export function SynthesisView({
 
   const chatInputEl = (
     <div className={styles.commandContainer} style={{ maxWidth: '800px', margin: '0 auto', background: 'var(--bg-primary)' }}>
-      <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)' }}>
-        <div className={styles.searchIcon}><SearchIcon /></div>
-        <input type="text" className={styles.commandInput}
+      <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)', alignItems: 'flex-end' }}>
+        <div className={styles.searchIcon} style={{ paddingBottom: '12px' }}><SearchIcon /></div>
+        <textarea className={styles.commandInput}
           placeholder={messages.length > 0 ? "Ask a follow up..." : "Ask me anything about your life..."}
-          value={query} onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) onSubmit(query.trim()); }}
+          value={query} 
+          onChange={(e) => {
+            setQuery(e.target.value);
+            e.target.style.height = 'auto';
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+          }}
+          onKeyDown={(e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (query.trim()) {
+                onSubmit(query.trim());
+                e.currentTarget.style.height = 'auto';
+              }
+            } 
+          }}
           disabled={isStreaming}
+          rows={1}
+          style={{ resize: 'none', overflowY: 'auto', minHeight: '44px', maxHeight: '200px', paddingTop: '12px', paddingBottom: '12px' }}
         />
         <button className={styles.commandSendBtn}
           onClick={() => { if (query.trim()) onSubmit(query.trim()); }}

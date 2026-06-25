@@ -442,16 +442,29 @@ function ChatPageInner() {
   }
 
   const chatInputEl = (
-    <div className={styles.inputBox} style={{ width: '100%', maxWidth: '680px' }}>
-      <SearchIcon />
-      <input 
-        type="text" 
+    <div className={styles.inputBox} style={{ width: '100%', maxWidth: '680px', alignItems: 'flex-end' }}>
+      <div style={{ paddingBottom: '10px' }}><SearchIcon /></div>
+      <textarea 
         className={styles.input}
         placeholder="Ask me anything about your life…"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) handleSubmit(query.trim()); }}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          e.target.style.height = 'auto';
+          e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+        }}
+        onKeyDown={(e) => { 
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (query.trim()) {
+              handleSubmit(query.trim());
+              e.currentTarget.style.height = 'auto';
+            }
+          } 
+        }}
         disabled={isStreaming}
+        rows={1}
+        style={{ resize: 'none', overflowY: 'auto', minHeight: '44px', maxHeight: '200px', paddingTop: '11px', paddingBottom: '11px' }}
       />
       <button 
         className={styles.sendBtn}
