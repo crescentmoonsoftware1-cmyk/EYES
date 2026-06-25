@@ -574,8 +574,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
   if (user && isGuestOnly) return null;
 
+  const isOAuthCallback = pathname.includes('/connect') || pathname.startsWith('/auth');
+
   // Prevent flash of Dashboard before redirect to onboarding completes
-  if (user && !user.onboardingCompleted && !pathname.startsWith(ONBOARDING_ROUTE)) {
+  if (user && !user.onboardingCompleted && !pathname.startsWith(ONBOARDING_ROUTE) && !isOAuthCallback) {
     return (
       <div className={styles.fallbackScreen}>
         <div className={styles.loaderLine} />
