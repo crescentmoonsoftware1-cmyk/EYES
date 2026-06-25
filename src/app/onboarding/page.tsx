@@ -39,17 +39,14 @@ const ROLE_CONNECTORS: Record<string, { id: string, label: string, icon: string 
   engineering: [
     { id: 'github', label: 'GitHub', icon: '🐙' },
     { id: 'slack', label: 'Slack', icon: '💬' },
-    { id: 'linear', label: 'Linear', icon: '⚡' },
   ],
   product: [
     { id: 'notion', label: 'Notion', icon: '📓' },
-    { id: 'slack', label: 'Slack', icon: '💬' },
     { id: 'linear', label: 'Linear', icon: '⚡' },
   ],
   marketing: [
     { id: 'twitter', label: 'X (Twitter)', icon: '🐦' },
     { id: 'notion', label: 'Notion', icon: '📓' },
-    { id: 'webflow', label: 'Webflow', icon: '🌐' },
   ],
   sales: [
     { id: 'google', label: 'Google Workspace', icon: '📧' },
@@ -57,12 +54,10 @@ const ROLE_CONNECTORS: Record<string, { id: string, label: string, icon: string 
   ],
   executive: [
     { id: 'google', label: 'Google Workspace', icon: '📧' },
-    { id: 'slack', label: 'Slack', icon: '💬' },
     { id: 'notion', label: 'Notion', icon: '📓' },
   ],
   design: [
     { id: 'canva', label: 'Canva', icon: '🎨' },
-    { id: 'notion', label: 'Notion', icon: '📓' },
     { id: 'slack', label: 'Slack', icon: '💬' },
   ]
 };
