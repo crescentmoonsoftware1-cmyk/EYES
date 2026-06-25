@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 import { createClient } from '@/utils/supabase/server';
 
 import { getBaseUrl } from '@/utils/url';
