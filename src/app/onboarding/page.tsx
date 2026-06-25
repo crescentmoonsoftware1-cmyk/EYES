@@ -68,20 +68,22 @@ const ROLE_CONNECTORS: Record<string, { id: string, label: string, icon: string 
 };
 
 export default function SandboxOnboarding() {
-  const { supabase } = useAuth();
+  const { supabase, updateUser } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
-    const savedStep = sessionStorage.getItem('onboarding_step');
+    const savedStep = localStorage.getItem('onboarding_step');
     if (savedStep) setStep(parseInt(savedStep, 10));
-    const role = sessionStorage.getItem('onboarding_role');
+    const role = localStorage.getItem('onboarding_role');
     if (role) setSelectedRole(role);
-    const goals = sessionStorage.getItem('onboarding_goals');
+    const goals = localStorage.getItem('onboarding_goals');
     if (goals) setSelectedGoals(JSON.parse(goals));
-    const persona = sessionStorage.getItem('onboarding_persona');
+    const persona = localStorage.getItem('onboarding_persona');
     if (persona) setSelectedPersona(persona);
 
     if (sessionStorage.getItem('eyes-post-connect')) {
@@ -89,12 +91,22 @@ export default function SandboxOnboarding() {
        if (!savedStep || savedStep === '1') setStep(2);
     }
     sessionStorage.setItem('eyes-is-onboarding', 'true');
-  }, []);
+    
+    const fetchConnections = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase.from('auth_tokens').select('platform').eq('user_id', session.user.id);
+      if (data) {
+        setConnectedPlatforms(data.map(d => d.platform));
+      }
+    };
+    fetchConnections();
+  }, [supabase]);
 
-  React.useEffect(() => { sessionStorage.setItem('onboarding_step', step.toString()); }, [step]);
-  React.useEffect(() => { if (selectedRole) sessionStorage.setItem('onboarding_role', selectedRole); }, [selectedRole]);
-  React.useEffect(() => { sessionStorage.setItem('onboarding_goals', JSON.stringify(selectedGoals)); }, [selectedGoals]);
-  React.useEffect(() => { if (selectedPersona) sessionStorage.setItem('onboarding_persona', selectedPersona); }, [selectedPersona]);
+  React.useEffect(() => { localStorage.setItem('onboarding_step', step.toString()); }, [step]);
+  React.useEffect(() => { if (selectedRole) localStorage.setItem('onboarding_role', selectedRole); }, [selectedRole]);
+  React.useEffect(() => { localStorage.setItem('onboarding_goals', JSON.stringify(selectedGoals)); }, [selectedGoals]);
+  React.useEffect(() => { if (selectedPersona) localStorage.setItem('onboarding_persona', selectedPersona); }, [selectedPersona]);
 
   const toggleGoal = (id: string) => {
     setSelectedGoals(prev => 
@@ -111,6 +123,7 @@ export default function SandboxOnboarding() {
       setStep(step + 1);
     } else {
       try {
+        setIsSubmitting(true);
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
@@ -129,16 +142,22 @@ export default function SandboxOnboarding() {
           const text = await res.text();
           throw new Error(`API Error: ${res.status} - ${text}`);
         }
-        // Clear the local cache so AuthContext doesn't instantly redirect us back
-        // using the stale cached profile where onboarding is still false.
+        
+        // Clear local caches
+        localStorage.removeItem('onboarding_step');
+        localStorage.removeItem('onboarding_role');
+        localStorage.removeItem('onboarding_goals');
+        localStorage.removeItem('onboarding_persona');
         localStorage.removeItem('eyes-user-profile-v1');
         sessionStorage.removeItem('eyes-is-onboarding');
 
-        // Hard reload to the dashboard so AuthContext does a fresh DB fetch
-        window.location.href = '/?view=readiness';
+        // Smooth transition
+        await updateUser({ onboardingCompleted: true });
+        router.replace('/?view=readiness');
       } catch (err) {
         console.error('Save failed:', err);
         alert(`Failed to save preferences. See console for details.`);
+        setIsSubmitting(false);
       }
     }
   };
@@ -204,17 +223,28 @@ export default function SandboxOnboarding() {
               </div>
 
               <div className={styles.grid}>
-                {selectedRole && ROLE_CONNECTORS[selectedRole]?.map(conn => (
+                {selectedRole && ROLE_CONNECTORS[selectedRole]?.map(conn => {
+                  const isConnected = connectedPlatforms.includes(conn.id);
+                  return (
                   <button
                     key={conn.id}
                     className={`${styles.optionCard}`}
-                    style={{ justifyContent: 'center', gap: '8px' }}
-                    onClick={() => { window.location.href = `/api/connect/${conn.id}/start`; }}
+                    style={{ 
+                      justifyContent: 'center', 
+                      gap: '8px',
+                      cursor: isConnected ? 'default' : 'pointer',
+                      border: isConnected ? '1px solid #4ade80' : undefined,
+                      background: isConnected ? 'rgba(74, 222, 128, 0.05)' : undefined 
+                    }}
+                    onClick={() => { if (!isConnected) window.location.href = `/api/connect/${conn.id}/start`; }}
                   >
-                    <span className={styles.icon}>{conn.icon}</span>
-                    <span className={styles.label}>Connect {conn.label}</span>
+                    <span className={styles.icon}>{isConnected ? '✓' : conn.icon}</span>
+                    <span className={styles.label} style={{ color: isConnected ? '#15803d' : undefined }}>
+                      {isConnected ? 'Connected' : `Connect ${conn.label}`}
+                    </span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
               <p style={{ marginTop: '24px', fontSize: '13px', color: '#666', textAlign: 'center' }}>
                 You can always connect more tools later. Feel free to connect one and click Continue.
@@ -295,9 +325,9 @@ export default function SandboxOnboarding() {
           <button 
             className={`${styles.btn} ${styles.btnPrimary}`} 
             onClick={handleNext}
-            disabled={isNextDisabled()}
+            disabled={isNextDisabled() || isSubmitting}
           >
-            {step === 4 ? 'Finish Setup' : 'Continue'}
+            {isSubmitting ? 'Securing your sanctum...' : step === 4 ? 'Finish Setup' : 'Continue'}
           </button>
         </div>
       </div>
