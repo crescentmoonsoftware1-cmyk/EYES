@@ -409,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[Auth] Redirecting to onboarding');
         router.replace(ONBOARDING_ROUTE);
       } else if (user.onboardingCompleted && pathname.startsWith(ONBOARDING_ROUTE)) {
-        router.replace('/?view=readiness');
+        router.replace('/');
       }
     }
 
