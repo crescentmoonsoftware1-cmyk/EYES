@@ -409,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[Auth] Redirecting to onboarding');
         router.replace(ONBOARDING_ROUTE);
       } else if (user.onboardingCompleted && pathname.startsWith(ONBOARDING_ROUTE)) {
-        router.replace('/');
+        router.replace('/?view=readiness');
       }
     }
 
@@ -495,7 +495,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return { success: false, message: 'Not authenticated' };
 
     try {
-      const dbUpdates: { name?: string; avatar?: string; behavior_logging_consent?: boolean } = {};
+      const dbUpdates: { name?: string; avatar?: string; behavior_logging_consent?: boolean; onboarding_completed?: boolean } = {};
       const authUpdates: { name?: string } = {};
 
       if (updates.name) {
@@ -505,6 +505,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (updates.behaviorLoggingConsent !== undefined) {
         dbUpdates.behavior_logging_consent = updates.behaviorLoggingConsent;
+      }
+      
+      if (updates.onboardingCompleted !== undefined) {
+        dbUpdates.onboarding_completed = updates.onboardingCompleted;
       }
       
       // If current avatar is just an initial, update it to match the new name's initial
