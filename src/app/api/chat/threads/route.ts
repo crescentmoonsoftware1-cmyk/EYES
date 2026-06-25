@@ -210,6 +210,32 @@ export async function POST(req: NextRequest) {
   });
 }
 
+// ─── PATCH /api/chat/threads ──────────────────────────────────────────────────
+export async function PATCH(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body || !body.threadId || !body.title) {
+    return NextResponse.json({ error: 'threadId and title required' }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from('chat_threads')
+    .update({ title: body.title })
+    .eq('id', body.threadId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
+
 // ─── DELETE /api/chat/threads?threadId=xxx ────────────────────────────────────
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient();

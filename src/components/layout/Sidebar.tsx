@@ -30,6 +30,8 @@ export default function Sidebar() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [threads, setThreads] = useState<any[]>([]);
   const [starredIds, setStarredIds] = useState<string[]>([]);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [editThreadTitle, setEditThreadTitle] = useState('');
   const { user } = useAuth();
 
   const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
@@ -128,6 +130,27 @@ export default function Sidebar() {
     }
   };
 
+  const handleEditSubmit = async (threadId: string) => {
+    if (!editThreadTitle.trim()) {
+      setEditingThreadId(null);
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/chat/threads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId, title: editThreadTitle.trim() })
+      });
+      if (res.ok) {
+        setThreads(prev => prev.map(t => t.id === threadId ? { ...t, title: editThreadTitle.trim() } : t));
+      }
+    } catch (e) {
+      console.error('Failed to update thread title:', e);
+    }
+    setEditingThreadId(null);
+  };
+
   // Group threads chronologically
   const groupedThreads = useMemo(() => {
     const today = new Date();
@@ -210,9 +233,29 @@ export default function Sidebar() {
       <div
         key={t.id}
         className={`${styles.chatItem} ${isActive ? styles.chatItemActive : ''} ${isStarred ? styles.chatItemStarred : ''}`}
-        onClick={() => router.push(targetUrl)}
+        onClick={() => {
+          if (editingThreadId !== t.id) {
+            router.push(targetUrl);
+          }
+        }}
       >
-        <span className={styles.chatTitle}>{t.title}</span>
+        {editingThreadId === t.id ? (
+          <input
+            type="text"
+            value={editThreadTitle}
+            onChange={(e) => setEditThreadTitle(e.target.value)}
+            onBlur={() => handleEditSubmit(t.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleEditSubmit(t.id);
+              if (e.key === 'Escape') setEditingThreadId(null);
+            }}
+            className={styles.chatTitleInput}
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span className={styles.chatTitle}>{t.title}</span>
+        )}
         <div className={styles.chatActions}>
           <button
             className={`${styles.chatActionBtn} ${isStarred ? styles.starBtnActive : ''}`}
@@ -220,6 +263,17 @@ export default function Sidebar() {
             title={isStarred ? "Unstar" : "Star"}
           >
             ★
+          </button>
+          <button
+            className={styles.chatActionBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingThreadId(t.id);
+              setEditThreadTitle(t.title);
+            }}
+            title="Rename chat"
+          >
+            ✎
           </button>
           <button
             className={styles.chatActionBtn}
