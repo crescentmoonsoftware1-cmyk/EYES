@@ -92,7 +92,7 @@ export default function SandboxOnboarding() {
       if (!session?.user) return;
       const { data } = await supabase.from('auth_tokens').select('platform').eq('user_id', session.user.id);
       if (data) {
-        setConnectedPlatforms(data.map(d => d.platform));
+        setConnectedPlatforms(data.map((d: any) => d.platform));
       }
     };
     fetchConnections();
