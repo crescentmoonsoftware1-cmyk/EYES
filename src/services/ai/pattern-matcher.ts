@@ -98,6 +98,7 @@ export class PatternMatcher {
    * The Confirms / Disconfirms Loop (Pending Phase 2 Graph DB)
    * This will be called periodically to re-evaluate prior hypotheses against new data.
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public static validateOngoingPatterns(userId: string, currentMatches: PatternMatchResult[], newGraphData: UserGraphData) {
     // TODO: Implement temporal drift analysis and edge invalidation.
     // This requires the Neo4j temporal graph to be active.

@@ -58,6 +58,7 @@ export async function GET(request: Request) {
       edges: graphEdges,
       merged_nodes_count: correlations?.length || 0
     });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

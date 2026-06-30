@@ -32,7 +32,7 @@ export const ColdStartInsights: React.FC<Props> = ({ insights }) => {
                 </span>
               </div>
               
-              <p className={styles.read}>"{match.pattern.coldStartRead}"</p>
+              <p className={styles.read}>&quot;{match.pattern.coldStartRead}&quot;</p>
               
               <div className={styles.evidenceBox}>
                 <strong>Receipts (Anchors):</strong>

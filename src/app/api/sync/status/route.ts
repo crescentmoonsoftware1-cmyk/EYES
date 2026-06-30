@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server';
  * Monitoring API: Returns a global view of the user's sync progress.
  * Used for the "Live Indexing Counter" in the dashboard.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();

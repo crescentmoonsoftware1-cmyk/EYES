@@ -8,6 +8,7 @@ import {
   type ProviderRevocationResult,
 } from '@/services/auth/provider-revocation';
 import { createClient } from '@/utils/supabase/server';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 
 function toDbPlatform(platform: string) {

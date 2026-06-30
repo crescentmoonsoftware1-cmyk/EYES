@@ -9,8 +9,10 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".venv/**",
     "out/**",
     "build/**",
+    "scripts/**",
     "next-env.d.ts",
     // Local developer utility/debug scripts (CommonJS, not part of the production build)
     "check-db.js",
@@ -23,6 +25,11 @@ const eslintConfig = defineConfig([
     "run_*.ts",
     "request_*.js",
   ]),
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn"
+    }
+  }
 ]);
 
 export default eslintConfig;

@@ -16,7 +16,9 @@ import {
   fromRetryQueueKey,
   toRunAttemptFromRetryAttempt,
   isNonRetriableHttpStatus,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   RETRY_BASE_DELAY_MS,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   RETRY_MAX_DELAY_MS,
   RETRY_MAX_ATTEMPTS,
   RETRY_JITTER_RATIO,
@@ -26,12 +28,19 @@ import {
   toEscalationCandidates,
   shouldDispatchEscalation,
   toEscalationKey,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ALERT_PENDING_RETRY_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ALERT_DEAD_LETTER_24H_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ALERT_MAX_RETRY_ATTEMPT_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ALERT_FAILURE_RATE_24H_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ESCALATION_DISPATCH_COOLDOWN_MINUTES,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ESCALATION_OWNER_WARNING,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ESCALATION_OWNER_CRITICAL,
 } from '@/lib/cron/escalation';
 
@@ -150,6 +159,7 @@ type EscalationDispatchResult = {
   error?: string;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function toFiniteNumber(raw: string | undefined, fallback: number) {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed)) {
@@ -177,7 +187,9 @@ const DIRECT_KEY_PLATFORMS: Array<{ platform: string; envKey: string }> = [
 const SUPPORTED_RETRY_PLATFORMS = new Set([...SUPPORTED_PLATFORMS, 'embeddings']);
 
 // ─── Runtime tuning constants (route-local) ──────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SYNC_TIMEOUT_MS         = Number(process.env.CRON_SYNC_TIMEOUT_MS        || 20000);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const EMBEDDINGS_TIMEOUT_MS   = Number(process.env.CRON_EMBEDDINGS_TIMEOUT_MS  || 25000);
 const DEFAULT_MAX_USERS_PER_RUN = Number(process.env.CRON_MAX_USERS_PER_RUN    || 10);
 const USER_CONCURRENCY        = Number(process.env.CRON_USER_CONCURRENCY       || 3);

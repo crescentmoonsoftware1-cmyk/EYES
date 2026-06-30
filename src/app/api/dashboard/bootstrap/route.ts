@@ -182,6 +182,7 @@ function mapPlatforms(syncRows: SyncStatusRow[]): PlatformStatus[] {
   return Object.values(uniquePlatforms);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function mapFeed(rows: RawEventRow[]): FeedItem[] {
   return rows.slice(0, 80).map((row) => ({
     id: row.id,

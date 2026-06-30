@@ -101,6 +101,7 @@ const hoisted = vi.hoisted(() => {
           }),
           order: vi.fn(() => builder),
           limit: vi.fn(() => builder),
+          is: vi.fn(() => builder),
         };
 
         return builder;

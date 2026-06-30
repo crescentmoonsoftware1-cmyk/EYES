@@ -5,6 +5,7 @@ import { getValidGoogleToken } from '@/services/auth/oauth';
 import { scoreGmailEvent } from '@/utils/risk/scorer';
 import { resolveSyncActor, type SyncActor, type SyncActorError } from '@/utils/sync/actor';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type GmailListResponse = {
   messages?: Array<{ id: string }>;
 };
@@ -52,6 +53,7 @@ function fixEncoding(text: string): string {
         return fixed;
       }
     }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     // fallback
   }
@@ -264,6 +266,7 @@ export async function POST(request: Request) {
           if (i + chunkSize < allMessageIds.length) {
             await new Promise(resolve => setTimeout(resolve, 800)); // Respect Google's 1-sec token bucket
           }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (err) {
           attempt++;
           console.warn(`[Gmail Sync] Rate limit hit. Backing off (Attempt ${attempt}/3)...`);

@@ -33,6 +33,7 @@ interface AIIntegrationViewProps {
   onBack: () => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AIIntegrationView({ onBack }: AIIntegrationViewProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);

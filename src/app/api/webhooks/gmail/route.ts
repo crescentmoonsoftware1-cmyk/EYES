@@ -80,6 +80,7 @@ export async function processMessageForAcuteAlert(
   supabase: any,
   userId: string,
   message: { id: string; content: string; author?: string; title?: string; timestamp?: string },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   platform: string
 ): Promise<void> {
   if (!message.content || message.content.length < 30) return;

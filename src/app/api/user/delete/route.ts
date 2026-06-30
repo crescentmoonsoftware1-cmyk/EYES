@@ -8,6 +8,7 @@ import { createClient } from '@/utils/supabase/server';
  * Tables cleared: oauth_tokens, raw_events, embeddings, sync_status, user_profiles.
  * Note: auth.users is handled by Supabase but we can trigger it if needed.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function DELETE(request: Request) {
   try {
     const supabase = await createClient();

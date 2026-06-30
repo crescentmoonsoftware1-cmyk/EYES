@@ -14,6 +14,7 @@ type NotionSearchResult = {
   title?: Array<{ plain_text: string }>;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type NotionSearchResponse = {
   results?: NotionSearchResult[];
 };
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
       console.error('notion sync auth error: token invalid or corrupted');
       return NextResponse.json({ error: 'Unable to authenticate Notion connection.' }, { status: 401 });
     }
-    let accessToken = decryptedToken;
+    const accessToken = decryptedToken;
 
     const url = new URL(request.url);
     const depth = url.searchParams.get('depth') || 'shallow';

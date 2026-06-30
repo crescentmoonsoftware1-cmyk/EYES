@@ -6,11 +6,14 @@ import {
   SlackIconOfficial, 
   DiscordIconOfficial,
   AsanaIconOfficial,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   TrelloIconOfficial,
   LinearIconOfficial,
   ClickUpIconOfficial,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   VercelIconOfficial,
   NetlifyIconOfficial,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   SupabaseIconOfficial,
   SentryIconOfficial,
   WebflowIconOfficial,
@@ -21,6 +24,7 @@ import {
   StravaIconOfficial,
   FitbitIconOfficial,
   WithingsIconOfficial,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   RedditIconOfficial,
   LinkedInIconOfficial,
   GoogleDocsIcon,

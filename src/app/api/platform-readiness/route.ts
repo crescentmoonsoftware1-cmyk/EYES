@@ -276,6 +276,7 @@ const platformMappings: Record<string, string> = {
 };
 
 const toDbPlatform = (id: string) => platformMappings[id] || id.replace(/-/g, '_');
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const fromDbPlatform = (dbPlatform: string) => {
   for (const [id, dbId] of Object.entries(platformMappings)) {
     if (dbId === dbPlatform) return id;

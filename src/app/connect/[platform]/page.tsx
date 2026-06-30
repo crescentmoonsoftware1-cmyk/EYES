@@ -76,6 +76,7 @@ function ConnectPlatformInner() {
 
     if (oauthStatus === 'success' && p) {
       triggerBackgroundSync(p);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       try { sessionStorage.setItem('eyes-post-connect', p); } catch (_) {}
       // Batch all state mutations to avoid synchronous cascading render warning
       setTimeout(() => {

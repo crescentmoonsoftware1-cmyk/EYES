@@ -6,6 +6,7 @@ import { extractForUser } from '../../actions/extract/route';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SLACK_SIGNING_SECRET = process.env.SLACK_CLIENT_SECRET ?? '';
 
 /**

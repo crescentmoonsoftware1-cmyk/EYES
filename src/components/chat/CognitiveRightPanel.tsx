@@ -134,8 +134,6 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'mindmap', label: 'Mind Map' },
-    { id: 'loops',   label: 'Loops' },
-    { id: 'drift',   label: 'Drift' },
     { id: 'people',  label: 'People' },
   ];
 
@@ -164,11 +162,10 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
             color: '#fff', fontSize: '18px', fontWeight: 800, 
             letterSpacing: '-0.02em', margin: 0, display: 'flex', alignItems: 'center', gap: '8px'
           }}>
-            {identityInsight ? identityInsight.title : 'Intelligence Layer'}
-            {identityInsight && <span style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Phase 5 Identity</span>}
+            Intelligence Layer
           </h2>
-          <p style={{ color: identityInsight ? '#e5e7eb' : '#6366f1', fontSize: identityInsight ? '11px' : '10px', fontWeight: identityInsight ? 500 : 800, letterSpacing: identityInsight ? '0' : '0.1em', marginTop: '6px', lineHeight: 1.4, textTransform: identityInsight ? 'none' : 'uppercase' }}>
-            {identityInsight ? identityInsight.body : 'Intelligence Layer Active'}
+          <p style={{ color: '#6366f1', fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', marginTop: '6px', lineHeight: 1.4, textTransform: 'uppercase' }}>
+            Intelligence Layer Active
           </p>
         </div>
         <button onClick={onClose} style={{

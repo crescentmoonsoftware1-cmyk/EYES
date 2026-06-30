@@ -68,6 +68,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
           if (res.ok) {
             const data = await res.json();
             if (data.thread) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const msgs = (data.thread.chat_messages || []).map((m: any) => ({
                 role: m.role,
                 content: m.content
@@ -151,6 +152,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
         // Second delayed fetch to capture data from the background sync
         setTimeout(() => load(), 5000);
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_) {
       // sessionStorage unavailable — not critical
     }

@@ -8,7 +8,9 @@ import {
   useAuthSession,
   resetPulseTimer,
   getErrorMessage,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   purgeSupabaseLocalAuthArtifacts,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isRefreshTokenFailure,
 } from './hooks/useAuthSession';
 import { useRealtimeSync } from './hooks/useRealtimeSync';

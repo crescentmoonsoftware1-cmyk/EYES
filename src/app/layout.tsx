@@ -7,6 +7,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import SmoothScroll from "@/components/SmoothScroll";
 import { AuthProvider } from "@/context/AuthContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";

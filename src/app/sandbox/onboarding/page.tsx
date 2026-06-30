@@ -166,7 +166,7 @@ export default function SandboxOnboarding() {
             >
               <div className={styles.header}>
                 <h1 className={styles.title}>Connect your main tools</h1>
-                <p className={styles.subtitle}>Let's start indexing your digital life securely in the background.</p>
+                <p className={styles.subtitle}>Let&apos;s start indexing your digital life securely in the background.</p>
               </div>
 
               <div className={styles.grid}>
@@ -225,7 +225,7 @@ export default function SandboxOnboarding() {
               transition={{ duration: 0.3 }}
             >
               <div className={styles.header}>
-                <h1 className={styles.title}>Choose your AI's style</h1>
+                <h1 className={styles.title}>Choose your AI&apos;s style</h1>
                 <p className={styles.subtitle}>How should your assistant communicate with you?</p>
               </div>
 

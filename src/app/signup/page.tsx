@@ -1,5 +1,6 @@
 "use client";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect, useRef, CSSProperties, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -175,6 +176,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon, requi
 
 export default function SignupPage() {
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user, isLoading: isAuthLoading, signup, loginWithGoogle, loginWithGithub } = useAuth();
 
   const [name, setName] = useState("");
@@ -251,6 +253,7 @@ export default function SignupPage() {
         padding: "24px",
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap"
         rel="stylesheet"

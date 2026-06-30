@@ -24,8 +24,9 @@ export async function GET(req: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let thread: any = result.data;
-    let error = result.error;
+    const error = result.error;
 
     if (error) {
       console.error('[Chat History] Failed to load single thread:', error.message);
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
 
     if (thread && thread.chat_messages) {
       // Sort by created_at for chronological order
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sortedMessages = [...thread.chat_messages].sort((a: any, b: any) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
@@ -54,8 +56,9 @@ export async function GET(req: NextRequest) {
     .order('updated_at', { ascending: false })
     .limit(30);
 
-  let threads: any[] | null = result.data;
-  let error = result.error;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const threads: any[] | null = result.data;
+  const error = result.error;
 
   if (error) {
     console.error('[Chat History] Failed to load threads:', error.message);
@@ -65,6 +68,7 @@ export async function GET(req: NextRequest) {
   // Sort messages in-memory to guarantee order stability regardless of identical created_at
   const sortedThreads = (threads ?? []).map((thread) => {
     if (!thread.chat_messages) return thread;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sortedMessages = [...thread.chat_messages].sort((a: any, b: any) => {
       if (a.message_order !== undefined && b.message_order !== undefined) {
         return a.message_order - b.message_order;
@@ -157,6 +161,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .eq('platform', 'eyes_chat');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existingIds = new Set((existingMemories || []).map((m: any) => m.source_id));
 
     for (let i = 0; i < completedMessages.length - 1; i++) {

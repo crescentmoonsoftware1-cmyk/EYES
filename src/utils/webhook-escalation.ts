@@ -162,6 +162,7 @@ export function calculateWebhookRetryDelay(
  * Check if webhook error is retriable
  * Work Item #6: Distinguishes transient from permanent failures
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function isRetriableWebhookError(status: number | null, _error: string | null): boolean {
   if (status === null) {
     // Network error - retriable

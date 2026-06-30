@@ -41,6 +41,7 @@ export function AnimatedNumber({ value, duration = 1500, format = 'number' }: An
         window.cancelAnimationFrame(animationFrameId);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, duration]); // We intentionally leave displayValue out of deps to allow chaining
 
   const formatted = format === 'percent' 

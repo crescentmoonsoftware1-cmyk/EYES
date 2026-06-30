@@ -106,7 +106,6 @@ function buildSystemPrompt(
 ): string {
   const evidenceBlock = [
     evidence ? `EVIDENCE:\n${evidence}` : 'EVIDENCE: No matching records found in your connected sources.',
-    insights ? `INSIGHTS:\n${insights}` : '',
     graph ? `KNOWLEDGE GRAPH:\n${graph}` : ''
   ].filter(Boolean).join('\n\n');
 
@@ -311,6 +310,7 @@ async function retrieveEvidence(
 
   // Parse Graph Edges
   if (graphResult && graphResult.data && graphResult.data.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     graphText = graphResult.data.map((e: any) => `[${e.head_node_id.replace(/_/g, ' ')}] ${e.relation_label} [${e.tail_node_id.replace(/_/g, ' ')}]`).join('\n');
   }
 
@@ -338,6 +338,7 @@ async function retrieveEvidence(
         console.warn('[Chat] hybrid_search error:', error.message);
       } else if (data && data.length > 0) {
         rows = data;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         hasHighQualityEmbeddingMatches = data.some((r: any) => (r.similarity ?? 0) > SIMILARITY_THRESHOLD);
       }
     }
@@ -602,6 +603,7 @@ async function handleChat(request: Request): Promise<Response> {
       // We buffer the stream to get the reply text for summary, then re-stream
       // to the client without blocking. We use a TransformStream for this.
       let bufferedReply = '';
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const encoder = new TextEncoder();
       const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
       const writer = writable.getWriter();

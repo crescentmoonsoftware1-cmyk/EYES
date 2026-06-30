@@ -73,6 +73,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ gaps: driftGaps });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

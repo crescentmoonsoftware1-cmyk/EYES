@@ -6,6 +6,7 @@ import { generateEmbedding } from '@/services/ai/ai';
  * Re-index: Regenerates embeddings for all memories that lack an embedding.
  * Reads from the unified `memories` table. Processes up to 200 items per call.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();

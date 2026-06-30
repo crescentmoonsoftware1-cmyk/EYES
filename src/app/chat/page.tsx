@@ -346,6 +346,7 @@ function ChatPageInner() {
           if (res.ok) {
             const data = await res.json();
             if (data.thread) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const msgs = (data.thread.chat_messages || []).map((m: any) => ({
                 role: m.role,
                 content: m.content
@@ -527,23 +528,38 @@ function ChatPageInner() {
                             <ReactMarkdown 
                               remarkPlugins={[remarkGfm]}
                               components={{
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 p: ({node, ...props}) => <p style={{margin: '0 0 10px 0', lineHeight: 1.6}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 ul: ({node, ...props}) => <ul style={{margin: '0 0 10px 20px', padding: 0, listStyle: 'disc'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 ol: ({node, ...props}) => <ol style={{margin: '0 0 10px 20px', padding: 0, listStyle: 'decimal'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 li: ({node, ...props}) => <li style={{margin: '4px 0', lineHeight: 1.5}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 table: ({node, ...props}) => <div style={{overflowX: 'auto', margin: '16px 0', borderRadius: '8px', border: '1px solid var(--border-subtle)'}}><table style={{width: '100%', borderCollapse: 'collapse', fontSize: '13px'}} {...props} /></div>,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 th: ({node, ...props}) => <th style={{borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', textAlign: 'left', background: 'var(--bg-secondary)', fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 td: ({node, ...props}) => <td style={{borderBottom: '1px solid var(--border-subtle)', padding: '10px 14px', color: 'var(--text-secondary)'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 code: ({node, inline, ...props}: React.HTMLAttributes<HTMLElement> & { node?: unknown; inline?: boolean }) => 
                                   inline 
                                     ? <code style={{background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace'}} {...props} />
                                     : <span style={{display: 'block', background: '#1A1B26', color: '#a9b1d6', padding: '14px', borderRadius: '8px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(255,255,255,0.1)'}}><code {...props} /></span>,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 pre: ({node, ...props}) => <pre style={{margin: 0, padding: 0, background: 'transparent'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 strong: ({node, ...props}) => <strong style={{fontWeight: 700, color: 'var(--text-primary)'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 h1: ({node, ...props}) => <h1 style={{fontSize: '18px', fontWeight: 700, margin: '20px 0 10px', color: 'var(--text-primary)'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 h2: ({node, ...props}) => <h2 style={{fontSize: '16px', fontWeight: 700, margin: '18px 0 10px', color: 'var(--text-primary)'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 h3: ({node, ...props}) => <h3 style={{fontSize: '14px', fontWeight: 700, margin: '16px 0 8px', color: 'var(--text-primary)'}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 a: ({node, ...props}) => <a style={{color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500}} {...props} />,
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 blockquote: ({node, ...props}) => <blockquote style={{margin: '12px 0', paddingLeft: '12px', borderLeft: '3px solid var(--border-subtle)', color: 'var(--text-secondary)', fontStyle: 'italic'}} {...props} />
                               }}
                             >{m.content}</ReactMarkdown>

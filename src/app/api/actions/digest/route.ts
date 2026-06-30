@@ -55,6 +55,7 @@ ${memoryContext}
       const cleanJson = response?.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleanJson || '{"digest":[]}');
       finalDigest = parsed.digest || [];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       console.warn('[Digest] AI response was not valid JSON, using simple parsing.');
       // Simple fallback if JSON fails

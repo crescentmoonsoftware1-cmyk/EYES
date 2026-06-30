@@ -124,6 +124,7 @@ const getSectionIcon = (id: string) => {
 
 export const PolicyPageTemplate = ({
   title,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   lastUpdated: _lastUpdated,
   sections
 }: {

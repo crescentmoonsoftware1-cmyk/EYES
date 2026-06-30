@@ -90,6 +90,7 @@ describe('POST /api/cron/job-recovery', () => {
       new Response(JSON.stringify({ ok: true }), { status: 200 })
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     syncGithubMock.mockResolvedValue(NextResponse.json({ ok: true, syncedRepos: 0, hasMore: false }) as any);
     markJobAsRecoveredMock.mockResolvedValue({ success: true });
 

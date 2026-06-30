@@ -482,8 +482,9 @@ Identify 1-4 specific gaps. Return:
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildWeekSummaries(vectors: StateVector[]): string {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   void vectors;
   const weeks: StateVector[][] = [];
   for (let i = 0; i < vectors.length; i += 7) {

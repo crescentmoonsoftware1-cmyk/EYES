@@ -58,6 +58,7 @@ export default function LandingPage() {
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [logoHovered, setLogoHovered] = useState(false);
 
   // Monitor scroll for sticky navbar

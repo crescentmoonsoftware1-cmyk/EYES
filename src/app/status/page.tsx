@@ -1,5 +1,6 @@
 import React from 'react';
 import { createClient } from '@/utils/supabase/server';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ShieldIcon, ArrowRightIcon } from '@/components/common/icons/PlatformIcons';
 import Link from 'next/link';
 
@@ -13,6 +14,7 @@ async function checkDatabaseStatus() {
     const latency = Date.now() - start;
     if (error) throw error;
     return { status: 'operational', latency };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
     return { status: 'outage', latency: 0 };
   }

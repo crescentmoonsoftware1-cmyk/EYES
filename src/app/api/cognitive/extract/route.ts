@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     let contentToExtract = rawText || '';
     let platform = 'manual';
-    let sourceMemoryId = memoryId || null;
+    const sourceMemoryId = memoryId || null;
 
     if (memoryId) {
       const { data: memory, error: memErr } = await admin

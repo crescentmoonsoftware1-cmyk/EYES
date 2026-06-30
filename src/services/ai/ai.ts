@@ -27,20 +27,24 @@ const MOCK_MODE = process.env.MOCK_MODE === 'true';
 // All calls route via the gateway.
 const EMBED_DIMS = 1024; // Align with Voyage/Gemini 1024-dim database schema (Migration 032)
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function pickRandom<T>(arr: T[]): T | null {
   return arr.length === 0 ? null : arr[Math.floor(Math.random() * arr.length)];
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // ── Per-model cooldown (in-process, resets on cold start) ────────────────────
 const cooldowns = new Map<string, number>();
 const COOLDOWN_MS = 300_000;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isCooling(m: string): boolean {
   const t = cooldowns.get(m);
   if (!t) return false;
   if (Date.now() - t > COOLDOWN_MS) { cooldowns.delete(m); return false; }
   return true;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function markFailed(m: string): void { cooldowns.set(m, Date.now()); }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -215,6 +219,7 @@ async function handleChat(
 
 // ── Public interface ─────────────────────────────────────────────────────────
 export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal } = options;
 
   // K3: Mock mode

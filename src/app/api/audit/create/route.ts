@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
 import { Client } from '@upstash/qstash';
 

@@ -34,6 +34,7 @@ const hoisted = vi.hoisted(() => {
               })),
             })),
             upsert: upsertSpy,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any;
         }
         return builder;
@@ -84,6 +85,7 @@ describe('POST /api/chat/threads indexing', () => {
     expect(response.status).toBe(200);
     expect(upsertSpy).toHaveBeenCalledTimes(1);
     // Use (as any) to avoid TS2493 on mock calls tuple inference
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((upsertSpy.mock.calls as any)[0][0]).toMatchObject({
       user_id: 'test-user-id',
       platform: 'eyes_chat',

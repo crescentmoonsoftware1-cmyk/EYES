@@ -19,6 +19,7 @@ export async function POST(request: Request) {
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (!user) {

@@ -27,6 +27,7 @@ function cleanContent(raw: string | null | undefined, maxLen = 240): string {
 }
 
 export function MemoryFeedView({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onBack,
   platforms,
   filterPlatform,
@@ -74,6 +75,7 @@ export function MemoryFeedView({
 
   // ── Re-fetch from top when filter changes ──────────────────────────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setItems([]);
     setNextCursor(null);

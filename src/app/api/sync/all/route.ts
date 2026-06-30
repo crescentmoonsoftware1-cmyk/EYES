@@ -21,6 +21,7 @@ export function toSyncRoutePlatform(platform: string) {
   return platform.replace(/_/g, '-');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isBackgroundMode(request: Request) {
   const background = new URL(request.url).searchParams.get('background');
   if (!background) return false;

@@ -7,6 +7,7 @@
  * Extracted from AuthContext.tsx to reduce the 875-line monolith.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';

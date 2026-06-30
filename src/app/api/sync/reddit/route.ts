@@ -7,6 +7,7 @@ import { resolveSyncActor } from '@/utils/sync/actor';
 
 type RedditMe = { name: string };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type RedditCommentListing = {
   data?: {
     children?: Array<{

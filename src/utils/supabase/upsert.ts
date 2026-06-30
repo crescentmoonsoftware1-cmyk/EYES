@@ -217,6 +217,7 @@ async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUp
 
         // Save relationships to the Bi-Temporal Graph table (Phase 2)
         if (relations.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const edgesToInsert = relations.map((rel: any) => ({
              user_id: event.user_id,
              head_node_id: rel.head.toLowerCase().replace(/\s+/g, '_'),

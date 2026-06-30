@@ -7,6 +7,7 @@ interface TimelineViewProps {
   onBack: () => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TimelineView({ onBack }: TimelineViewProps) {
   const [data, setData] = React.useState<{ year: string; count: number }[]>([]);
   const [loading, setLoading] = React.useState(true);
