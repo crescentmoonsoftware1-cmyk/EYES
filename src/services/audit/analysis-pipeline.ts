@@ -29,7 +29,8 @@ async function resolveCommitmentStatuses(
       .filter(w => w.length >= 3);
 
     // Look for a calendar event created within 7 days of the commitment
-    // that shares at least 1 keyword with the commitment text
+    // that shares at least 2 keywords with the commitment text (raised from 1
+    // to reduce false positives where unrelated events share common short words)
     const hasFulfillingEvent = calendarEvents.some(evt => {
       if (!evt.timestamp || !evt.title) return false;
       const evtDate = new Date(evt.timestamp).getTime();
@@ -37,7 +38,8 @@ async function resolveCommitmentStatuses(
       if (!withinWindow) return false;
 
       const evtWords = evt.title.toLowerCase().split(/\W+/).filter(w => w.length >= 3);
-      return commitmentWords.some(w => evtWords.includes(w));
+      const matchingWords = commitmentWords.filter(w => evtWords.includes(w));
+      return matchingWords.length >= 2; // L4 fix: require 2+ shared keywords to reduce false positives
     });
 
     return {
@@ -45,6 +47,18 @@ async function resolveCommitmentStatuses(
       status: hasFulfillingEvent ? 'completed' : 'pending',
     };
   });
+}
+
+/**
+ * Computes a time-decay weight for a memory record.
+ * Recent (< 30 days): 1.0 | Semi-recent (< 6 months): 0.5 | Older: 0.2
+ * Extracted from the three inline copies that previously existed in runAnalysis.
+ */
+function computeRecencyWeight(timestampIso: string, nowTs: number): number {
+  const ageMs = nowTs - new Date(timestampIso).getTime();
+  const THIRTY_DAYS_MS  = 30  * 24 * 60 * 60 * 1000;
+  const SIX_MONTHS_MS   = 180 * 24 * 60 * 60 * 1000;
+  return ageMs < THIRTY_DAYS_MS ? 1.0 : ageMs < SIX_MONTHS_MS ? 0.5 : 0.2;
 }
 
 export class AuditAnalysisService {
@@ -78,7 +92,9 @@ export class AuditAnalysisService {
         try {
           const parsedSettings = JSON.parse(settingsData.data_types[0]);
           if (parsedSettings.riskSensitivity) riskSensitivity = parsedSettings.riskSensitivity;
-        } catch { }
+        } catch (parseErr) {
+          console.warn('[Audit] Failed to parse connector settings JSON:', parseErr);
+        }
       }
 
       // Unify keywords for a comprehensive extraction pass (identical across all lenses to ensure strict determinism)
@@ -345,10 +361,7 @@ Return JSON ONLY:
         const evt = events.find(e => e.id === a.id);
         if (!evt) return;
 
-        const ageMs = nowTs - new Date(evt.timestamp).getTime();
-        const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
-        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-        const weight = ageMs < thirtyDaysMs ? 1.0 : ageMs < sixMonthsMs ? 0.5 : 0.2;
+        const weight = computeRecencyWeight(evt.timestamp, nowTs);
 
         weightedTotalMentions += weight;
         if (a.sentiment === -1) {
@@ -521,10 +534,7 @@ Return JSON ONLY:
         // Calculate total DB weight of this platform (using recency weights)
         let platformDbWeight = 0;
         platformEvents.forEach(evt => {
-          const ageMs = nowTs - new Date(evt.timestamp).getTime();
-          const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
-          const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-          const weight = ageMs < thirtyDaysMs ? 1.0 : ageMs < sixMonthsMs ? 0.5 : 0.2;
+          const weight = computeRecencyWeight(evt.timestamp, nowTs);
           platformDbWeight += weight;
         });
 

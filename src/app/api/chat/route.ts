@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { invokeModel, invokeModelStream } from '@/services/ai/ai';
 
+// Vercel function timeout — must be <= plan limit (Pro = 300s, Hobby = 10s)
+export const maxDuration = 60;
+
+// ── Constants ────────────────────────────────────────────────────────────────
+/** Minimum cosine similarity to include a memory record in evidence (0–1 scale). */
+const SIMILARITY_THRESHOLD = 0.18;
+/** Maximum allowed message length in characters — prevents token-bomb attacks. */
+const MAX_MESSAGE_LENGTH = 8_000;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Role = 'user' | 'assistant' | 'system';
 type Msg  = { role: Role; content: string };
@@ -14,6 +23,17 @@ type PlannerResult = {
   semantic_weight: number;
   intent: 'lookup' | 'pattern' | 'contradiction' | 'open_reflection';
   needs_history: boolean;
+};
+
+type EyesCitation = {
+  recordId: string;
+  memoryId: string;
+  platform: string;
+  title: string | null;
+  timestamp: string | null;
+  snippet: string;
+  sourceUrl: string | null;
+  sourceId?: number;
 };
 
 type MemoryRow = {
@@ -82,10 +102,12 @@ function buildSystemPrompt(
   summary: string,
   today: string,
   userMessage: string,
+  graph: string,
 ): string {
   const evidenceBlock = [
     evidence ? `EVIDENCE:\n${evidence}` : 'EVIDENCE: No matching records found in your connected sources.',
-    insights ? `INSIGHTS:\n${insights}` : ''
+    insights ? `INSIGHTS:\n${insights}` : '',
+    graph ? `KNOWLEDGE GRAPH:\n${graph}` : ''
   ].filter(Boolean).join('\n\n');
 
   return `You are EYES — an intelligence that has read everything this person has ever said across their connected accounts. You are not a search engine and not a generic assistant. You are the one entity that remembers their digital life in full and reflects it back to them with honesty.
@@ -186,7 +208,7 @@ async function retrieveEvidence(
   userId: string,
   plan: PlannerResult,
   userTurn: string,
-): Promise<{ evidence: string; citations: EyesCitation[]; insightsText: string }> {
+): Promise<{ evidence: string; citations: EyesCitation[]; insightsText: string; graphText: string }> {
   if (process.env.MOCK_MODE === 'true') {
     const mockCitations: EyesCitation[] = [
       {
@@ -225,13 +247,15 @@ async function retrieveEvidence(
     return {
       evidence,
       citations: mockCitations,
-      insightsText: '[INSIGHT:REPUTATION] Commitment inconsistency detected: requested one-pager has no matching email attachment or delivery record prior to follow-up.'
+      insightsText: '[INSIGHT:REPUTATION] Commitment inconsistency detected: requested one-pager has no matching email attachment or delivery record prior to follow-up.',
+      graphText: ''
     };
   }
 
   const citations: EyesCitation[] = [];
   const evidenceParts: string[] = [];
   let insightsText = '';
+  let graphText = '';
 
   // Calculate start_date if time_window_days is provided
   let start_date: string | undefined = undefined;
@@ -249,7 +273,7 @@ async function retrieveEvidence(
   
   let embedding: number[] | null = null;
   
-  const [embedResult, insightsResult] = await Promise.all([
+  const [embedResult, insightsResult, graphResult] = await Promise.all([
     invokeModel({
       capability: 'embed',
       messages: [{ role: 'user', content: primaryQ }],
@@ -266,7 +290,13 @@ async function retrieveEvidence(
           .eq('is_current', true)
           .order('strength', { ascending: false })
           .limit(5)
-      : Promise.resolve({ data: null })
+      : Promise.resolve({ data: null }),
+    supabase
+      .from('chronic_edges')
+      .select('head_node_id, relation_label, tail_node_id, is_contradicted_by')
+      .eq('user_id', userId)
+      .is('valid_to', null)
+      .limit(30)
   ]);
 
   if (embedResult && typeof embedResult === 'object' && 'embedding' in embedResult) {
@@ -277,6 +307,11 @@ async function retrieveEvidence(
     insightsText = insightsResult.data.map((r: { kind: string; title: string; body: string; citations: string[]; strength: number }) =>
       `[INSIGHT:${r.kind.toUpperCase()}] ${r.title}\n${r.body}\nCitations: ${(r.citations || []).join(', ')}`
     ).join('\n\n');
+  }
+
+  // Parse Graph Edges
+  if (graphResult && graphResult.data && graphResult.data.length > 0) {
+    graphText = graphResult.data.map((e: any) => `[${e.head_node_id.replace(/_/g, ' ')}] ${e.relation_label} [${e.tail_node_id.replace(/_/g, ' ')}]`).join('\n');
   }
 
   const queries = plan.search_queries && plan.search_queries.length > 0
@@ -303,7 +338,7 @@ async function retrieveEvidence(
         console.warn('[Chat] hybrid_search error:', error.message);
       } else if (data && data.length > 0) {
         rows = data;
-        hasHighQualityEmbeddingMatches = data.some((r: any) => (r.similarity ?? 0) > 0.18);
+        hasHighQualityEmbeddingMatches = data.some((r: any) => (r.similarity ?? 0) > SIMILARITY_THRESHOLD);
       }
     }
 
@@ -371,7 +406,7 @@ async function retrieveEvidence(
     if (!rows) continue;
 
     const filtered = rows
-      .filter(r => (r.similarity ?? 0) > 0.18)
+      .filter(r => (r.similarity ?? 0) > SIMILARITY_THRESHOLD)
       .sort((a, b) => b.combined_score - a.combined_score);
 
     for (const r of filtered) {
@@ -403,19 +438,10 @@ async function retrieveEvidence(
 
   // Token cap: ~7000 input tokens ≈ 28000 chars
   const evidence = evidenceParts.join('\n\n---\n\n').slice(0, 28000);
-  return { evidence, citations, insightsText };
+  return { evidence, citations, insightsText, graphText };
 }
 
-type EyesCitation = {
-  recordId: string;
-  memoryId: string;
-  platform: string;
-  title: string | null;
-  timestamp: string | null;
-  snippet: string;
-  sourceUrl: string | null;
-  sourceId?: number;
-};
+// EyesCitation is declared at top of file — see line 5 block
 
 // ── Step 7: Update rolling summary (background, non-blocking) ─────────────────
 async function updateSummary(
@@ -476,17 +502,20 @@ async function storeNote(
   return noteId;
 }
 
-const CHAT_TIMEOUT_MS = 25_000;
+const CHAT_TIMEOUT_MS = 60_000;
 
 async function handleChat(request: Request): Promise<Response> {
   try {
     const body = await request.json();
-    const message: string = body.message || '';
+    const message: string = (body.message || '').slice(0, MAX_MESSAGE_LENGTH);
     const history: unknown = body.history;
     const threadId: string | null = body.threadId || null;
     const prevSummary: string = body.summary || '';
 
     if (!message.trim()) return NextResponse.json({ error: 'No message provided' }, { status: 400 });
+    if (body.message && body.message.length > MAX_MESSAGE_LENGTH) {
+      console.warn(`[Chat] Message truncated from ${body.message.length} to ${MAX_MESSAGE_LENGTH} chars.`);
+    }
 
     const supabase = await createClient();
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
@@ -532,11 +561,11 @@ async function handleChat(request: Request): Promise<Response> {
     }
 
     // ── Steps 3–4: Retrieve and assemble evidence ─────────────────────────────
-    const { evidence, citations, insightsText } = await retrieveEvidence(supabase, user.id, plan, message);
+    const { evidence, citations, insightsText, graphText } = await retrieveEvidence(supabase, user.id, plan, message);
 
     // ── Step 5: EYES persona system prompt ────────────────────────────────────
     const systemPrompt = buildSystemPrompt(
-      userName, userRole, userGoals, userPersona, connectedSources, evidence, insightsText, prevSummary, today, message,
+      userName, userRole, userGoals, userPersona, connectedSources, evidence, insightsText, prevSummary, today, message, graphText
     );
 
     const fullMessages: Msg[] = [

@@ -1,17 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { User } from '../AuthContext';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const REALTIME_PULSE_THROTTLE_MS = 10000;
-
-let _lastPulseTime = 0;
-function emitRealtimeRefreshEvent() {
-  if (typeof window === 'undefined') return;
-  const now = Date.now();
-  if (now - _lastPulseTime < REALTIME_PULSE_THROTTLE_MS) return;
-  _lastPulseTime = now;
-  window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
-}
+const REALTIME_PULSE_THROTTLE_MS = 10_000;
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -23,6 +14,18 @@ export function useRealtimeSync(
   isLoading: boolean,
   pathname: string
 ) {
+  // M3 fix: move module-level mutable pulse state into a ref so it's
+  // scoped to the hook instance and stable across HMR hot reloads.
+  const lastPulseTimeRef = useRef<number>(0);
+
+  const emitRealtimeRefreshEvent = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const now = Date.now();
+    if (now - lastPulseTimeRef.current < REALTIME_PULSE_THROTTLE_MS) return;
+    lastPulseTimeRef.current = now;
+    window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
+  }, []);
+
   useEffect(() => {
     if (isLoading || !user) {
       return;
@@ -46,7 +49,7 @@ export function useRealtimeSync(
     const queueRefresh = () => {
       if (refreshTimer) return;
 
-      // Debounce bursts: Only allow UI refresh every 2 seconds to damp the pulse.
+      // Debounce bursts: only allow UI refresh every 2 seconds to damp the pulse.
       refreshTimer = setTimeout(() => {
         refreshTimer = undefined;
         emitRealtimeRefreshEvent();
@@ -78,5 +81,5 @@ export function useRealtimeSync(
       }
       void supabase.removeChannel(channel);
     };
-  }, [isLoading, pathname, supabase, user]);
+  }, [isLoading, pathname, supabase, user, emitRealtimeRefreshEvent]);
 }

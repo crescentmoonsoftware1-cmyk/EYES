@@ -15,10 +15,32 @@ export type PlatformOutcome = {
 };
 
 const SYNC_TIMEOUT_MS = Number(process.env.CRON_SYNC_TIMEOUT_MS || 20000);
+const COGNITIVE_EXTRACT_SECRET = process.env.CRON_SECRET || '';
 
 function toSyncRoutePlatform(platform: string) {
   if (platform === 'google_calendar') return 'google-calendar';
   return platform.replace(/_/g, '-');
+}
+
+/**
+ * Fire-and-forget: trigger cognitive extraction for a user after sync.
+ * Called after successful platform syncs to keep the Chronic Layer up to date.
+ * Never awaited — does not block sync completion.
+ */
+function triggerCognitiveExtraction(baseUrl: string, userId: string): void {
+  const url = `${baseUrl}/api/cognitive/extract`;
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-cron-secret': COGNITIVE_EXTRACT_SECRET,
+    },
+    body: JSON.stringify({ userId, batch: true }),
+    signal: AbortSignal.timeout(25_000),
+  }).catch(err => {
+    // Non-critical — log and continue
+    console.warn(`[PlatformSync] Cognitive extraction trigger failed for ${userId}:`, err instanceof Error ? err.message : err);
+  });
 }
 
 function parseResponsePayload(rawBody: string) {
@@ -193,6 +215,10 @@ export async function runPlatformSyncDirect(
         error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Sync failed (${response.status})`,
       };
     }
+
+    // L-FINAL-2: trigger async cognitive extraction after successful direct sync
+    const extractBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    triggerCognitiveExtraction(extractBaseUrl, userId);
 
     return {
       platform,

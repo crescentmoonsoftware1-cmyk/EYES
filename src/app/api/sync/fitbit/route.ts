@@ -17,13 +17,13 @@ export async function POST(request: Request) {
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'fitbit', status: 'syncing', last_sync_at: new Date().toISOString() });
 
     // Token refresh
-    let accessToken = decryptToken(tokenRow.access_token);
+    let accessToken = decryptToken(tokenRow.access_token) || '';
     if (tokenRow.expires_at && new Date(tokenRow.expires_at).getTime() - Date.now() < 300000 && tokenRow.refresh_token) {
       const basicAuth = Buffer.from(`${process.env.FITBIT_CLIENT_ID}:${process.env.FITBIT_CLIENT_SECRET}`).toString('base64');
       const refreshResp = await fetch('https://api.fitbit.com/oauth2/token', {
         method: 'POST',
         headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: decryptToken(tokenRow.refresh_token) }),
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: decryptToken(tokenRow.refresh_token) || '' }),
       });
       if (refreshResp.ok) {
         const rb = await refreshResp.json();

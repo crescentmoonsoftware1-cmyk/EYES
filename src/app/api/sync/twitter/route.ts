@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Twitter is not connected' }, { status: 401 });
     }
 
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
 
     // Mark as syncing
     await upsertSyncStatusSafely(supabase, {

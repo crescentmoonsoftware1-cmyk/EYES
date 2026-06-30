@@ -19,12 +19,12 @@ export async function POST(request: Request) {
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'strava', status: 'syncing', last_sync_at: new Date().toISOString() });
 
     // Refresh token if needed
-    let accessToken = decryptToken(tokenRow.access_token);
+    let accessToken = decryptToken(tokenRow.access_token) || '';
     if (tokenRow.expires_at && new Date(tokenRow.expires_at).getTime() - Date.now() < 300000 && tokenRow.refresh_token) {
       const refreshResp = await fetch('https://www.strava.com/oauth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: process.env.STRAVA_CLIENT_ID, client_secret: process.env.STRAVA_CLIENT_SECRET, refresh_token: decryptToken(tokenRow.refresh_token), grant_type: 'refresh_token' }),
+        body: JSON.stringify({ client_id: process.env.STRAVA_CLIENT_ID, client_secret: process.env.STRAVA_CLIENT_SECRET, refresh_token: decryptToken(tokenRow.refresh_token) || '', grant_type: 'refresh_token' }),
       });
       if (refreshResp.ok) {
         const rb = await refreshResp.json();

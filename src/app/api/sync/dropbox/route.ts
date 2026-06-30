@@ -23,6 +23,7 @@ async function refreshDropboxToken(supabase: SupabaseClient, userId: string, ref
   if (!body.access_token) return null;
   await supabase.from('oauth_tokens').update({
     access_token: encryptToken(body.access_token),
+    refresh_token: encryptToken(body.refresh_token || refreshToken),
     expires_at: body.expires_in ? new Date(Date.now() + body.expires_in * 1000).toISOString() : null,
     updated_at: new Date().toISOString(),
   }).eq('user_id', userId).eq('platform', 'dropbox');
@@ -43,11 +44,13 @@ export async function POST(request: Request) {
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'dropbox', status: 'syncing', last_sync_at: new Date().toISOString() });
 
     // Refresh token if close to expiry
-    let accessToken = decryptToken(tokenRow.access_token);
+    let accessToken = decryptToken(tokenRow.access_token) || '';
     if (tokenRow.expires_at && tokenRow.refresh_token) {
       const expiresAt = new Date(tokenRow.expires_at);
       if (expiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
-        const newToken = await refreshDropboxToken(supabase, userId, decryptToken(tokenRow.refresh_token));
+        const decryptedRefresh = decryptToken(tokenRow.refresh_token);
+        if (!decryptedRefresh) return NextResponse.json({ error: 'Dropbox token corrupted' }, { status: 401 });
+        const newToken = await refreshDropboxToken(supabase, userId, decryptedRefresh);
         if (newToken) accessToken = newToken;
       }
     }

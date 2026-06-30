@@ -1,0 +1,281 @@
+[
+  {
+    "title": "\ud83e\uddbe This Week in AI",
+    "entities": [
+      {
+        "label": "organization",
+        "text": "taaft",
+        "score": 0.8136578798294067
+      },
+      {
+        "label": "person",
+        "text": "Abhishek",
+        "score": 0.9445533156394958
+      },
+      {
+        "label": "organization",
+        "text": "Gemini",
+        "score": 0.8262889981269836
+      },
+      {
+        "label": "organization",
+        "text": "Gemini",
+        "score": 0.700229287147522
+      },
+      {
+        "label": "organization",
+        "text": "GPT-5",
+        "score": 0.6296795010566711
+      },
+      {
+        "label": "organization",
+        "text": "Five Eyes",
+        "score": 0.7589251399040222
+      }
+    ],
+    "relations": []
+  },
+  {
+    "title": "VISA PROCESSING RESUMES ! The IRCC has announced that beginning on July 1st, Canada wi...",
+    "entities": [
+      {
+        "label": "document",
+        "text": "VISA PROCESSING RESUMES",
+        "score": 0.7656095027923584
+      },
+      {
+        "label": "organization",
+        "text": "IRCC",
+        "score": 0.9280290007591248
+      },
+      {
+        "label": "place",
+        "text": "Canada",
+        "score": 0.7830740809440613
+      },
+      {
+        "label": "document",
+        "text": "VISA PROCESSING RESUMES",
+        "score": 0.7907514572143555
+      },
+      {
+        "label": "organization",
+        "text": "IRCC",
+        "score": 0.9261144995689392
+      },
+      {
+        "label": "place",
+        "text": "Canada",
+        "score": 0.7725629806518555
+      },
+      {
+        "label": "person",
+        "text": "Abhishek",
+        "score": 0.8590217232704163
+      },
+      {
+        "label": "document",
+        "text": "VISA PROCESSING RESUMES",
+        "score": 0.725087583065033
+      },
+      {
+        "label": "organization",
+        "text": "IRCC",
+        "score": 0.9134219884872437
+      },
+      {
+        "label": "place",
+        "text": "Canada",
+        "score": 0.7501968741416931
+      },
+      {
+        "label": "organization",
+        "text": "Tata Consultancy Services",
+        "score": 0.8708402514457703
+      },
+      {
+        "label": "person",
+        "text": "Guru Prasad",
+        "score": 0.9164067506790161
+      }
+    ],
+    "relations": []
+  },
+  {
+    "title": "Reminder: Host Intro Call - StayingBee \ud83d\udc1d (Abhishek Prabhakaran ) @ Tue 5 May 2026 8pm - 8:30pm (IST) (viridiana.alvarez@stayingbee.com)",
+    "entities": [
+      {
+        "label": "person",
+        "text": "Abhishek Prabhakaran",
+        "score": 0.9779558777809143
+      },
+      {
+        "label": "person",
+        "text": "viridiana.alvarez",
+        "score": 0.8132597804069519
+      },
+      {
+        "label": "person",
+        "text": "viridiana.alvarez",
+        "score": 0.7377335429191589
+      },
+      {
+        "label": "organization",
+        "text": "Google",
+        "score": 0.9345793724060059
+      },
+      {
+        "label": "organization",
+        "text": "google",
+        "score": 0.822252631187439
+      },
+      {
+        "label": "person",
+        "text": "viridiana.alvarez",
+        "score": 0.6345296502113342
+      },
+      {
+        "label": "person",
+        "text": "Abhishek Prabhakaran",
+        "score": 0.9789944291114807
+      },
+      {
+        "label": "organization",
+        "text": "Google",
+        "score": 0.9483100771903992
+      },
+      {
+        "label": "event",
+        "text": "Meet",
+        "score": 0.6409488916397095
+      },
+      {
+        "label": "organization",
+        "text": "google",
+        "score": 0.855997622013092
+      },
+      {
+        "label": "organization",
+        "text": "google",
+        "score": 0.8595463633537292
+      },
+      {
+        "label": "organization",
+        "text": "Google",
+        "score": 0.9179111123085022
+      },
+      {
+        "label": "organization",
+        "text": "google",
+        "score": 0.8747523427009583
+      },
+      {
+        "label": "person",
+        "text": "Abhishek Prabhakaran",
+        "score": 0.978459358215332
+      }
+    ],
+    "relations": []
+  },
+  {
+    "title": "Assistant Project Manager  - (Planning - MSP) at Isprava",
+    "entities": [
+      {
+        "label": "person",
+        "text": "Assistant Project Manager",
+        "score": 0.8940180540084839
+      },
+      {
+        "label": "organization",
+        "text": "Isprava",
+        "score": 0.8844988942146301
+      },
+      {
+        "label": "organization",
+        "text": "Isprava",
+        "score": 0.7512212991714478
+      },
+      {
+        "label": "person",
+        "text": "Assistant Project Manager",
+        "score": 0.8221890330314636
+      },
+      {
+        "label": "place",
+        "text": "Goa",
+        "score": 0.609283447265625
+      },
+      {
+        "label": "person",
+        "text": "Assistant Project Manager",
+        "score": 0.8791912198066711
+      },
+      {
+        "label": "organization",
+        "text": "Isprava",
+        "score": 0.9085497260093689
+      },
+      {
+        "label": "place",
+        "text": "Goa",
+        "score": 0.6567044258117676
+      }
+    ],
+    "relations": [
+      {
+        "head": "Assistant Project Manager",
+        "label": "works_at",
+        "tail": "Isprava",
+        "score": 0.95
+      }
+    ]
+  },
+  {
+    "title": "Gestionnaire de production H/F - GROUPE PIMENT at AEROCONTACT",
+    "entities": [
+      {
+        "label": "organization",
+        "text": "H/F - GROUPE PIMENT",
+        "score": 0.8004969954490662
+      },
+      {
+        "label": "organization",
+        "text": "AEROCONTACT",
+        "score": 0.9279558062553406
+      },
+      {
+        "label": "organization",
+        "text": "AEROCONTACT",
+        "score": 0.824158251285553
+      },
+      {
+        "label": "organization",
+        "text": "H/F - GROUPE PIMENT",
+        "score": 0.7844731211662292
+      },
+      {
+        "label": "organization",
+        "text": "H/F - GROUPE PIMENT",
+        "score": 0.8177950382232666
+      },
+      {
+        "label": "organization",
+        "text": "AEROCONTACT",
+        "score": 0.7750677466392517
+      },
+      {
+        "label": "place",
+        "text": "Argonay",
+        "score": 0.6131157279014587
+      }
+    ],
+    "relations": [
+      {
+        "head": "AEROCONTACT",
+        "label": "located_in",
+        "tail": "Argonay",
+        "score": 0.9
+      }
+    ]
+  }
+]

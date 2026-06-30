@@ -192,6 +192,9 @@ async function extractAndStoreEntities(
   supabase: SupabaseClient,
   row: MemoryUpsertRow
 ): Promise<void> {
+  // DISABLED: Bypassing legacy LLM classification in preparation for GLiNER/GLiREL (Phase 1)
+  return;
+
   // Skip short content — not worth extracting from
   if (!row.content || row.content.length < 80) return;
 
@@ -218,7 +221,10 @@ Text: ${row.content.slice(0, 1000)}`,
   let entities: Array<{ type: string; name: string }> = [];
   try {
     const match = String(aiResponse).match(/\[[\s\S]*?\]/);
-    if (match) entities = JSON.parse(match[0]);
+    // TS18047: TypeScript can't narrow match through try/catch, use non-null assertion
+    // Safe because match() returning null causes early return on next line
+    if (!match) return;
+    entities = JSON.parse(match![0]);
   } catch { return; }
 
   if (!entities.length) return;

@@ -142,7 +142,7 @@ export async function getValidGoogleToken(
         body: new URLSearchParams({
           client_id: clientId,
           client_secret: clientSecret,
-          refresh_token: refreshToken,
+          refresh_token: refreshToken || '',
           grant_type: 'refresh_token',
         }),
       });
@@ -317,7 +317,7 @@ export async function getValidDiscordToken(
         client_id: clientId,
         client_secret: clientSecret,
         grant_type: 'refresh_token',
-        refresh_token: decryptToken(tokenRow.refresh_token),
+        refresh_token: decryptToken(tokenRow.refresh_token) || '',
       }),
     });
 
@@ -335,7 +335,9 @@ export async function getValidDiscordToken(
       .from('oauth_tokens')
       .update({
         access_token: encryptToken(newAccessToken),
-        refresh_token: newRefreshToken ? encryptToken(newRefreshToken) : tokenRow.refresh_token,
+        refresh_token: newRefreshToken 
+          ? encryptToken(newRefreshToken) 
+          : (tokenRow.refresh_token && !tokenRow.refresh_token.startsWith('enc:v1:') ? encryptToken(tokenRow.refresh_token) : tokenRow.refresh_token),
         expires_at: newExpiresAt,
         updated_at: new Date().toISOString(),
       })
@@ -396,7 +398,7 @@ export async function getValidRedditToken(
       },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: decryptToken(tokenRow.refresh_token),
+        refresh_token: decryptToken(tokenRow.refresh_token) || '',
       }),
     });
 

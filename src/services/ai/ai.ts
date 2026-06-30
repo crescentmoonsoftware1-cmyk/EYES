@@ -59,6 +59,8 @@ export interface AIInvokeOptions {
   preference?: AIPreference;
   capture?: boolean;
   maxTokens?: number;
+  /** AbortSignal to cancel the in-flight request (e.g. when the chat timeout fires). */
+  signal?: AbortSignal;
 }
 
 export type EmbedResult = { embedding: number[] };
@@ -120,6 +122,7 @@ async function gatewayChat(
   alias: string,
   messages: { role: string; content: string }[],
   maxTokens = 1024,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   const base = getGatewayBase();
   const key = getGatewayKey();
@@ -132,6 +135,7 @@ async function gatewayChat(
         'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({ model: alias, messages, max_tokens: maxTokens, temperature: 0.1 }),
+      signal, // thread AbortSignal through for cancellation on timeout
     });
     if (!res.ok) {
       console.warn(`[AI Gateway] ${alias} returned ${res.status}`);
@@ -140,12 +144,13 @@ async function gatewayChat(
     const body = await res.json();
     return body?.choices?.[0]?.message?.content ?? null;
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return null; // Clean cancellation
     console.warn('[AI Gateway] fetch failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }
 
-async function gatewayEmbed(text: string): Promise<number[] | null> {
+async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[] | null> {
   const base = getGatewayBase();
   const key = getGatewayKey();
   if (!base || !key) return null;
@@ -161,18 +166,20 @@ async function gatewayEmbed(text: string): Promise<number[] | null> {
         input: text.slice(0, 8000),
         dimensions: 1024,
       }),
+      signal, // thread AbortSignal through for cancellation on timeout
     });
     if (!res.ok) return null;
     const body = await res.json();
     return body?.data?.[0]?.embedding ?? null;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return null; // Clean cancellation
     return null;
   }
 }
 
 // ── Embedding (gateway ONLY) ────────────────────────────────
-async function handleEmbedding(text: string): Promise<EmbedResult | null> {
-  const gatewayResult = await gatewayEmbed(text);
+async function handleEmbedding(text: string, signal?: AbortSignal): Promise<EmbedResult | null> {
+  const gatewayResult = await gatewayEmbed(text, signal);
   if (gatewayResult) return { embedding: gatewayResult };
   console.error('[AI] Gateway embedding failed.');
   return null;
@@ -182,7 +189,8 @@ async function handleChat(
   messages: AIHistoryMessage[],
   system: string,
   capability: AICapability,
-  overrideMaxTokens?: number
+  overrideMaxTokens?: number,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   const isClassify = capability === 'classify' ||
     /return.*json|json only|valid json/i.test(system);
@@ -198,7 +206,7 @@ async function handleChat(
   ];
 
   // 1. Gateway (K1)
-  const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens);
+  const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens, signal);
   if (gatewayResult) { console.log(`[AI] Gateway (${alias}) OK`); return gatewayResult; }
 
   console.error('[AI] Gateway chat failed.');
@@ -207,7 +215,7 @@ async function handleChat(
 
 // ── Public interface ─────────────────────────────────────────────────────────
 export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResult> {
-  const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat' } = options;
+  const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal } = options;
 
   // K3: Mock mode
   if (MOCK_MODE) {
@@ -216,11 +224,11 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
   }
 
   if (capability === 'embed') {
-    return handleEmbedding(messages[0]?.content || '');
+    return handleEmbedding(messages[0]?.content || '', signal);
   }
 
   const startedAt = Date.now();
-  const result = await handleChat(messages, system, capability, options.maxTokens);
+  const result = await handleChat(messages, system, capability, options.maxTokens, signal);
 
   if (capture && result) {
     setTimeout(() => {
@@ -240,7 +248,7 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
 
 // ── Streaming (gateway SSE ONLY) ──────────────
 export async function invokeModelStream(options: AIInvokeOptions): Promise<ReadableStream> {
-  const { messages = [], system = '' } = options;
+  const { messages = [], system = '', signal } = options;
   const encoder = new TextEncoder();
 
   if (MOCK_MODE) {
@@ -270,12 +278,17 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({ model: ALIAS_CHAT, messages: fullMessages, max_tokens: 1024, temperature: 0.1, stream: true }),
+        signal, // propagate AbortSignal so timeout cancels the stream
       });
       if (res.ok && res.body) {
         console.log('[AI Stream] Gateway streaming');
         return sseToReadable(res.body, encoder);
       }
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Clean cancellation — return an empty stream
+        return new ReadableStream({ start(c) { c.close(); } });
+      }
       console.warn('[AI Stream] Gateway stream failed:', err instanceof Error ? err.message : err);
     }
   }

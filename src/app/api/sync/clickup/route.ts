@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (!tokenRow?.access_token) return NextResponse.json({ error: 'ClickUp is not connected.' }, { status: 401 });
     const { data: currentStatus } = await supabase.from('sync_status').select('total_items').eq('user_id', userId).eq('platform', 'clickup').maybeSingle();
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'clickup', status: 'syncing', last_sync_at: new Date().toISOString() });
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
     const headers = { Authorization: accessToken };
     const url = new URL(request.url);
     const limit = url.searchParams.get('depth') === 'deep' ? 100 : 25;

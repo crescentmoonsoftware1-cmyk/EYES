@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       last_sync_at: new Date().toISOString(),
     });
 
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
 
     // Query assigned issues from Linear's GraphQL API
     const query = `

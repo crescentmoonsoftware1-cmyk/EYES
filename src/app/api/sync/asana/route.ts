@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const { data: currentStatus } = await supabase.from('sync_status').select('total_items').eq('user_id', userId).eq('platform', 'asana').maybeSingle();
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'asana', status: 'syncing', last_sync_at: new Date().toISOString() });
 
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
     const headers = { Authorization: `Bearer ${accessToken}`, 'Asana-Enable': 'new_user_task_lists' };
     const url = new URL(request.url);
     const limit = url.searchParams.get('depth') === 'deep' ? 100 : 25;

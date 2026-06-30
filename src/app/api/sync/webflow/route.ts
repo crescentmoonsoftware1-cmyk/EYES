@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     if (!tokenRow?.access_token) return NextResponse.json({ error: 'Webflow is not connected.' }, { status: 401 });
     const { data: currentStatus } = await supabase.from('sync_status').select('total_items').eq('user_id', userId).eq('platform', 'webflow').maybeSingle();
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'webflow', status: 'syncing', last_sync_at: new Date().toISOString() });
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
     const headers = { Authorization: `Bearer ${accessToken}`, 'accept-version': '2.0.0' };
     const sitesResp = await fetch('https://api.webflow.com/v2/sites', { headers, cache: 'no-store' });
     if (!sitesResp.ok) throw new Error(`Webflow sites API (${sitesResp.status})`);

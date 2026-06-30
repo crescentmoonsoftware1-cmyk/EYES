@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+gliner
+litellm
+supabase
+python-dotenv
+pydantic
+torch

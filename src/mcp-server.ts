@@ -34,7 +34,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const EMBED_DIMS = 1536;
+const EMBED_DIMS = 1024; // Voyage/Gemini 1024-dim — aligned with migration 032 & ai.ts
 
 async function generateGatewayEmbedding(text: string): Promise<number[] | null> {
   if (!LITELLM_BASE_URL || !LITELLM_KEY) {
@@ -255,7 +255,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // match_memories: vector(1024), threshold, count, user_id_arg
       const { data: matches, error } = await supabase.rpc("match_memories", {
         query_embedding: embedding,
-        match_threshold: 0.35,
+        match_threshold: 0.25, // L-NEW-3 fix: calibrated for 1024-dim (Voyage/Gemini) — 0.35 was set for old 1536-dim embeddings
         match_count: limit,
         user_id_arg: userId, // Local MCP runs for a single owner
       });

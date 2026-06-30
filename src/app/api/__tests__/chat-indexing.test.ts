@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const upsertSpy = vi.fn(async () => ({ error: null }));
 
@@ -69,7 +70,7 @@ describe('POST /api/chat/threads indexing', () => {
     ];
 
     const response = await POST(
-      new Request('http://localhost/api/chat/threads', {
+      new NextRequest('http://localhost/api/chat/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,7 +83,8 @@ describe('POST /api/chat/threads indexing', () => {
 
     expect(response.status).toBe(200);
     expect(upsertSpy).toHaveBeenCalledTimes(1);
-    expect(upsertSpy.mock.calls[0]?.[0]).toMatchObject({
+    // Use (as any) to avoid TS2493 on mock calls tuple inference
+    expect((upsertSpy.mock.calls as any)[0][0]).toMatchObject({
       user_id: 'test-user-id',
       platform: 'eyes_chat',
       event_type: 'chat_turn',

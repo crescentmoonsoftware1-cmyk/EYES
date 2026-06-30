@@ -1,0 +1,587 @@
+CONFIDENTIAL · INTERNAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE
+ONLY · DO NOT DISTRIBUTE
+EYES
+EVERYTHING YOU EVER SAID
+The Chronic Layer
+Build Directive
+The direction, the order, and the non-negotiables for building
+the understanding layer — while the live product stays
+standing. Read this once, top to bottom. It is written to be
+understood, not just executed.
+DOCUMENT
+Chronic Layer Build Directive
+VERSION
+v1.0 · Working Directive
+DATE
+25 June 2026
+PREPARED FOR
+Crescent Moon Engineering
+FROM
+EYES Founder Office
+SCOPE
+Perception Layer + Phases 1–4
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 1 / 21
+00How to read this document
+What this is, what it asks of you, and the few rules that govern everything below.
+This directive sets the direction for the next stretch of work. It does not contain dates,
+week counts, or who-does-what. You know your team and your pace better than anyone.
+What this document fixes is the order of the work, the shape of each piece, and a small
+set of rules that do not bend.
+The work runs on two tracks at once. The live product — the thing 32 real people are already using
+— stays standing and stays cared for. That is track one, and it is always priority one. In parallel,
+starting now, we begin building the understanding layer underneath EYES. That is track two. Track
+two never comes at the expense of track one. A broken live product loses people faster than a
+missing feature wins them.
+The order of track two is fixed. The pace is yours. If a phase finishes faster than expected, the next
+one begins — the sequence does not change, but nothing waits for permission. And one rule sits
+above all the phases, stated on the next page on its own, because it is the rule that protects
+everything EYES is.
+THE SINGLE OPERATING RULE THAT MATTERS MOST
+The moment anything is built that a user can feel in the chat — a new kind of answer, a
+relationship surfacing, an insight that wasn't possible yesterday — it ships that day, and I
+am told. Do not batch it. Do not wait for the phase to be "complete." The chat is the product;
+the instant the chat gets smarter, the user should get that, and the founder should know it
+happened. Plug it in, push it, message me.
+This document covers the Perception Layer and Phases 1 through 4 of the Chronic build. It stops
+there deliberately. The organs above Phase 4 are real and they are coming, but they are direction,
+not commitment — they are described in one short closing section and specced separately, when
+the layers beneath them are stable.
+A NOTE ON HOW THIS WAS WRITTEN
+This is written for humans first — read it and the whole picture should sit in your head. It is
+also written knowing it will be handed to an AI to help execute. So the tools are named, the
+algorithms are named, the libraries are named, the schemas are written out explicitly, and the
+verbs are real. There is no "leverage," no "optimize," no vague direction. Where a choice
+was made, the alternatives we rejected and the reason are on the page, so the reasoning
+travels with the instruction.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 2 / 21
+THE ONE RULE WITH NO EXCEPTIONS
+NON-NEGOTIABLE · EVERY PHASE · NO "LATER"
+Everything carries its receipt.
+Every entity, every relationship, every edge written into the graph — at every phase,
+without exception — carries provenance back to the exact source record and the
+exact span of text it was extracted from. If EYES knows it, EYES can show where it
+learned it.
+This is not a nice-to-have we add once the graph works. It is built in from the first record, because
+it is the foundation the entire product stands on. EYES is the system that cites, that proves, that
+holds you to what the record actually says. The whole promise — the reason a person trusts it over
+a brilliant stranger like ChatGPT — is that it never makes a claim it cannot back.
+Picture the failure if we skip it. The Chronic layer surfaces an insight: "you committed to this and let
+it slip." The user, stung, says: "show me where I said that." If EYES cannot produce the exact
+message, the exact line, the exact date — the trust does not just crack on that one insight. It
+collapses across the entire product, retroactively, on every answer EYES has ever given. An
+unanchored insight is worse than no insight. It is a liability wearing the costume of intelligence.
+A claim without its source is not a feature. It is the exact thing
+EYES exists to replace.
+So: anchoring is in from record one. If an extracted relationship cannot point back to the text that
+produced it, it does not enter the graph as a fact — it waits as a candidate until it can be grounded.
+No engineer skips this in the name of speed. This is the place where correctness beats velocity,
+every time, no discussion.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 3 / 21
+01The architecture, in one picture
+Where every piece of this build sits. Orientation before instruction.
+EYES is one body with five layers. Data comes in raw, gets perceived, gets understood,
+gets answered, and reaches the person. The understanding layer — Chronic — is where
+this directive lives.
+RAW TRUTH emails · messages · calendar · GitHub · Notion · docs
+never deleted · never Chronic's job to remember
+│
+▼
+PERCEPTION LAYER turns raw records into structured signal
+also the retrieval layer — mostly already built
+│
+▼
+┌─────────────────────────────────────────────────────┐
+│   CHRONIC  ·  the persistent understanding organism    │
+│                                                      │
+│    foundation    Entity →  Relationship →  Temporal →     │
+│    (what is)     Behavior                             │
+│                                                      │
+│    interpretation  Drift →  Loops →  Contradiction →       │
+│    (what moves)   Narrative                            │
+│                                                      │
+│    emergence     Identity →  Prediction                 │
+│                                                      │
+│    runs continuously · never sleeps                  │
+└─────────────────────────────────────────────────────┘
+│
+▼
+ACUTE interprets the question · selects context ·
+retrieves · surfaces understanding · answers
+│
+▼
+INTERFACE chat today · dashboard / brief / document tomorrow
+Two things to hold about Chronic before the phases begin.
+The order of the organs is itself meaningful.
+The foundation organs answer what is — who and what exist (Entity), how they connect
+(Relationship), when (Temporal), what's happening (Behavior). The interpretation organs answer
+what's moving — what's drifting, what repeats, what conflicts, what story is forming. The
+emergence organs answer what this is becoming. Each layer reads from the one below it. You build
+bottom-up, and this directive covers the foundation — Entity, Relationship, the start of Temporal —
+plus the Perception Layer that feeds it.
+The substrate is locked.
+Everything Chronic does runs on a bi-temporal knowledge graph. The engine is Graphiti; the graph
+database underneath is Neo4j (community edition) or Kuzu — your call based on what the team is
+comfortable operating, both are fine. "Bi-temporal" means every fact carries two timelines: when it
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 4 / 21
+was true in the world, and when EYES learned it. This is not up for re-architecting. It is the decision
+the whole stack assumes.
+WHAT THIS DIRECTIVE COVERS — AND WHAT IT DOESN'T
+Covered: the Perception Layer, the entity and relation schemas, and Phases 1–4 (extraction
+quality, the Gmail foundation slice, multi-source expansion, and the first temporal and
+community work). Deferred to a later directive: the interpretation and emergence organs —
+Drift proper, Loops, Contradiction, Narrative, Identity, Prediction. They are described in one
+closing section as direction only. Do not plan against them yet.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 5 / 21
+02Two tracks, one team
+How the live product and the new build run side by side without one starving the
+other.
+ATrack one — the live product stays standing
+This is priority one, every day, no matter what is being built on track two. It is not background work
+and it is not "when there's time." It is the floor.
+BTrack two — the Chronic build, in parallel, starting now
+Not "after the product is perfect." Now. The phases that follow are track two. They run alongside
+track one, on whatever share of the team's attention is left once track one is genuinely safe.
+THE SHIP-ON-READY RULE, RESTATED BECAUSE IT GOVERNS EVERYTHING
+Whenever a piece of track two produces something a user can feel in the chat — a real
+entity surfacing, a cross-source connection, a first insight that wasn't possible before — it
+ships that day, and the founder is told the same day. The build is plug-and-play into the live
+chat by design. Speed of shipping the felt improvement is the whole point of building in this
+order.
+CThe daily document
+From this day forward, the team sends a short document every day. Same three sections, same
+shape, every time:
+The structure and the daily cadence are mandated. The mechanism — where it lives, how it's sent
+— is yours to choose, as long as it arrives daily in this form. What it replaces is scattered status
+across chat threads. One document, every day, same structure. That is the discipline.
+FOUNDER-OWNED, NOT TEAM-OWNED
+Monitoring, continuously. Who logs in, who returns, where they drop off in the flow. Server
+load, response times, query performance. We need to see trouble before users do.
+Bug triage with real windows. Anything users hit gets fixed inside a defined window — the most
+severe same-day, the serious within a day or two, the minor within the week. The windows
+matter more than their exact length; what cannot happen is a user-facing bug sitting untriaged.
+Connector health. Gmail, GitHub, Notion, and Slack-when-throttling-allows stay synced and
+stable. If one breaks or rate-limits, that is known and owned, not discovered by a user.
+Visible polish. Onboarding refinements as we learn from real sessions, audit formatting, the
+citation experience, any remaining text-rendering issues. This continues alongside everything.
+What we did today — the work that happened.
+What we finished today — what actually closed, shipped, or merged. Not "worked on." Finished.
+What we're doing tomorrow — the next concrete moves.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 6 / 21
+The entity schema and the relation schema — what kinds of things and what kinds of
+connections EYES recognizes — are defined by the founder. A working v0 is written into this
+document (Section 03B) so the team can begin immediately. It will be refined. The tools
+below are configured against that schema, and they re-configure without a rebuild, so
+refinement later is cheap.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 7 / 21
+03The Perception Layer
+The foundation that mostly already exists — and the retrieval layer the chat already
+runs on.
+Perception turns raw records into structured signal, and it is the same layer that
+retrieves. Most of it is already built. The work is to formalize it, anchor it, and wire
+it to feed the graph.
+AWhat it is, and why it sits where it does
+Between Raw Truth and Chronic sits the layer that observes. Its job is to take a raw record — a
+Gmail message, a Notion note — and pull out the structured signal inside it: the mentions, the
+events, the people, the actions, the commitments. It is the eye that sees before the brain
+understands.
+Here is the part that matters for sequencing, and the reason this section exists: the Perception
+Layer is also the retrieval layer. The chunked search the team already built — chopping incoming
+data into tagged, bite-sized pieces, running hybrid search that matches on meaning first and falls
+back to exact then partial keywords, injecting the source and title into every chunk — that is
+perception. Retrieval is the act of perceiving what's relevant in the raw corpus. It is not thrown
+away in the Chronic build. It is named, kept, strengthened, and connected upward.
+PERCEPTION feeds two paths — both matter
+  raw record
+      │
+      ├──►   retrieval path   →   ACUTE direct lookup
+      │       (chunk · embed ·      "find my last email to John"
+      │        hybrid search)       answered from source, no graph needed
+      │
+      └──►   extraction path  →   ENTITY ENGINE input
+             (entities · events ·   perceived entities become
+              commitments pulled    resolved nodes in the graph
+              from the text)
+BThe work to do here
+This is "little work" relative to the phases above, because the spine of it exists. Four concrete
+things:
+Formalize it as the named Perception Layer. The existing chunked-RAG retrieval becomes an
+explicit, named layer with a defined output, not an undocumented pipeline. Everything above
+reads from a known contract.
+1
+Anchor every chunk. Each chunk already carries source and title; extend that so every chunk
+— and every signal extracted from it — points back to the exact record and character span.
+This is the anchoring rule applied at the perception layer, where it begins.
+2
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 8 / 21
+Tools
+No new substrate here — this is the existing embedding pipeline (OpenAI text-embedding-3-small
+via the LiteLLM gateway alias auto-embed ) and the existing hybrid search. Strengthen and
+formalize; do not replace.
+WHY RETRIEVAL AND THE GRAPH ARE NOT THE SAME THING — AND WHY BOTH STAY
+Retrieval answers "where is the thing I'm looking for" — it finds relevant records fast. The
+graph answers "how does what we know connect and change." A question like "find my last
+email to John" is pure retrieval; it never needs the graph. A question like "have I been pulling
+away from John this year" needs the graph. Acute routes between them. Perception serves
+retrieval; perception also feeds the graph. Both paths live, from the same layer.
+DONE LOOKS LIKE
+The retrieval layer is named and documented with a defined output contract; every chunk
+and extracted signal carries provenance to its source record and span; perception's
+extraction output is available as input to the Entity Engine; and retrieval quality in live chat
+answers is measured and holding.
+Hands off to → the Entity Engine (Phase 2), which takes the entities perception pulls from text and resolves them
+into canonical, deduplicated nodes in the graph.
+Wire perception's output to feed the Entity Engine. The entities and events the layer perceives
+become the input the Entity Engine resolves into graph nodes (Phase 2). Today perception
+feeds only retrieval; it must also feed extraction.
+3
+Keep retrieval quality high. Retrieval is what the user feels in every chat answer. The hybrid
+search — meaning, then exact, then partial — stays and gets sharper. A better answer in chat
+is a shippable, felt improvement, and it falls under the ship-on-ready rule.
+4
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 9 / 21
+04The schemas — v0, founder-owned
+What kinds of things, and what kinds of connections, EYES recognizes. The DNA
+every organ is built from.
+The algorithms below are commodities — they exist, they're open-source, you adopt
+them. The schema is the part that is uniquely EYES, and it is where the moat begins. A
+generic system recognizes "person" and "works at." Only EYES recognizes
+"commitment" and "delayed on" as first-class things. That choice is what makes every
+interpretation organ above able to do something no one else can.
+This is v0. It is enough to start configuring the tools today. It will be refined by the founder as real
+user data shows which types actually matter. The tools reconfigure without a rebuild, so refinement
+is cheap and expected.
+AEntity types — the nouns
+Each becomes a label the extraction model is given, and a node-type in the graph.
+ENTITY TYPE WHAT IT CAPTURES
+person A human — named or referenced — appearing in the records.
+organization A company, team, institution, or group.
+place A location — city, country, venue, region.
+project A named effort or piece of work the person is engaged in.
+commitment A thing the person said they would do. First-class, not a topic.
+decision A choice the person made — including a choice against something.
+goal A stated intention or aim, larger than a single commitment.
+emotional_state An expressed feeling or state — anxious, excited, drained, resolved.
+event Something that happened at a time — a meeting, a call, a milestone.
+topic A subject the person engages with repeatedly.
+document A referenced artifact — a file, a doc, a deck.
+financial_transaction A money movement or financial event referenced in the records.
+BRelation types — the connections
+Each becomes a label the relation model is given, and a typed edge in the graph. The first group is
+generic and useful; the second group is where EYES diverges from every generic knowledge
+graph.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 10 / 21
+Generic relations (useful, not the moat)
+RELATION READS AS
+works_at person →  organization
+member_of person →  organization / team
+located_in person / org →  place
+discusses person →  topic / project
+EYES-specific relations (where the moat lives)
+RELATION READS AS
+committed_to person made a commitment regarding a thing, project, or person
+delayed_on a commitment with elapsed time and no action — the accountability signal
+decided_against an active rejection, not merely an absence
+mentioned_with_emotion a reference carrying emotional valence — positive, anxious, excited,
+drained
+depends_on one commitment or project blocked by another
+conflicts_with two stated intentions in tension — feeds Contradiction later
+referenced_alongside a co-occurrence pattern — feeds Narrative later
+searched_for the user actively asked EYES about this — feeds the accountability layer
+READ THIS BEFORE CONFIGURING ANYTHING
+The EYES-specific relations are the reason the whole system is worth building. Any tool can
+extract works_at. Only EYES decides that delayed_on is a real, first-class relationship in a
+person's life — because only EYES is in the business of holding a person to what they said.
+When configuring the relation model, these are not optional extras. They are the point.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 11 / 21
+05Phase 1 — Extraction quality spike
+Prove the extraction tools work on real EYES data before the whole foundation is built
+on them.
+Before committing the architecture to a toolchain, prove it produces good output
+on one real corpus. The deliverable is a memo, not code that stays.
+What it does, and why it comes first
+The single biggest unknown in this entire build is whether the chosen extraction tools — GLiNER for
+entities and GLiREL for relations — are good enough on real EYES data to be the foundation
+everything else stands on. If extraction quality is poor, every organ above inherits the noise, and
+we'd find that out months in. So we find out now, in a contained spike, before building broadly on
+the assumption.
+The approach
+Take one user's full Gmail corpus — the founder's is the natural choice, it is dense and real. Run
+GLiNER  across all of it with the v0 entity schema. Run GLiREL  on top to extract relations with the
+v0 relation schema. Then look hard at the output and measure it: obvious misses, hallucinated
+entities or relations that the text does not support, and cross-source duplicates. Write a one-page
+memo: what worked, what didn't, where the quality cliff is, and a clear go / no-go on the toolchain.
+Nothing built in this phase is meant to survive. It is a measurement instrument. Its only product is
+the memo and the decision it produces.
+Why these tools, and what we rejected
+OPTION VERDICT REASON
+GLiNER (entities)
++ GLiREL
+(relations)
+ADOPT Zero-shot — you define the labels (including commitment, decision) at
+runtime. Runs locally on CPU, which means extraction happens on our own
+infrastructure, not a third-party API per message. Right for privacy and cost.
+spaCy reject Fixed schema. Excellent for person / org / place / date, but cannot treat
+"commitment" or "decision" as entities — and those are the ones that
+matter.
+REBEL reject Locked to ~220 Wikidata relation types. The EYES-specific relations don't
+exist in its vocabulary.
+LLM-only
+extraction
+fallback Most capable, most expensive, and prone to hallucinating relations the text
+doesn't support. Kept only as a fallback for genuinely ambiguous records —
+never the primary path.
+COST AT SCALE
+GLiNER on CPU ≈  free  — it is compute time, no per-call API cost. The LLM fallback, used for
+the small share of records where the local model's confidence is low, runs through the
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 12 / 21
+existing auto-extract Gemini gateway alias and costs in the order of
+pennies per user per month . This is the cheapest organ in the system.
+DONE LOOKS LIKE
+A written quality memo on the founder's Gmail corpus, with measured extraction quality (how
+much it catches, how much it invents, how many duplicates it leaves), and a clear go / no-go
+on the GLiNER + GLiREL toolchain. If quality is good, Phase 2 begins. If it is not, that surfaces
+immediately — not silently months later.
+Hands off to → Phase 2, which takes the proven toolchain and builds the real, permanent foundation on Gmail.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 13 / 21
+06Phase 2 — The foundation slice on Gmail
+Build the full entity →  relationship →  temporal foundation, end to end, on one source
+only.
+Thin and deep, not broad and shallow. One source, taken all the way through —
+entities, relationships, time, evidence — before any second source is touched.
+The instinct will be to do all sources at once, or to do entities everywhere before touching
+relationships. Resist it. A complete, working Gmail-only graph — real nodes, typed edges, every
+edge carrying its receipt — teaches more and de-risks more than a broad entity-only layer across
+every connector. Gmail first, because it is the richest, densest source we have, OAuth is already
+wired, and it is where commitment detection is strongest.
+AThe Entity Engine — building the nouns
+Three sub-jobs, in order: extract, resolve, store.
+BThe Relationship Engine — building the connections
+On top of the resolved nodes, GLiREL  extracts typed relations using the v0 relation schema. Two
+disciplines are non-negotiable here:
+CTemporal anchoring — putting every edge in time
+Every edge in the graph carries four timestamps. This is the bi-temporal substrate doing its job:
+one edge, fully time-stamped
+  Sai  ── works_at ──►   JFrog
+        valid_from   = 2020          // true in the world since
+Extract — GLiNER  with the v0 entity schema pulls entities from each Gmail record. (The LLM
+fallback via auto-extract handles the contextually weird cases the local model is unsure
+about.)
+Resolve — Graphiti 's built-in resolution runs on the stream, collapsing repeat mentions of the
+same entity as data flows in. (Batch reconciliation with Splink waits for Phase 3, when multiple
+sources make cross-source duplicates the real problem.)
+Store — each entity becomes a node in the bi-temporal graph on Graphiti, with the graph DB
+(Neo4j or Kuzu) underneath. Each node carries: a canonical ID, its alias forms, its evidence (the
+records it appeared in, with source URLs), and an evolving summary.
+Anchoring on every relation. Every extracted relation carries a pointer back to the exact text
+span that produced it. A relation that cannot be grounded in source text does not enter the graph
+as a fact — it waits as a candidate. This is the anchoring rule, enforced at the edge level.
+A confidence threshold. GLiREL emits a confidence on each relation. Relations above roughly
+0.7–0.8 are promoted into the graph; below that they are stored as candidates and not
+surfaced. This is what prevents EYES ever claiming a connection the user didn't make.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 14 / 21
+        valid_to     = null          // still true, for now
+        observed_from = 2026-05-15    // when EYES learned it
+        observed_to   = null          // still believed
+        evidence     = gmail://msg/abc123
+        confidence   = 0.94
+later, a record says Sai left — the old edge is NOT deleted:
+        valid_to     = 2026-11-15     // updated
+        observed_to  = 2026-11-22     // superseded, but kept
+The old fact is never deleted. It is marked superseded and stays in the graph, recoverable. A fact
+that fades but remains in the body — the way memory actually works.
+COST AT SCALE
+GLiNER + GLiREL on CPU ≈  free. Graphiti, Neo4j community / Kuzu — open source, free.
+The only running cost is the LLM fallback on the small share of ambiguous records — order
+of €0.50–€2 per user per month . The foundation is almost entirely free to run.
+DONE LOOKS LIKE
+For one test user's Gmail: the graph contains resolved entity nodes and typed, evidenced,
+time-stamped relationship edges. And the acceptance test that matters most — every chat
+answer that references an entity or a relationship cites the exact source record it came from.
+No claim without its receipt.
+Hands off to → Phase 3, which extends this proven foundation across every source and makes the same entity
+collapse no matter where it appears.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 15 / 21
+07Phase 3 — Multi-source & cross-sourceresolution
+Extend the foundation to every connector, and make one person be one node — no
+matter where they appear.
+The same extraction pipeline, now across all sources — plus the hard new problem:
+the same entity, seen in many places, becoming a single node. This is where the
+first major user-visible deliverable lands.
+AExtend to the rest of the live connectors
+The extraction itself is the same GLiNER + GLiREL pipeline, now run across GitHub, Notion, and
+Slack (Slack as throttling allows — it stays de-emphasized in onboarding until the rate limit is
+resolved). No new extraction machinery; the same tools, more sources.
+BThe hard new problem — cross-source resolution
+When Sai appears in Gmail, Sai Kumar in Notion, and saik@jfrog.com in a calendar invite — are
+these one entity or three? If three, the graph is broken: every insight about Sai is split across
+phantom duplicates. This is the entity-resolution problem, and it is solved with a two-layer pattern:
+In this phase you bring Splink online, run it nightly, review its merge proposals, and tune the
+threshold. This is unglamorous and uncompromising — it is the difference between 47 phantom
+"Sai" nodes and one.
+ADOPT — SPLINK
+Probabilistic record linkage, proven at national-
+statistics scale — links a million records on a laptop
+in about a minute. Open source, free, runs on our
+own infrastructure.
+REJECT — DEDUPE.IO
+Similar idea, smaller ceiling — known to hit memory
+limits past roughly two million records. Fine for a
+toy, wrong for a system meant to compound for
+years.
+CThe first major user-visible win — the Mindmap
+This is where the existing Mindmap frontend work plugs into the new graph backend. The chunk-
+cluster view is replaced by a real entity-relationship view — actual people, projects, and places,
+with cross-source merging working, so one person shows up once with all their threads gathered.
+This is the first time a user feels the Chronic layer in the chat. Under the ship-on-ready rule, it ships
+the day it works.
+Streaming layer — Graphiti 's built-in resolution catches the easy merges as data flows in.
+Batch layer — Splink  runs nightly across the full graph, reconciling the harder cases. It uses
+a probabilistic record-linkage model (Fellegi-Sunter): for each candidate pair it computes the
+probability they're the same entity from each field's match strength — name similarity, date
+overlap, exact email match — produces a probability, and clusters matches above a threshold
+into one entity.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 16 / 21
+COST AT SCALE
+Splink, Graphiti, Neo4j / Kuzu — all open source, all free, all on our own infrastructure.
+The nightly Splink batch runs on a small VM. No new per-user cost beyond the same small
+extraction fallback from Phase 2.
+DONE LOOKS LIKE
+For the test user, when the same person appears in Gmail and Notion, they collapse to one
+node in the graph — and the Mindmap UI shows it correctly, real entities with cross-source
+merging visible. The migration story is handled: existing data flows into the new graph without
+disrupting the live users.
+Hands off to → Phase 4, which asks the graph its first questions about change over time and surfaces the first
+thing EYES could not say before.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 17 / 21
+08Phase 4 — Temporal aggregation &community detection
+Make the graph answer questions about change — and say the first thing it couldn't
+say yesterday.
+The foundation is real and multi-source. Now it learns to reason over time, to find
+the natural clusters in a life, and to surface the first true signal of change.
+ATemporal aggregation
+The first temporal questions are not machine learning — they are queries on the graph we already
+have. Count of mentions(person →  "France") per week, per month. Count of new
+committed_to edges per week. Median age of edges whose valid_to is still null, grouped by
+relation type — in plain terms, how long commitments sit open without action. These are graph
+queries (Cypher or SQL), cheap and fast, no new models.
+BCommunity detection
+Once there are hundreds of typed edges, the question becomes: which entities cluster together into
+meaningful groups? One cluster might be the build team — the founder, the project, the engineers,
+bound by works_with and discusses. Another might be the France question — the person, a
+place, a visa, parents, money, bound by mentions and worries_about. Community detection
+makes these visible without anyone predefining them.
+ADOPT — LEIDEN
+Runs nightly against the full graph. Produces well-
+connected, internally-coherent clusters; fast at our
+scale; already used under the hood by Graphiti.
+Cluster IDs are stored as their own node type.
+REJECT — LOUVAIN
+The older method Leiden improves on. Known to
+produce internally-disconnected communities —
+clusters that aren't actually one thing. Leiden's
+refinement step fixes exactly this.
+Cluster names are surfaced to the user for validation — the moment the user names their own
+clusters, which is one of the most important validation moments in the whole product. The system
+finds the shape; the person gives it meaning.
+CEdge decay & the first contradiction handling
+The decay discipline becomes concrete here: when a new edge contradicts an old one, the old one
+is not deleted — it gets its valid_to set and an is_contradicted_by pointer to the newer edge.
+The graph keeps an audit of how it evolved. Same (head, relation, tail) asserted twice with
+a conflict is the structural signature the Contradiction organ will later read.
+DThe first drift signal — the first new thing EYES says
+Nothing elaborate yet: count-based change detection on entity-mention frequency. "You mentioned
+France 47 times last year and 12 times this year — that pattern has changed." This is the Drift
+organ in its most primitive form, and it is the first time EYES tells the user something it could not
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 18 / 21
+have told them before the Chronic layer existed. Under the ship-on-ready rule, the day it works in
+chat, it ships.
+COST AT SCALE
+Leiden, temporal queries — free, on our own infrastructure.  Temporal aggregation is
+graph queries, not inference. Community detection is a nightly batch on a small VM. No new
+per-user API cost.
+DONE LOOKS LIKE
+The graph answers temporal questions (mention rates over time, open-commitment age);
+Leiden clusters run nightly and surface named communities for the user to validate;
+superseded edges are marked, not deleted, with contradiction pointers; and the first count-
+based drift signal surfaces in live chat.
+Hands off to → the interpretation and emergence organs — described next as direction only, specced separately
+when this layer is stable.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 19 / 21
+09Beyond Phase 4 — direction, notcommitment
+What the foundation is being built toward. Named here so the destination is clear; not
+planned against yet.
+Everything above builds the foundation — the what is. What follows is the rest of the
+organism. It is real, it is where EYES becomes singular, and it is not committed in this
+directive. Each of these begins only when the layers beneath it are stable and trusted.
+They will be specced in their own directive. Do not plan, estimate, or build against them
+yet — they are here so the team can see what the foundation is for.
+›The interpretation organs — what's moving
+›The emergence organs — what this is becoming
+THE DISCIPLINE THAT PROTECTS ALL OF IT
+These organs are the most powerful and the least solved. They depend entirely on the
+quality of the foundation below them. Building them on a shaky foundation produces
+confident nonsense — the worst possible outcome for a product whose entire value is being
+trustworthy about a person's own life. The foundation comes first, all the way, before any of
+this. That is the whole reason for the order in this document.
+Drift, proper. Beyond count-based change: genuine change-point detection and distribution-shift
+methods on the time series the graph produces — the direction of change, statistically
+grounded, separated from noise.
+Loops. Sequence-pattern mining over ordered behavior — the recurring structures a person
+runs without seeing them. Big idea →  deep research →  build →  launch →  bigger idea.
+Contradiction. The structural signature laid down in Phase 4, read out fully — where what a
+person says and what a person does diverge. Revealed, never judged.
+Narrative. The compression of thousands of events into the story they actually form — a
+homecoming story, a reinvention story — the way humans actually hold their own lives.
+Identity. Not what a person says they are, but who keeps showing up across patterns, states,
+relationships, and decisions over time. It emerges; it isn't stored.
+Prediction. Trajectory projection — if the last many months continue unchanged, where does
+this go. Not fortune-telling. The shape of the line extended.
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 20 / 21
+IN ONE BREATH
+The directive, compressed
+Track one, always first The live product stays standing and cared for. Monitoring, bug
+windows, connector health, polish. Every day, no matter what's
+being built.
+Track two, in parallel, now The Chronic build starts now, alongside track one — never instead of
+it.
+Ship on ready The instant anything user-visible works in the chat, it ships that day
+and the founder is told. Built to plug in.
+Anchor everything Every entity, relation, and edge carries its receipt to the exact source
+and span. No claim EYES can't back. No exceptions, no "later."
+The order is fixed Perception →  Entity →  Relationship →  Temporal →  community. Pace
+is yours; sequence is not.
+Substrate is locked Bi-temporal knowledge graph. Graphiti. Neo4j community or Kuzu
+underneath.
+Schemas are founder-owned v0 is written here so you can start today. It will be refined. The tools
+reconfigure without a rebuild.
+Adopt, don't reinvent GLiNER, GLiREL, Graphiti, Splink, Leiden — all open source, all
+proven, mostly free. The build is configuration. The moat is the
+schema and the anchoring.
+A daily document Did / finished / doing tomorrow. Same shape, every day. Mechanism
+yours; cadence and structure mandated.
+Build the foundation properly, all the way, before reaching for the
+organs above it. The order is the strategy.
+EYES — EVERYTHING YOU EVER SAID
+CONFIDENTIAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY
+EYES — CHRONIC LAYER BUILD DIRECTIVE CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 25 JUNE 2026 · FOUNDER OFFICE PAGE 21 / 21

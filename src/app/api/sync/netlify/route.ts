@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     if (!tokenRow?.access_token) return NextResponse.json({ error: 'Netlify is not connected.' }, { status: 401 });
     const { data: currentStatus } = await supabase.from('sync_status').select('total_items').eq('user_id', userId).eq('platform', 'netlify').maybeSingle();
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'netlify', status: 'syncing', last_sync_at: new Date().toISOString() });
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
     const headers = { Authorization: `Bearer ${accessToken}` };
     const url = new URL(request.url);
     const deep = url.searchParams.get('depth') === 'deep';

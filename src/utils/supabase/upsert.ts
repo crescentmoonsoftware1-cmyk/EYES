@@ -170,79 +170,76 @@ async function fireAcuteDetection(supabase: SupabaseClient, events: RawEventUpse
 
 /**
  * Fire-and-forget entity extraction on recently ingested events.
- * Extracts people, orgs, tools from each memory and populates entities table.
- * Limits to 5 events per batch to control AI costs.
+ * Sends data to the new Python FastAPI Chronic Engine running locally.
  */
 async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
+  const CHRONIC_ENGINE_URL = process.env.CHRONIC_ENGINE_URL || 'http://127.0.0.1:8000';
+  
   try {
-    // Only extract from events with meaningful content
-    const eligible = events.filter(e => e.content && e.content.length >= 80).slice(0, 5);
+    // Phase 3.A: Process ALL synced events regardless of platform
+    const eligible = events.filter(e => e.content && e.content.length >= 80);
     if (eligible.length === 0) return;
-
-    const { invokeModel } = await import('@/services/ai/ai');
 
     for (const event of eligible) {
       try {
-        const aiResponse = await invokeModel({
-          capability: 'classify',
-          system: 'You extract named entities from text. Respond with valid JSON only.',
-          messages: [{
-            role: 'user',
-            content: `Extract entities from this message. Return JSON array only:
-[{"type":"person|organization|tool|place","name":"Exact Name"}]
-Return [] if no entities found.
-
-Text: ${event.content.slice(0, 1000)}`,
-          }],
-          preference: 'auto',
-          capture: false,
+        const response = await fetch(`${CHRONIC_ENGINE_URL}/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: event.user_id,
+            platform_id: event.platform_id,
+            text: event.content.slice(0, 2000), // Send first 2000 chars to GLiNER
+            threshold: 0.6
+          })
         });
 
-        if (!aiResponse) continue;
-
-        let entities: Array<{ type: string; name: string }> = [];
-        try {
-          const match = String(aiResponse).match(/\[[\s\S]*?\]/);
-          if (match) entities = JSON.parse(match[0]);
-        } catch { continue; }
-
-        if (!entities.length) continue;
-
-        const enriched = entities.map(e => ({
-          ...e,
-          canonical_id: `${e.type}_${e.name.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`,
-        }));
-
-        // Store in entities_extracted column
-        await supabase
-          .from('memories')
-          .update({ entities_extracted: enriched })
-          .eq('user_id', event.user_id)
-          .eq('platform', event.platform)
-          .eq('source_id', event.platform_id)
-          .then(() => {});
-
-        // Upsert into entities table
-        for (const entity of enriched) {
-          await supabase
-            .from('entities')
-            .upsert({
-              user_id: event.user_id,
-              canonical_id: entity.canonical_id,
-              name: entity.name,
-              entity_type: entity.type,
-              last_seen_at: new Date().toISOString(),
-            }, { onConflict: 'user_id,canonical_id' })
-            .then(() => {});
+        if (!response.ok) {
+          console.warn(`[Entities] Chronic Engine returned ${response.status}`);
+          continue;
         }
 
-        console.log(`[Entities] Extracted ${enriched.length} entities from ${event.platform}/${event.platform_id.slice(0, 12)}`);
-      } catch {
-        // Non-critical — skip this event
+        const data = await response.json();
+        const entities = data.entities || [];
+        const relations = data.relations || [];
+
+        if (!entities.length && !relations.length) continue;
+
+        // Store the raw output from GLiNER in the memories table (including start/end indices for Anchoring)
+        await supabase
+          .from('memories')
+          .update({ 
+            entities_extracted: entities,
+            is_graph_extracted: true
+          })
+          .eq('user_id', event.user_id)
+          .eq('platform', event.platform)
+          .eq('source_id', event.platform_id);
+
+        // Save relationships to the Bi-Temporal Graph table (Phase 2)
+        if (relations.length > 0) {
+          const edgesToInsert = relations.map((rel: any) => ({
+             user_id: event.user_id,
+             head_node_id: rel.head.toLowerCase().replace(/\s+/g, '_'),
+             tail_node_id: rel.tail.toLowerCase().replace(/\s+/g, '_'),
+             relation_label: rel.label,
+             confidence: rel.score,
+             observed_from: new Date().toISOString(),
+             source_record_id: event.platform_id
+          }));
+
+          const { error: edgeError } = await supabase.from('chronic_edges').insert(edgesToInsert);
+          if (edgeError) {
+             console.warn('[Chronic Engine] Failed to save edges to Supabase:', edgeError.message);
+          }
+        }
+
+        console.log(`[Chronic Engine] Successfully extracted ${entities.length} entities & ${relations.length} relations from ${event.platform}/${event.platform_id.slice(0, 12)} via FastAPI`);
+      } catch (err) {
+        console.warn('[Chronic Engine] Fetch failed (is the Python server running?):', err);
       }
     }
   } catch (err) {
-    console.warn('[Entities] Background extraction failed (non-fatal):', err);
+    console.warn('[Chronic Engine] Background extraction failed:', err);
   }
 }
 

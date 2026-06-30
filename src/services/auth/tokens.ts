@@ -46,7 +46,8 @@ export function encryptToken(value: string) {
   return `${PREFIX}:${iv.toString('base64')}:${encrypted.toString('base64')}:${tag.toString('base64')}`;
 }
 
-export function decryptToken(value: string) {
+export function decryptToken(value: string | null | undefined): string | null {
+  if (!value) return null;
   if (!value.startsWith(`${PREFIX}:`)) return value;
 
   const key = getKey();
@@ -57,15 +58,21 @@ export function decryptToken(value: string) {
 
   const [, , ivB64, payloadB64, tagB64] = value.split(':');
   if (!ivB64 || !payloadB64 || !tagB64) {
-    throw new Error('Invalid encrypted token format.');
+    console.error('[Token] Invalid encrypted token format.');
+    return null;
   }
 
-  const iv = Buffer.from(ivB64, 'base64');
-  const payload = Buffer.from(payloadB64, 'base64');
-  const tag = Buffer.from(tagB64, 'base64');
+  try {
+    const iv = Buffer.from(ivB64, 'base64');
+    const payload = Buffer.from(payloadB64, 'base64');
+    const tag = Buffer.from(tagB64, 'base64');
 
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(tag);
-  const decrypted = Buffer.concat([decipher.update(payload), decipher.final()]);
-  return decrypted.toString('utf8');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(payload), decipher.final()]);
+    return decrypted.toString('utf8');
+  } catch (err) {
+    console.error('[Token] AES-256-GCM token decryption error:', err instanceof Error ? err.message : err);
+    return null;
+  }
 }

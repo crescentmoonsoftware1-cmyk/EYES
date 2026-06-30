@@ -106,14 +106,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Notion is not connected yet.' }, { status: 400 });
     }
 
-    let accessToken: string;
-    try {
-      accessToken = decryptToken(tokenRow.access_token);
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      console.error('notion sync auth error:', detail);
-      return NextResponse.json({ error: 'Unable to authenticate Notion connection.', detail }, { status: 401 });
+    const decryptedToken = decryptToken(tokenRow.access_token);
+    if (!decryptedToken) {
+      console.error('notion sync auth error: token invalid or corrupted');
+      return NextResponse.json({ error: 'Unable to authenticate Notion connection.' }, { status: 401 });
     }
+    let accessToken = decryptedToken;
 
     const url = new URL(request.url);
     const depth = url.searchParams.get('depth') || 'shallow';

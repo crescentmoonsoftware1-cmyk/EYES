@@ -14,12 +14,12 @@ export async function POST(request: Request) {
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'withings', status: 'syncing', last_sync_at: new Date().toISOString() });
 
     // Token refresh (Withings tokens expire in 3 hours)
-    let accessToken = decryptToken(tokenRow.access_token);
+    let accessToken = decryptToken(tokenRow.access_token) || '';
     if (tokenRow.expires_at && new Date(tokenRow.expires_at).getTime() - Date.now() < 300000 && tokenRow.refresh_token) {
       const refreshResp = await fetch('https://wbsapi.withings.net/v2/oauth2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ action: 'requesttoken', grant_type: 'refresh_token', client_id: process.env.WITHINGS_CLIENT_ID!, client_secret: process.env.WITHINGS_CLIENT_SECRET!, refresh_token: decryptToken(tokenRow.refresh_token) }),
+        body: new URLSearchParams({ action: 'requesttoken', grant_type: 'refresh_token', client_id: process.env.WITHINGS_CLIENT_ID!, client_secret: process.env.WITHINGS_CLIENT_SECRET!, refresh_token: decryptToken(tokenRow.refresh_token) || '' }),
       });
       if (refreshResp.ok) {
         const rb = (await refreshResp.json()).body;

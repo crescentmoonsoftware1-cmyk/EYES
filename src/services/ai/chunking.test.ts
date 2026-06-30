@@ -24,7 +24,9 @@ describe('buildDeterministicChunks', () => {
     expect(first.length).toBeLessThanOrEqual(5);
 
     first.forEach((chunk) => {
-      expect(chunk.startsWith('[Source: gmail] [Type: email] Title: Weekly Ops Digest\n\n')).toBe(true);
+      expect(chunk.text.startsWith('[Source: gmail] [Type: email] Title: Weekly Ops Digest\n\n')).toBe(true);
+      expect(chunk.startIndex).toBeGreaterThanOrEqual(0);
+      expect(chunk.endIndex).toBeGreaterThan(chunk.startIndex);
     });
   });
 
@@ -35,6 +37,9 @@ describe('buildDeterministicChunks', () => {
       title: null,
       content: '    ',
     });
-    expect(chunks).toEqual(['[Source: notion] [Type: null] Title: null\n\n']);
+    expect(chunks.length).toBe(1);
+    expect(chunks[0].text).toEqual('[Source: notion] [Type: null] Title: null\n\n');
+    expect(chunks[0].startIndex).toBe(0);
+    expect(chunks[0].endIndex).toBe(0);
   });
 });

@@ -1,0 +1,435 @@
+CONFIDENTIAL · INTERNAL · FOUNDER-OWNED ARTIFACT · DO NOT DISTRIBUTE
+EYES
+EVERYTHING YOU EVER SAID
+The Seeded
+Pattern Library
+The life-shapes EYES carries into the very first conversation —
+so that on day one, with a nearly empty graph, it can still say
+something true. The answer to the cold start. A companion to the
+Chronic Layer Build Directive.
+DOCUMENT
+Seeded Pattern Library
+VERSION
+v0 · Founder-Owned, To Be
+Refined
+DATE
+26 June 2026
+PAIRS WITH
+Chronic Layer Build Directive v1.0
+OWNER
+Founder (same as the schema)
+PATTERNS IN V0
+15, across 6 categories
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 1 / 13
+00Why this exists — the cold start
+The first sixty seconds decide whether a person stays. This is what makes them not
+feel empty.
+A user connects Gmail through OAuth. Within the first minute — before they search for a
+single email — a large share of them will type some version of one question: "who am I?" ·
+"what do you think of me?" · "tell me something about myself." That moment is the whole
+product. It is the screenshot moment, the moment that decides whether they ever come
+back.
+And at that exact moment, the graph is nearly empty. No time has passed. Nothing has
+accumulated. If Chronic can only speak from what this user's data has taught it so far, the first
+answer is thin — and a thin answer to the most important question, on the first try, kills the user
+before the product ever gets the chance to be good.
+ChatGPT isn't smart because of its users. It's smart because it read
+the books first. Chronic, today, has no books.
+This library is the books. It is a set of recognizable life-shapes — the founder's loop, the
+homecoming arc, the gap between what a person says and what they do — that a brand-new user
+is matched against from day one. The user shows up with two weeks of mail, and instead of
+starting from zero, Chronic asks: "which of the shapes I already know does this resemble?" — and
+it has a head start. The library is what lets a nearly-empty graph still say something that makes a
+person stop and think "how does it know that already?"
+TWO LIBRARIES, NOT ONE — AND ONLY ONE OF THEM IS NOW
+The mined library — learning new life-shapes from thousands of users — needs the users,
+and is later. The seeded library — the shapes EYES carries into the first conversation, hand-
+authored before a single user shows up — is needed now, because it is the only thing that
+makes minute-one land. This document is the seeded library. It is the fifty years of life pre-
+loaded into the technological infant.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 2 / 13
+01The seven disciplines
+A pattern library is one bad step from horoscopes. These are the rules that keep it
+true.
+The danger is real and specific. A library of life-shapes that "match" people becomes
+astrology the moment the shapes are vague enough to fit anyone, or the moment a
+psychological label gets stamped on a person from two weeks of email. EYES's entire
+worth is being true and evidenced about a specific person. Every pattern in this document
+obeys all seven of these, or it does not go in the library.
+A pattern is a prior, not a label. It is a starting hypothesis to be confirmed or killed against the
+person's real data — never a verdict stamped on them. The library makes minute-one non-
+empty. The person's own data is what makes it true.
+1
+Every pattern is grounded in detectable signals. If a shape cannot be tied to concrete
+features the Entity, Relationship, and Temporal engines actually produce — mention
+frequencies, relation-type ratios, delayed_on counts, drift over time, co-occurrence — it
+does not go in the library. No vibes. This is the line between EYES and a fortune teller.
+2
+Anchoring still applies. When Chronic surfaces a pattern match, it cites the evidence — the
+same receipt rule as every other claim. "I think you might run on external deadlines — here
+are the three commitments that show it." Never a free-floating insight.
+3
+Confidence matches the data. A match on two weeks of one source is a hypothesis, and
+must be spoken as one. The uncertainty lives in the phrasing — "early read," "tentative," "tell
+me if I'm wrong," "I'll get sharper." Overclaiming a pattern on thin data is the single thing that
+breaks trust on the first answer.
+4
+Patterns must be falsifiable. Every pattern names what would disconfirm it. A shape that
+matches everyone is a Barnum statement — worthless and dishonest. If it cannot be wrong,
+it is not in the library.
+5
+The wellbeing discipline. Some shapes touch distress — isolation, narrowing, a fading
+relationship, burnout. These are surfaced with the most care: as gentle observations oriented
+toward the person's own reflection, never as alarming diagnoses, never assuming the cause,
+and — when the signals are strong and concerning — leaning toward encouraging real
+human connection rather than cold pattern-reporting. EYES calls a person out on their
+avoidance. It does not bludgeon them about their pain. That line is real, and the library holds
+it.
+6
+Seeded now, mined later. This v0 is hand-authored from knowledge and behavioral
+observation. Over time, the privacy-preserved aggregate — the shape of patterns across
+many lives, never the contents of any one — will surface new shapes to add. The seeded
+library solves the cold start today; the mined library deepens it later.
+7
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 3 / 13
+02How each pattern is built
+The anatomy of a card — so the structure is reusable as you add your own.
+Every pattern in the next section is one card with the same parts. The structure is the
+discipline — it forces each shape to be grounded, voiced honestly, and falsifiable. When
+you add your own patterns, fill these same fields, or the new pattern doesn't earn its
+place.
+NAME + CODE The shape's plain name and an internal codename. Internal only — the user
+never sees "you are exhibiting Pattern A2."
+SENSITIVITY Standard, Sensitive, or Positive. Sensitive shapes carry a handling note and
+are surfaced with care, never as alarm.
+THE SHAPE What this life-pattern actually is, in one or two plain sentences.
+SIGNALS IT CAN DETECT The concrete graph features that suggest the shape — frequencies, ratios,
+edge types, drift. This is the grounding. No signal, no pattern.
+THE COLD-START READ What Chronic might actually say on day one when it matches — in the EYES
+voice, perceptive and honest, hedged for thin data, never flattering, never a
+verdict.
+CONFIRMS / DISCONFIRMS What later data would strengthen the hypothesis, and what would kill it. This
+is the falsifiability — and the hook into the prediction-and-outcome learning
+loop.
+ON THE VOICE IN THE COLD-START READS
+The reads below are written in EYES's register: direct, specific, perceptive, and humane —
+the voice that calls a person out without coddling them, and without ever pretending to
+certainty it doesn't have. They are illustrations of the register, not scripts to ship word-for-
+word. The names in brackets are placeholders the engine fills from the person's real entities.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 4 / 13
+03The patterns — v0
+Fifteen life-shapes across six categories. The starter set. Yours to refine.
+A · HOW A PERSON BUILDS the shape of how they make things
+A1The Builder's LoopTHE_LOOP STANDARD
+A person who cycles idea →  deep research →  architecture →  build →  near-launch →  new,
+bigger idea, rarely closing the loop on the last thing before the next one captures them.
+SIGNALS IT CAN DETECT
+Multiple project entities, each reaching a "build" stage; new project entities appearing before prior ones
+reach a shipped/closed event; high density of research and learning topic mentions relative to completed-
+milestone events; committed_to edges on projects with no matching completion.
+THE COLD-START READ
+"From your mail alone, I can already see at least three things you started with real intensity —
+[X], [Y], [Z]. Two of them go quiet right around the point the third one starts. Could be
+coincidence. Could be a pattern worth watching. I'll know more as I see more."
+CONFIRMS IF
+more projects follow the same start-intensify-
+abandon-restart shape over months.
+DISCONFIRMS IF
+projects reach sustained shipped states; the last
+thing gets finished before the next begins.
+A2Executes for Others, Orbits Own WorkORBIT STANDARD
+Delivers reliably on commitments to other people, but commitments to their own work and goals
+stall, circle, or never get the same follow-through.
+SIGNALS IT CAN DETECT
+High completion rate on committed_to edges whose tail is another person/organization; low
+completion on committed_to edges whose tail is a self-goal or own project; delayed_on concentrated
+on self-directed commitments; emotional_state around own work skewing anxious or avoidant.
+THE COLD-START READ
+"Early read, just from your email: when someone else is waiting on you, you deliver. When it's
+your own thing, it tends to orbit. The commitments with a name attached get done; the ones
+that are only yours get circled. Tell me if that lands, or if I'm reading it wrong."
+CONFIRMS IF
+the others-vs-self completion gap holds as more
+commitments resolve.
+DISCONFIRMS IF
+self-directed goals complete at a similar rate to
+commitments made to others.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 5 / 13
+A3The Perfectionist HoldHOLD STANDARD
+Work reaches near-completion and then stalls indefinitely in refinement, never quite crossing
+into release.
+SIGNALS IT CAN DETECT
+project entities with many revision/edit events but no release/publish event; long-lived valid_to-null
+commitments to "finishing" a thing; a project's mention frequency staying high without any completion
+event closing it.
+THE COLD-START READ
+"One thing I notice early: [project] has been close to done for a while. Lots of polishing, not
+much shipping. I might be missing the moment it went out — but if it hasn't, that gap between
+'almost' and 'out' is worth a look."
+CONFIRMS IF
+multiple projects show the same long refine-
+without-release tail.
+DISCONFIRMS IF
+work ships at a normal cadence; "almost done"
+reliably becomes "out."
+B · COMMITMENT & FOLLOW-THROUGH the gap between saying and doing
+B1Runs on External AccountabilityEXTERNAL STANDARD
+Things with an external deadline or someone watching get done; things with neither don't —
+regardless of how important the person says they are.
+SIGNALS IT CAN DETECT
+Completion events cluster around commitments that have an associated deadline event or other-person
+tail; self-stated important goals without external markers accumulate delayed_on; the gap between
+stated priority and completion correlates with the presence or absence of an external watcher.
+THE COLD-START READ
+"Here's an early pattern, and it's a common one: the things on your plate that have a deadline
+or a person attached get done. The ones that are just important to you — no deadline, nobody
+waiting — those are the ones that slip. The work has someone watching. The personal stuff has
+neither."
+CONFIRMS IF
+presence/absence of an external marker keeps
+predicting completion.
+DISCONFIRMS IF
+unwatched personal goals complete at the same
+rate as deadline-bound ones.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 6 / 13
+B2The Quiet NoQUIET_NO STANDARD
+Soft agreement to things that then never get acted on — a "yes" that was never really a
+commitment, just a way to end the conversation.
+SIGNALS IT CAN DETECT
+committed_to edges followed by no action and eventual silence — decay, not an explicit
+decided_against; recurring delayed_on on a particular category of ask; a gap between the language of
+agreement and any downstream event.
+THE COLD-START READ
+"Tentative, because I need more to be sure: there's a kind of 'yes' in your mail that doesn't seem
+to turn into anything — agreements that just quietly go nowhere. Not refusals. Just yeses that
+weren't really yeses. Worth noticing which asks those are."
+CONFIRMS IF
+a consistent class of agreements keeps dissolving
+into silence.
+DISCONFIRMS IF
+stated agreements generally produce follow-up
+action.
+C · IDENTITY & TRANSITION who a person is becoming, or leaving behind
+C1The Homecoming ArcHOMECOMING SENSITIVE
+A person who moved away from an origin — a place, a culture, a former life — and whose data
+shows a slow gravitational pull back toward it, often beneath their stated direction.
+SIGNALS IT CAN DETECT
+Rising mention frequency of origin place and origin person entities over time, while the current place's
+emotional_state valence flattens or declines; committed_to edges toward the current direction
+accumulating delayed_on; co-occurrence of the origin place with family and belonging entities.
+THE COLD-START READ
+"I don't have enough yet to say much here, and I want to be careful — but one early thread:
+[origin] comes up more than I'd expect for someone whose plans seem to point elsewhere. I'm
+not concluding anything. I'll just watch whether that holds, and you can tell me what it means."
+CONFIRMS IF
+origin mentions keep rising as forward-direction
+commitments keep slipping.
+DISCONFIRMS IF
+origin mentions are stable/declining and the
+current direction is progressing.
+HANDLING
+Touches belonging and possibly homesickness. Surface as a gentle observation about the data, never as
+"you secretly want to go home." Let the person assign the meaning.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 7 / 13
+C2The ReinventionREINVENTION STANDARD
+A person actively migrating away from a former identity or field — the old vocabulary fading as
+a new one rises.
+SIGNALS IT CAN DETECT
+An old topic/skill cluster declining in mention frequency over time (downward drift) while a new cluster
+rises (upward drift); decided_against edges on the old direction; new project and goal entities
+concentrated in the new domain.
+THE COLD-START READ
+"Something's shifting in what you spend words on. [Old domain] is fading; [new domain] is
+taking its place — and it doesn't look accidental. If you're in the middle of becoming a different
+kind of person professionally, the data already shows it before you'd probably say it out loud."
+CONFIRMS IF
+the old cluster keeps declining and the new one
+keeps rising over time.
+DISCONFIRMS IF
+both clusters stay active, or the "old" one re-rises
+— that's C3, not reinvention.
+C3Caught BetweenLIMINAL SENSITIVE
+A person genuinely suspended between two places, careers, or identities — neither resolving.
+Sustained tension, not migration.
+SIGNALS IT CAN DETECT
+Two competing entity clusters both active over time, neither declining; conflicts_with edges between
+stated intentions; oscillating emotional_state valence rather than a settling trend.
+THE COLD-START READ
+"Early, and gently: you seem to be holding two things at once — [A] and [B] — and neither is
+winning. That in-between can be its own kind of heavy. I'm not sure yet whether it's a phase or
+a place you're stuck in. I'll watch, and you can tell me which it is."
+CONFIRMS IF
+both clusters stay active with no resolution over a
+long window.
+DISCONFIRMS IF
+one cluster clearly wins out — that's reinvention or
+homecoming resolving.
+HANDLING
+Liminal states can carry real anxiety. Acknowledge the weight without dramatizing it; never imply the
+person is failing to choose. Observation, not pressure.
+D · RELATIONSHIPS who matters, who's fading, who's fuel
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 8 / 13
+D1High-Leverage, Low-ContactHIGH_LEVERAGE POSITIVE
+A person who appears in a small number of high-consequence moments — decisions,
+opportunities, turning points — but a low overall volume of communication.
+SIGNALS IT CAN DETECT
+A person entity with few total mentions but high co-occurrence with decision, opportunity, and milestone
+event entities; appears disproportionately at temporal inflection points in the graph.
+THE COLD-START READ
+"Here's one I find interesting already: [Name] barely shows up in your email by volume — but
+the few times they do, something important is happening around it. Most people never notice
+who their low-contact, high-leverage people are. [Name] looks like one of yours."
+CONFIRMS IF
+the person keeps surfacing at consequential
+moments despite low volume.
+DISCONFIRMS IF
+their appearances turn out to be routine, not tied
+to consequence.
+D2The Fading ThreadFADING SENSITIVE
+A person whose interaction has steadily declined over time — a relationship cooling, often
+without the person consciously noticing.
+SIGNALS IT CAN DETECT
+Declining mention frequency of a person entity across successive periods; lengthening gaps between
+interactions; a valid_to-null relationship edge with no recent supporting events.
+THE COLD-START READ
+"One quiet thing, and I'll hold it lightly: you and [Name] used to be in contact a lot more than
+you are now. The thread's gone thin. I don't know why — people drift, life happens, and
+sometimes it's nothing. Just something you might not have clocked."
+CONFIRMS IF
+the decline continues across later periods.
+DISCONFIRMS IF
+contact resumes, or the lull was a known,
+temporary gap.
+HANDLING
+A fade can mean grief, estrangement, or loss. Never assume the reason, never imply fault, never push
+"you should reach out." Offer the observation; let the person decide what it is.
+E · STATED VS. ACTUAL the contradiction seeds — handled honestly
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 9 / 13
+E1The Stated-Goal / Actual-Behavior GapSAY_DO_GAP SENSITIVE
+A clear, repeatedly stated intention with little or no corresponding action — the gap between
+what a person says they're doing and what the record actually shows. The accountability core
+of EYES.
+SIGNALS IT CAN DETECT
+A goal or commitment entity with high mention frequency (talked about often) but near-zero associated
+action or completion events; delayed_on accumulating; conflicts_with between the stated goal and
+where time and attention actually go.
+THE COLD-START READ
+"Early, tentative, and tell me if it's unfair: [goal] comes up a lot in how you talk — but I'm not yet
+seeing much in the record that looks like moving on it. Could be I just can't see the action.
+Could be something else. I'll get sharper, and I'd rather be corrected than wrong."
+CONFIRMS IF
+the talk-without-action gap persists as more data
+arrives.
+DISCONFIRMS IF
+action on the goal shows up that the thin early data
+simply hadn't surfaced yet.
+HANDLING
+This is the insight most likely to sting, and the one most likely to be wrong on thin data. Always frame as
+a question, never a verdict. The receipt rule is non-negotiable here — name the evidence, and invite
+correction. Honest, not cruel.
+E2The Quiet PivotQUIET_PIVOT STANDARD
+A person's actual attention has shifted significantly from what they'd describe as their focus —
+a drift they haven't consciously registered.
+SIGNALS IT CAN DETECT
+Divergence between the entity a person names as their "focus" and the entities actually rising in mention
+frequency; a new cluster overtaking an old one with no explicit decision event marking the change.
+THE COLD-START READ
+"If someone asked what you're focused on, I suspect you'd say [stated]. But the last while of
+your mail is mostly about [actual]. Not a contradiction exactly — more that your attention
+moved and didn't send a memo. Worth knowing where it actually went."
+CONFIRMS IF
+the rising cluster keeps diverging from the stated
+focus.
+DISCONFIRMS IF
+stated focus and actual attention realign, or were
+aligned all along.
+F · STATE & WELLBEING the most sensitive category — the most care
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 10 / 13
+F1Building Mode vs. Recovery ModeMODE_CYCLE STANDARD
+A person who cycles between high-output building phases and quieter recovery phases.
+Knowing which phase they're in explains a great deal about their behavior.
+SIGNALS IT CAN DETECT
+Activity and commitment-creation events clustering into bursts separated by quiet periods;
+emotional_state valence shifting between energized and drained across those periods.
+THE COLD-START READ
+"You don't run at one speed — and that's not a flaw, it's a rhythm. There are stretches where
+you're building hard, and stretches where you go quiet and refill. Reading you well means
+knowing which one you're in right now. Looks like [phase], from here."
+CONFIRMS IF
+the burst-then-quiet rhythm repeats across
+multiple cycles.
+DISCONFIRMS IF
+output is steady-state, with no real oscillation.
+F2The NarrowingNARROWING SENSITIVE
+The breadth of a person's life — relationships, interests, activities — visibly contracts toward a
+single domain over time. Can be healthy focus. Can be a warning sign.
+SIGNALS IT CAN DETECT
+Declining diversity of active entity clusters over time; rising concentration of mentions in one cluster;
+declining mention of relationship and personal-life entities relative to a single dominant domain.
+THE COLD-START READ
+"Something I'll raise carefully, because it can mean very different things: your world has gotten
+more concentrated lately — more and more about [domain], less of the other threads that used
+to be there. Sometimes that's focus, and it's good. Sometimes it's worth checking in on. Only
+you know which."
+CONFIRMS IF
+cluster diversity keeps falling and
+personal/relationship mentions keep thinning.
+DISCONFIRMS IF
+breadth returns, or the concentration was a known,
+bounded sprint.
+HANDLING — THE MOST CARE IN THE LIBRARY
+This shape can correlate with isolation or depression. Never alarm, never diagnose, never assume.
+Frame as the person's own to interpret. If signals are strong and the personal/relationship threads have
+gone quiet, lean gently toward the value of human connection — and remember EYES is not a substitute
+for it. Pain is not a thing to be called out. It is a thing to be careful with.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 11 / 13
+F3Avoidance-via-ResearchAVOIDANCE STANDARD
+When the uncomfortable next step gets replaced by more learning, research, or planning —
+productive-feeling activity that quietly substitutes for the hard thing.
+SIGNALS IT CAN DETECT
+Spikes in research and learning topic mentions co-occurring with the approach of a known hard
+commitment — a deadline, a sale, a launch; the hard commitment accruing delayed_on while research
+activity rises around it.
+THE COLD-START READ
+"Here's a sharp one, and I mean it kindly: right around the times [hard thing] gets close, your
+mail fills up with reading, researching, planning — everything except the hard thing itself.
+Learning more can be exactly how we avoid doing the thing we already know how to do.
+Worth catching yourself at it."
+CONFIRMS IF
+research spikes keep coinciding with avoided hard
+commitments.
+DISCONFIRMS IF
+research reliably precedes action, not avoidance —
+i.e. it's preparation, not flight.
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 12 / 13
+IN ONE BREATH
+The library, compressed
+The graph fills by itself, per person, over time. The library is what lets the very first
+conversation — before the graph has filled — say something true anyway. It is the
+fifty years pre-loaded into the infant: a set of recognizable life-shapes the person is
+matched against from minute one, so the most important question they'll ever ask
+EYES doesn't land on an empty page.
+Every shape here is a prior, not a label — a hypothesis to be confirmed or killed against the
+person's own data. Every shape is grounded in signals the engines actually detect, anchored
+to its evidence, spoken with confidence that matches how thin the data still is, and able to be
+wrong. The shapes that touch pain are handled with care, not bludgeoned. And this is v0 —
+fifteen shapes, hand-authored, founder-owned, the same as the schema. It will grow: seeded
+by hand now, mined from the aggregate later.
+The library makes minute-one non-empty. The person's own life is
+what makes it true.
+EYES — EVERYTHING YOU EVER SAID
+CONFIDENTIAL · FOUNDER-OWNED ARTIFACT · COMPANION TO THE CHRONIC LAYER BUILD DIRECTIVE
+EYES — SEEDED PATTERN LIBRARY V0 CONFIDENTIAL · FOUNDER-OWNED
+V0 · 26 JUNE 2026 · COMPANION TO THE BUILD DIRECTIVE PAGE 13 / 13

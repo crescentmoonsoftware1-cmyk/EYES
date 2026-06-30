@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     await upsertSyncStatusSafely(supabase, { user_id: userId, platform: 'sentry', status: 'syncing', last_sync_at: new Date().toISOString() });
 
-    const accessToken = decryptToken(tokenRow.access_token);
+    const accessToken = decryptToken(tokenRow.access_token) || '';
     const headers = { Authorization: `Bearer ${accessToken}` };
     const url = new URL(request.url);
     const limit = url.searchParams.get('depth') === 'deep' ? 100 : 25;

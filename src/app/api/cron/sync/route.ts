@@ -7,6 +7,59 @@ import { logCronMetrics, logAsyncJobFailure } from '@/utils/monitoring';
 import type { EmbeddingOutcome } from '@/services/sync/embeddings-sync';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+// ── Lib imports (pure logic extracted for testability — H-NEW-3 split) ────────
+import {
+  computeRetryDelayMs,
+  computeRetryDelayWithJitterMs,
+  computeNextRetryAttemptAt,
+  toRetryQueueKey,
+  fromRetryQueueKey,
+  toRunAttemptFromRetryAttempt,
+  isNonRetriableHttpStatus,
+  RETRY_BASE_DELAY_MS,
+  RETRY_MAX_DELAY_MS,
+  RETRY_MAX_ATTEMPTS,
+  RETRY_JITTER_RATIO,
+} from '@/lib/cron/retry';
+
+import {
+  toEscalationCandidates,
+  shouldDispatchEscalation,
+  toEscalationKey,
+  ALERT_PENDING_RETRY_THRESHOLD,
+  ALERT_DEAD_LETTER_24H_THRESHOLD,
+  ALERT_MAX_RETRY_ATTEMPT_THRESHOLD,
+  ALERT_FAILURE_RATE_24H_THRESHOLD,
+  ESCALATION_DISPATCH_COOLDOWN_MINUTES,
+  ESCALATION_OWNER_WARNING,
+  ESCALATION_OWNER_CRITICAL,
+} from '@/lib/cron/escalation';
+
+import type {
+  RetryQueueRow,
+  RetryQueueUpsertRow,
+  RetryDeadLetterInsertRow,
+} from '@/lib/cron/retry';
+
+import type {
+  UserEscalationMetrics,
+  EscalationCandidate,
+  EscalationSeverity,
+  EscalationStatus,
+} from '@/lib/cron/escalation';
+
+// Re-export public API so existing test imports continue to work
+export {
+  computeRetryDelayMs,
+  computeRetryDelayWithJitterMs,
+  shouldDispatchEscalation,
+  toEscalationCandidates,
+};
+
+// Vercel function timeout — must be <= plan limit (Pro = 800s max for background)
+export const maxDuration = 800;
+export const dynamic = 'force-dynamic';
+
 type TokenRow = {
   user_id: string;
   platform: string;
@@ -42,37 +95,8 @@ type SyncRunLogInsertRow = {
   metadata: Record<string, unknown>;
 };
 
-type RetryQueueRow = {
-  user_id: string;
-  platform: string;
-  retry_attempt: number;
-  next_attempt_at: string;
-};
-
-type RetryQueueUpsertRow = {
-  user_id: string;
-  platform: string;
-  retry_attempt: number;
-  next_attempt_at: string;
-  last_http_status: number | null;
-  last_error_message: string | null;
-  metadata: Record<string, unknown>;
-  updated_at: string;
-};
-
-type RetryDeadLetterInsertRow = {
-  run_id: string;
-  user_id: string;
-  platform: string;
-  retry_attempt: number;
-  last_http_status: number | null;
-  error_message: string | null;
-  failure_reason: 'max_attempts_exceeded' | 'non_retriable_status';
-  metadata: Record<string, unknown>;
-};
-
-type EscalationSeverity = 'info' | 'warning' | 'critical';
-type EscalationStatus = 'open' | 'resolved';
+// RetryQueueRow, RetryQueueUpsertRow, RetryDeadLetterInsertRow — imported from @/lib/cron/retry
+// EscalationSeverity, EscalationStatus, EscalationCandidate, UserEscalationMetrics — imported from @/lib/cron/escalation
 
 type EscalationEventRow = {
   user_id: string;
@@ -90,32 +114,6 @@ type EscalationEventRow = {
   last_dispatched_at: string | null;
   dispatch_count: number;
   metadata: Record<string, unknown>;
-};
-
-type EscalationCandidate = {
-  code: string;
-  severity: 'warning' | 'critical';
-  owner: string;
-  message: string;
-  observed: number;
-  threshold: number;
-  metrics: {
-    pendingRetries: number;
-    maxRetryAttempt: number;
-    deadLetters24h: number;
-    runs24h: number;
-    failures24h: number;
-    failureRate24h: number;
-  };
-};
-
-type UserEscalationMetrics = {
-  pendingRetries: number;
-  maxRetryAttempt: number;
-  deadLetters24h: number;
-  runs24h: number;
-  failures24h: number;
-  failureRate24h: number;
 };
 
 type RetryQueueMetricRow = {
@@ -178,45 +176,25 @@ const DIRECT_KEY_PLATFORMS: Array<{ platform: string; envKey: string }> = [
 ];
 const SUPPORTED_RETRY_PLATFORMS = new Set([...SUPPORTED_PLATFORMS, 'embeddings']);
 
-// ─── Runtime tuning constants ────────────────────────────────────────────────
-const SYNC_TIMEOUT_MS = Number(process.env.CRON_SYNC_TIMEOUT_MS || 20000);
-const EMBEDDINGS_TIMEOUT_MS = Number(process.env.CRON_EMBEDDINGS_TIMEOUT_MS || 25000);
-const DEFAULT_MAX_USERS_PER_RUN = Number(process.env.CRON_MAX_USERS_PER_RUN || 10);
-const USER_CONCURRENCY = Number(process.env.CRON_USER_CONCURRENCY || 3);
-const PLATFORM_CONCURRENCY = Number(process.env.CRON_PLATFORM_CONCURRENCY || 2);
-const RETRY_BASE_DELAY_MS = Number(process.env.CRON_RETRY_BASE_DELAY_MS || 60000);
-const RETRY_MAX_DELAY_MS = Number(process.env.CRON_RETRY_MAX_DELAY_MS || 60 * 60 * 1000);
-const RETRY_MAX_ATTEMPTS = Number(process.env.CRON_RETRY_MAX_ATTEMPTS || 4);
-const RETRY_DUE_LIMIT = Number(process.env.CRON_RETRY_DUE_LIMIT || 100);
-const RETRY_JITTER_RATIO = Number(process.env.CRON_RETRY_JITTER_RATIO || 0.2);
+// ─── Runtime tuning constants (route-local) ──────────────────────────────────
+const SYNC_TIMEOUT_MS         = Number(process.env.CRON_SYNC_TIMEOUT_MS        || 20000);
+const EMBEDDINGS_TIMEOUT_MS   = Number(process.env.CRON_EMBEDDINGS_TIMEOUT_MS  || 25000);
+const DEFAULT_MAX_USERS_PER_RUN = Number(process.env.CRON_MAX_USERS_PER_RUN    || 10);
+const USER_CONCURRENCY        = Number(process.env.CRON_USER_CONCURRENCY       || 3);
+const PLATFORM_CONCURRENCY    = Number(process.env.CRON_PLATFORM_CONCURRENCY   || 2);
+const RETRY_DUE_LIMIT         = Number(process.env.CRON_RETRY_DUE_LIMIT        || 100);
 
-const ALERT_PENDING_RETRY_THRESHOLD = Math.max(
-  1,
-  Math.floor(toFiniteNumber(process.env.SYNC_ALERT_PENDING_RETRY_THRESHOLD, 8))
-);
-const ALERT_DEAD_LETTER_24H_THRESHOLD = Math.max(
-  1,
-  Math.floor(toFiniteNumber(process.env.SYNC_ALERT_DEAD_LETTER_24H_THRESHOLD, 3))
-);
-const ALERT_MAX_RETRY_ATTEMPT_THRESHOLD = Math.max(
-  1,
-  Math.floor(toFiniteNumber(process.env.SYNC_ALERT_MAX_RETRY_ATTEMPT_THRESHOLD, 3))
-);
-const ALERT_FAILURE_RATE_24H_THRESHOLD = Math.max(
-  0,
-  Math.min(1, toFiniteNumber(process.env.SYNC_ALERT_FAILURE_RATE_24H_THRESHOLD, 0.25))
-);
-const ESCALATION_WEBHOOK_URL = process.env.SYNC_ESCALATION_WEBHOOK_URL?.trim() || null;
-const ESCALATION_DISPATCH_COOLDOWN_MINUTES = Math.max(
-  1,
-  Math.floor(toFiniteNumber(process.env.SYNC_ESCALATION_COOLDOWN_MINUTES, 60))
-);
-const ESCALATION_OWNER_WARNING = process.env.SYNC_ESCALATION_OWNER_WARNING || 'ops-review';
-const ESCALATION_OWNER_CRITICAL = process.env.SYNC_ESCALATION_OWNER_CRITICAL || 'ops-oncall';
+// These are route-only (not in lib) — webhook URL and include-warning flag
+const ESCALATION_WEBHOOK_URL     = process.env.SYNC_ESCALATION_WEBHOOK_URL?.trim() || null;
 const ESCALATION_INCLUDE_WARNING = ['1', 'true', 'yes', 'on'].includes(
   (process.env.SYNC_ESCALATION_INCLUDE_WARNING || '').toLowerCase()
 );
 
+// ─── Route-local utility functions ───────────────────────────────────────────
+function isMissingTable(errorCode?: string) {
+  // Postgres error code 42P01 = undefined_table
+  return errorCode === '42P01';
+}
 
 
 function parseResponsePayload(rawBody: string) {
@@ -248,167 +226,12 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function isMissingTable(errorCode?: string) {
-  // Postgres undefined_table
-  return errorCode === '42P01';
-}
+// ── NOTE: The following functions are imported from lib/cron/retry and lib/cron/escalation ──
+// computeRetryDelayMs, computeRetryDelayWithJitterMs, computeNextRetryAttemptAt,
+// toRetryQueueKey, fromRetryQueueKey, toRunAttemptFromRetryAttempt, isNonRetriableHttpStatus,
+// shouldDispatchEscalation, toEscalationCandidates, toEscalationKey
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 
-function toRetryQueueKey(userId: string, platform: string) {
-  return `${userId}::${platform}`;
-}
-
-function fromRetryQueueKey(key: string) {
-  const [userId, platform] = key.split('::');
-  return { userId, platform };
-}
-
-export function computeRetryDelayMs(retryAttempt: number) {
-  const normalizedAttempt = Math.max(1, retryAttempt);
-  const exponent = normalizedAttempt - 1;
-  const raw = RETRY_BASE_DELAY_MS * Math.pow(2, exponent);
-  return Math.min(RETRY_MAX_DELAY_MS, raw);
-}
-
-function clampJitterRatio(raw: number) {
-  if (!Number.isFinite(raw)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(1, raw));
-}
-
-export function computeRetryDelayWithJitterMs(retryAttempt: number, randomValue = Math.random()) {
-  const baseDelay = computeRetryDelayMs(retryAttempt);
-  const jitterRatio = clampJitterRatio(RETRY_JITTER_RATIO);
-  if (jitterRatio <= 0) {
-    return baseDelay;
-  }
-
-  const normalizedRandom = Math.max(0, Math.min(1, randomValue));
-  const minFactor = 1 - jitterRatio;
-  const maxFactor = 1 + jitterRatio;
-  const factor = minFactor + (maxFactor - minFactor) * normalizedRandom;
-  const jittered = Math.round(baseDelay * factor);
-  return Math.min(RETRY_MAX_DELAY_MS, Math.max(1000, jittered));
-}
-
-function computeNextRetryAttemptAt(retryAttempt: number, retryDelayMs?: number) {
-  const delayMs = typeof retryDelayMs === 'number' ? retryDelayMs : computeRetryDelayWithJitterMs(retryAttempt);
-  return new Date(Date.now() + delayMs).toISOString();
-}
-
-function toRunAttemptFromRetryAttempt(retryAttempt: number | undefined) {
-  if (!retryAttempt || retryAttempt < 1) {
-    return 1;
-  }
-
-  return retryAttempt + 1;
-}
-
-function isNonRetriableHttpStatus(status: number | null) {
-  if (status === null) {
-    return false;
-  }
-
-  return status >= 400 && status < 500 && status !== 429;
-}
-
-function toEscalationOwner(severity: 'warning' | 'critical') {
-  return severity === 'critical' ? ESCALATION_OWNER_CRITICAL : ESCALATION_OWNER_WARNING;
-}
-
-function toEscalationKey(userId: string, code: string) {
-  return `${userId}::${code}`;
-}
-
-export function shouldDispatchEscalation(params: {
-  lastDispatchedAt?: string | null;
-  nowMs?: number;
-  cooldownMinutes?: number;
-}) {
-  const { lastDispatchedAt, nowMs = Date.now(), cooldownMinutes = ESCALATION_DISPATCH_COOLDOWN_MINUTES } = params;
-
-  if (!lastDispatchedAt) {
-    return true;
-  }
-
-  const dispatchedAtMs = new Date(lastDispatchedAt).getTime();
-  if (Number.isNaN(dispatchedAtMs)) {
-    return true;
-  }
-
-  const elapsedMs = nowMs - dispatchedAtMs;
-  const requiredMs = Math.max(1, cooldownMinutes) * 60 * 1000;
-  return elapsedMs >= requiredMs;
-}
-
-export function toEscalationCandidates(metrics: UserEscalationMetrics): EscalationCandidate[] {
-  const candidates: EscalationCandidate[] = [];
-  const {
-    pendingRetries,
-    maxRetryAttempt,
-    deadLetters24h,
-    runs24h,
-    failureRate24h,
-  } = metrics;
-
-  if (pendingRetries >= ALERT_PENDING_RETRY_THRESHOLD) {
-    candidates.push({
-      code: 'retry_queue_backlog',
-      severity: 'warning',
-      owner: toEscalationOwner('warning'),
-      message: `Retry queue backlog is elevated (${pendingRetries} pending).`,
-      observed: pendingRetries,
-      threshold: ALERT_PENDING_RETRY_THRESHOLD,
-      metrics,
-    });
-  }
-
-  if (maxRetryAttempt >= ALERT_MAX_RETRY_ATTEMPT_THRESHOLD) {
-    candidates.push({
-      code: 'high_retry_attempts',
-      severity: 'warning',
-      owner: toEscalationOwner('warning'),
-      message: `Retry attempts are climbing (max attempt ${maxRetryAttempt}).`,
-      observed: maxRetryAttempt,
-      threshold: ALERT_MAX_RETRY_ATTEMPT_THRESHOLD,
-      metrics,
-    });
-  }
-
-  if (deadLetters24h >= ALERT_DEAD_LETTER_24H_THRESHOLD) {
-    candidates.push({
-      code: 'dead_letter_volume',
-      severity: 'critical',
-      owner: toEscalationOwner('critical'),
-      message: `Dead-letter volume in 24h exceeded threshold (${deadLetters24h}).`,
-      observed: deadLetters24h,
-      threshold: ALERT_DEAD_LETTER_24H_THRESHOLD,
-      metrics,
-    });
-  }
-
-  if (runs24h > 0 && failureRate24h >= ALERT_FAILURE_RATE_24H_THRESHOLD) {
-    candidates.push({
-      code: 'scheduler_failure_rate',
-      severity: 'critical',
-      owner: toEscalationOwner('critical'),
-      message: `Scheduler failure rate is high (${Math.round(failureRate24h * 100)}%).`,
-      observed: Number((failureRate24h * 100).toFixed(2)),
-      threshold: Number((ALERT_FAILURE_RATE_24H_THRESHOLD * 100).toFixed(2)),
-      metrics,
-    });
-  }
-
-  // Preserve deterministic ordering for dedupe and tests.
-  const rank: Record<EscalationSeverity, number> = {
-    critical: 0,
-    warning: 1,
-    info: 2,
-  };
-
-  return candidates.sort((a, b) => rank[a.severity] - rank[b.severity] || a.code.localeCompare(b.code));
-}
 
 async function dispatchEscalationWebhook(payload: Record<string, unknown>): Promise<EscalationDispatchResult> {
   if (!ESCALATION_WEBHOOK_URL) {

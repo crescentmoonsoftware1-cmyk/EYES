@@ -76,6 +76,7 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
   const [correlations, setCorrelations] = useState<EntityCorrelation[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [inference, setInference] = useState<Inference | null>(null);
+  const [identityInsight, setIdentityInsight] = useState<{title: string, body: string} | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -83,12 +84,17 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
     const load = async () => {
       setLoading(true);
-      const [vecRes, statusRes, corrRes, clustersRes, inferenceRes] = await Promise.allSettled([
+      const [vecRes, statusRes, corrRes, clustersRes, inferenceRes, driftRes, insightsRes] = await Promise.allSettled([
         fetch('/api/cognitive/state-vectors?days=90').then(r => r.json()),
         fetch('/api/cognitive/status').then(r => r.json()),
         fetch('/api/cognitive/entity-correlations').then(r => r.json()),
         fetch('/api/topic-clusters').then(r => r.json()),
         fetch('/api/cognitive/next-state').then(r => r.json()),
+        // Phase 4.D: Fetching the real temporal drift signal!
+        // We simulate a logged-in user_id 'user123' for the fetch query parameter
+        fetch('/api/cognitive/temporal-drift?userId=user123').then(r => r.json()),
+        // Phase 5: Fetch Narrative and Identity
+        fetch('/api/cognitive/insights').then(r => r.json())
       ]);
 
       if (vecRes.status === 'fulfilled') {
@@ -99,6 +105,11 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
       }
       if (statusRes.status === 'fulfilled') {
         setLoops(statusRes.value.loops ?? []);
+      }
+      if (driftRes.status === 'fulfilled') {
+        setDriftGaps(driftRes.value.gaps ?? []);
+      } else if (statusRes.status === 'fulfilled') {
+        // Fallback to old drift gaps if the new API fails
         setDriftGaps(statusRes.value.driftGaps ?? []);
       }
       if (corrRes.status === 'fulfilled') {
@@ -109,6 +120,9 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
       }
       if (inferenceRes.status === 'fulfilled') {
         setInference(inferenceRes.value ?? null);
+      }
+      if (insightsRes.status === 'fulfilled' && insightsRes.value.insight) {
+        setIdentityInsight(insightsRes.value.insight);
       }
       setLoading(false);
     };
@@ -143,23 +157,26 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
       <div style={{
         padding: '24px 28px', 
         background: 'linear-gradient(to bottom, rgba(99, 102, 241, 0.05), transparent)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between'
       }}>
-        <div>
+        <div style={{ maxWidth: '85%' }}>
           <h2 style={{ 
-            color: '#fff', fontSize: '16px', fontWeight: 700, 
-            letterSpacing: '-0.02em', margin: 0 
-          }}>Intelligence Layer</h2>
-          <p style={{ color: '#6366f1', fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', marginTop: '4px', textTransform: 'uppercase' }}>
-            Intelligence Layer Active
+            color: '#fff', fontSize: '18px', fontWeight: 800, 
+            letterSpacing: '-0.02em', margin: 0, display: 'flex', alignItems: 'center', gap: '8px'
+          }}>
+            {identityInsight ? identityInsight.title : 'Intelligence Layer'}
+            {identityInsight && <span style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Phase 5 Identity</span>}
+          </h2>
+          <p style={{ color: identityInsight ? '#e5e7eb' : '#6366f1', fontSize: identityInsight ? '11px' : '10px', fontWeight: identityInsight ? 500 : 800, letterSpacing: identityInsight ? '0' : '0.1em', marginTop: '6px', lineHeight: 1.4, textTransform: identityInsight ? 'none' : 'uppercase' }}>
+            {identityInsight ? identityInsight.body : 'Intelligence Layer Active'}
           </p>
         </div>
         <button onClick={onClose} style={{
           background: 'rgba(255,255,255,0.05)', border: 'none', 
-          color: '#fff', borderRadius: '50%', width: '32px', height: '32px',
-          cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', opacity: 0.6, transition: 'opacity 0.2s'
-        }}>×</button>
+          color: '#fff', borderRadius: '50%', width: '28px', height: '28px',
+          cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', opacity: 0.6, transition: 'opacity 0.2s', marginTop: '2px'
+        }}>✕</button>
       </div>
 
       {/* Futuristic Tabs */}
@@ -212,7 +229,7 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
   );
 }
 
-// ── Mind Map Tab ──────────────────────────────────────────────────────────────
+// ── Mind Map Tab (The Bi-Temporal Graph) ──────────────────────────────────────
 function MindMapTab({ 
   vectors, 
   clusterIds, 
@@ -231,8 +248,21 @@ function MindMapTab({
   const { openConfirm } = useConfirm();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [graphData, setGraphData] = useState<{nodes: any[], edges: any[], merged_nodes_count: number} | null>(null);
 
-  if (!vectors.length && !clusters.length) return <EmptyState text="Need 21+ days of data to show cluster timeline." />;
+  useEffect(() => {
+    fetch('/api/cognitive/mindmap')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setGraphData(data);
+      })
+      .catch(console.error);
+  }, []);
+
+  if (!graphData || (!graphData.nodes.length && !graphData.edges.length)) {
+      return <EmptyState text="Graph is empty. Sync some data to extract relationships." />;
+  }
+
 
   const SENTIMENT_COLOR: Record<string, string> = {
     positive: '#22c55e', neutral: '#a78bfa', negative: '#f87171',
@@ -241,40 +271,41 @@ function MindMapTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
-      {/* Proportional Horizontal cluster timeline */}
-      {clusters.length > 0 && (
-        <div style={{
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '12px', padding: '14px',
-        }}>
-          <div style={{ fontSize: '9px', fontWeight: 800, color: '#9ca3af', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
-            STATE PATTERNS TIMELINE
-          </div>
-          <div style={{ display: 'flex', gap: '2px', height: '28px', borderRadius: '6px', overflow: 'hidden' }}>
-            {clusters.map((c, i) => {
-              const color = SENTIMENT_COLOR[c.sentiment] ?? '#a78bfa';
-              const weight = c.totalEvents || 1;
-              return (
-                <div key={c.id} title={`${c.title} (${c.totalEvents} memories)`} style={{
-                  flex: weight, background: color, opacity: 0.7 + (i === 0 ? 0.3 : 0),
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '8px', fontWeight: 800, color: '#000',
-                  cursor: 'pointer', transition: 'opacity 0.2s',
-                  minWidth: '20px',
-                }}
-                  onMouseEnter={e => { (e.target as HTMLDivElement).style.opacity = '1'; }}
-                  onMouseLeave={e => { (e.target as HTMLDivElement).style.opacity = '0.7'; }}
-                >
-                  {c.title.length <= 8 ? c.title : ''}
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '8px', color: '#9ca3af' }}>
-            <span>Oldest</span><span>Current</span>
-          </div>
+      {/* True Mindmap UI: Rendering Nodes & Edges from chronic_edges */}
+      <div style={{
+        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '12px', padding: '14px',
+      }}>
+        <div style={{ fontSize: '9px', fontWeight: 800, color: '#9ca3af', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+          <span>NEURAL KNOWLEDGE GRAPH</span>
+          <span style={{ color: '#10b981' }}>{graphData.merged_nodes_count} duplicates merged by Splink</span>
         </div>
-      )}
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+          {graphData.edges.map((edge, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '10px', background: 'rgba(0,0,0,0.2)',
+              borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)'
+            }}>
+              <div style={{ flex: 1, textAlign: 'right', fontSize: '12px', color: '#e5e7eb', fontWeight: 600 }}>
+                {edge.source.replace(/_/g, ' ')}
+              </div>
+              <div style={{
+                background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)',
+                color: '#818cf8', fontSize: '10px', padding: '2px 8px', borderRadius: '12px',
+                fontWeight: 700, whiteSpace: 'nowrap'
+              }}>
+                {edge.label}
+              </div>
+              <div style={{ flex: 1, textAlign: 'left', fontSize: '12px', color: '#e5e7eb', fontWeight: 600 }}>
+                {edge.target.replace(/_/g, ' ')}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
 
       {/* 90-day Daily grid */}
       {vectors.length > 0 && (
