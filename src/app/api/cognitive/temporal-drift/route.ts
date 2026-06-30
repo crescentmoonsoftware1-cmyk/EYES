@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createAdminClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request) {
   try {
@@ -14,6 +9,8 @@ export async function GET(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
+
+    const supabase = await createAdminClient();
 
     // Phase 4.A Temporal Aggregation: Count mentions of specific entities over time
     // For this example, we will find the most mentioned tail_node_id and compare its frequency

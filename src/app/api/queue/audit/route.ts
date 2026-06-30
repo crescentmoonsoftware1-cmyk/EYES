@@ -51,4 +51,7 @@ async function handler(request: Request) {
 }
 
 // verifySignatureAppRouter protects this endpoint so ONLY Upstash can call it
-export const POST = verifySignatureAppRouter(handler);
+export const POST = verifySignatureAppRouter(handler, {
+  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY || 'dummy_build_key',
+  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY || 'dummy_build_key'
+});
