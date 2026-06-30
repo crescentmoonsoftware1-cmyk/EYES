@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
+import { getOrCreateNodeId } from '@/utils/supabase/graph';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -135,53 +136,83 @@ export async function POST(request: Request) {
     let edgesWritten = 0;
     const edgeErrors: string[] = [];
 
+    // Helper function to find entity label
+    const findEntityLabel = (text: string): string => {
+      const cleanText = text.toLowerCase().trim();
+      const match = entities.find((e) => e.text.toLowerCase().trim() === cleanText);
+      return match ? match.label : 'other';
+    };
+
     for (const rel of relations) {
       if (!rel.head || !rel.label || !rel.tail) continue;
 
-      const headId = rel.head.toLowerCase().replace(/\s+/g, '_').slice(0, 200);
-      const tailId = rel.tail.toLowerCase().replace(/\s+/g, '_').slice(0, 200);
+      try {
+        const headLabel = findEntityLabel(rel.head);
+        const tailLabel = findEntityLabel(rel.tail);
 
-      // Check if this exact edge already exists (active)
-      const { data: existing } = await admin
-        .from('chronic_edges')
-        .select('id, tail_node_id')
-        .eq('user_id', user.id)
-        .eq('head_node_id', headId)
-        .eq('relation_label', rel.label)
-        .is('valid_to', null)
-        .maybeSingle();
+        const headNodeId = await getOrCreateNodeId(admin, user.id, rel.head, headLabel);
+        const tailNodeId = await getOrCreateNodeId(admin, user.id, rel.tail, tailLabel);
 
-      if (existing) {
-        if (existing.tail_node_id === tailId) {
-          // Identical edge — skip (already in graph)
-          continue;
-        }
-        // Contradiction detected — invalidate the old edge
-        await admin
+        const recordId = sourceMemoryId || 'manual';
+        const startChar = 0;
+        const endChar = 0;
+
+        // Check if this exact edge already exists (active)
+        const { data: existing } = await admin
           .from('chronic_edges')
-          .update({
-            valid_to: new Date().toISOString(),
-            is_contradicted_by: tailId,
+          .select('id, tail_node_id')
+          .eq('user_id', user.id)
+          .eq('head_node_id', headNodeId)
+          .eq('relation_label', rel.label)
+          .is('valid_to', null)
+          .maybeSingle();
+
+        if (existing) {
+          if (existing.tail_node_id === tailNodeId) {
+            // Identical edge — skip (already in graph)
+            continue;
+          }
+          // Contradiction detected — invalidate the old edge
+        }
+
+        // Insert the new edge
+        const { data: newEdge, error: insertErr } = await admin
+          .from('chronic_edges')
+          .insert({
+            user_id: user.id,
+            head_node_id: headNodeId,
+            relation_label: rel.label,
+            tail_node_id: tailNodeId,
+            confidence: Math.min(1, Math.max(0, rel.score || 0.7)),
+            source_record_id: recordId,
+            chunk_start_char: startChar,
+            chunk_end_char: endChar,
+            valid_from: new Date().toISOString(),
+            valid_to: null,
+            is_contradicted_by: null,
           })
-          .eq('id', existing.id);
-      }
+          .select('id')
+          .single();
 
-      // Insert the new edge
-      const { error: insertErr } = await admin.from('chronic_edges').insert({
-        user_id: user.id,
-        head_node_id: headId,
-        relation_label: rel.label,
-        tail_node_id: tailId,
-        confidence: Math.min(1, Math.max(0, rel.score || 0.7)),
-        source_memory_id: sourceMemoryId,
-        valid_to: null,
-        is_contradicted_by: null,
-      });
+        if (insertErr) {
+          edgeErrors.push(`${rel.head}→${rel.tail}: ${insertErr.message}`);
+        } else {
+          edgesWritten++;
 
-      if (insertErr) {
-        edgeErrors.push(`${headId}→${tailId}: ${insertErr.message}`);
-      } else {
-        edgesWritten++;
+          // If there was an existing contradicting edge, update it to point to the new edge
+          if (existing) {
+            await admin
+              .from('chronic_edges')
+              .update({
+                valid_to: new Date().toISOString(),
+                is_contradicted_by: newEdge.id,
+              })
+              .eq('id', existing.id);
+          }
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        edgeErrors.push(`${rel.head}→${rel.tail}: ${errMsg}`);
       }
     }
 

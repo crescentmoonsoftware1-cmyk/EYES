@@ -1,0 +1,2427 @@
+{
+  "user_email": "thomasshelby251890@gmail.com",
+  "user_id": "4d2f3e3c-b834-43fc-852a-c3cdbb535b68",
+  "total_records_processed": 30,
+  "total_entities_extracted": 220,
+  "total_relations_extracted": 93,
+  "entity_type_counts": {
+    "person": 42,
+    "organization": 75,
+    "project": 79,
+    "topic": 20,
+    "commitment": 4
+  },
+  "relation_type_counts": {
+    "discusses": 20,
+    "mentioned_with_emotion": 2,
+    "initiated_by": 1,
+    "is_a": 3,
+    "provides_mentorship_by": 2,
+    "helps_become": 1,
+    "provides": 1,
+    "sourced_from": 6,
+    "has_recommendation_about": 1,
+    "recommendation_remediated_in": 1,
+    "uses": 1,
+    "controls_content_for": 2,
+    "manages_recommendations_for": 1,
+    "is_abbreviated_as": 1,
+    "is_an_initiative_by": 1,
+    "is_a_type_of": 1,
+    "provides_notes_on": 1,
+    "are_a_type_of": 1,
+    "concerns": 1,
+    "prepares_response_for": 1,
+    "sends": 1,
+    "finalizes": 1,
+    "asked_about": 1,
+    "mentioned_in": 1,
+    "committed_to": 4,
+    "has_website": 1,
+    "is_part_of": 1,
+    "located_in": 3,
+    "is_popular_with": 1,
+    "sends_email_to": 1,
+    "is_member_of": 1,
+    "received_investment_from": 1,
+    "is_a_version_of": 1,
+    "is_an_operating_system_for": 1,
+    "coming_soon_for": 1,
+    "integrates_with": 2,
+    "partners_with": 1,
+    "works_at": 1,
+    "generates_issue": 1,
+    "is_set_up_in": 1,
+    "is_viewable_on": 1,
+    "affects_project": 1,
+    "occurred_on_browser": 1,
+    "occurred_in_environment": 1,
+    "occurred_on_os": 1,
+    "involved_feature": 1,
+    "occurred_at_url": 1,
+    "is_module_not_found_for": 1,
+    "attempts_to_import": 1,
+    "has_related_documentation": 1,
+    "has_job_openings_for": 1,
+    "has_job_openings_count": 1,
+    "has_followers_count": 1,
+    "has_employee_count": 1,
+    "offers": 2,
+    "hired_people_like": 1,
+    "listed_as_hiring_company_with": 1
+  },
+  "samples_for_audit": [
+    {
+      "id": "d8c1e951-9958-4c75-b1b3-ef29f77118e0",
+      "title": "Verify Discord Login from New Location",
+      "snippet": "Verify Discord Login from New Location\nHey tommy_25_1890, Someone tried to log into your Discord account from a new location. If this is you, click the link below to authorize the log in. IP Address: 223.184.21.187 Location: Coimbatore,\n Hey tommy_25_1890,\r\n\r\nSomeone tried to log into your Discord a...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "tommy_25_1890",
+          "score": 0.6420108675956726,
+          "start": 1751,
+          "end": 1764
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2bc99cc5-65bc-4c1c-8bb7-46c6dc00a331",
+      "title": "Nishant Kalkhanda and others share their thoughts on LinkedIn",
+      "snippet": "Nishant Kalkhanda and others share their thoughts on LinkedIn\n\ud835\udc08 \ud835\udc2c\ud835\udc28\ud835\udc25\ud835\udc2f\ud835\udc1e\ud835\udc1d \ud835\udc1e\ud835\udc2f\ud835\udc1e\ud835\udc2b\ud835\udc32 \ud835\udc1c\ud835\udc28\ud835\udc1d\ud835\udc22\ud835\udc27\ud835\udc20 \ud835\udc2a\ud835\udc2e\ud835\udc1e\ud835\udc2c\ud835\udc2d\ud835\udc22\ud835\udc28\ud835\udc27... \ud835\udc1a\ud835\udc27\ud835\udc1d \ud835\udc2c\ud835\udc2d\ud835\udc22\ud835\udc25\ud835\udc25\u2026 \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nNishant Kalkhanda shared a post: \ud835\udc08 \ud835\udc2c\ud835\udc28...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Nishant Kalkhanda",
+          "score": 0.9801204800605774,
+          "start": 0,
+          "end": 17
+        },
+        {
+          "label": "person",
+          "text": "Nishant Kalkhanda",
+          "score": 0.9717338681221008,
+          "start": 263,
+          "end": 280
+        },
+        {
+          "label": "person",
+          "text": "Navin Kumar",
+          "score": 0.6355170607566833,
+          "start": 1223,
+          "end": 1234
+        },
+        {
+          "label": "organization",
+          "text": "Amazon",
+          "score": 0.9528139233589172,
+          "start": 1271,
+          "end": 1277
+        },
+        {
+          "label": "person",
+          "text": "Anand Kumar yadav",
+          "score": 0.8885037899017334,
+          "start": 2235,
+          "end": 2252
+        }
+      ],
+      "relations": [
+        {
+          "head": "Nishant Kalkhanda",
+          "label": "discusses",
+          "tail": "coding question",
+          "score": 0.9
+        },
+        {
+          "head": "Nishant Kalkhanda",
+          "label": "discusses",
+          "tail": "interview",
+          "score": 0.9
+        },
+        {
+          "head": "Nishant Kalkhanda",
+          "label": "mentioned_with_emotion",
+          "tail": "stuck in the interview",
+          "score": 0.8
+        },
+        {
+          "head": "Navin Kumar",
+          "label": "discusses",
+          "tail": "Freshers Hiring",
+          "score": 0.9
+        },
+        {
+          "head": "Navin Kumar",
+          "label": "discusses",
+          "tail": "Amazon",
+          "score": 0.9
+        },
+        {
+          "head": "Navin Kumar",
+          "label": "discusses",
+          "tail": "work from home",
+          "score": 0.9
+        },
+        {
+          "head": "Navin Kumar",
+          "label": "discusses",
+          "tail": "Operations support Engineer",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "d9fa833f-10a7-4ba3-a9f6-4f57b8e94af3",
+      "title": "UPSC CSE \ud83d\udcc6  \u2022 Unlocking Nuclear Non-Proliferation",
+      "snippet": "UPSC CSE \ud83d\udcc6  \u2022 Unlocking Nuclear Non-Proliferation\nDAILY CURRENT AFFAIRS PROGRAM Welcome to DCAP! This is a free initiative by NIRNAY IAS, an online UPSC learning platform with mentorship by former Civil Servants. Who better to help you become an\n\r\n  \r\n  \r\n  \r\n  \r\n  \r\n  \r\n  \r\n \r\n \r\n  \r\n   \r\n    \r\n   ...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "DCAP!",
+          "score": 0.7586609125137329,
+          "start": 91,
+          "end": 96
+        },
+        {
+          "label": "organization",
+          "text": "NIRNAY IAS,",
+          "score": 0.9794132709503174,
+          "start": 126,
+          "end": 137
+        },
+        {
+          "label": "organization",
+          "text": "UPSC learning platform",
+          "score": 0.7452002763748169,
+          "start": 148,
+          "end": 170
+        },
+        {
+          "label": "person",
+          "text": "Civil Servants.",
+          "score": 0.7984014749526978,
+          "start": 197,
+          "end": 212
+        },
+        {
+          "label": "project",
+          "text": "DAILY CURRENT AFFAIRS PROGRAM",
+          "score": 0.7539294362068176,
+          "start": 574,
+          "end": 603
+        },
+        {
+          "label": "project",
+          "text": "DCAP!",
+          "score": 0.8448476195335388,
+          "start": 1325,
+          "end": 1330
+        },
+        {
+          "label": "organization",
+          "text": "NIRNAY IAS ,",
+          "score": 0.9826778769493103,
+          "start": 1362,
+          "end": 1374
+        },
+        {
+          "label": "organization",
+          "text": "UPSC learning platform",
+          "score": 0.7426894903182983,
+          "start": 1385,
+          "end": 1407
+        },
+        {
+          "label": "person",
+          "text": "former Civil Servants .",
+          "score": 0.7860617637634277,
+          "start": 1428,
+          "end": 1451
+        },
+        {
+          "label": "person",
+          "text": "officer",
+          "score": 0.6500842571258545,
+          "start": 1486,
+          "end": 1493
+        },
+        {
+          "label": "project",
+          "text": "DCAP \u00a0program",
+          "score": 0.8159471154212952,
+          "start": 1531,
+          "end": 1544
+        },
+        {
+          "label": "topic",
+          "text": "current Affairs",
+          "score": 0.7103477120399475,
+          "start": 1553,
+          "end": 1568
+        },
+        {
+          "label": "organization",
+          "text": "The Hindu,",
+          "score": 0.9577696323394775,
+          "start": 1602,
+          "end": 1612
+        },
+        {
+          "label": "organization",
+          "text": "Indian Express,",
+          "score": 0.9620444178581238,
+          "start": 1613,
+          "end": 1628
+        },
+        {
+          "label": "organization",
+          "text": "PIB,",
+          "score": 0.930656373500824,
+          "start": 1629,
+          "end": 1633
+        },
+        {
+          "label": "topic",
+          "text": "Current Affairs",
+          "score": 0.7805266380310059,
+          "start": 2976,
+          "end": 2991
+        }
+      ],
+      "relations": [
+        {
+          "head": "DCAP!",
+          "label": "initiated_by",
+          "tail": "NIRNAY IAS",
+          "score": 0.95
+        },
+        {
+          "head": "NIRNAY IAS",
+          "label": "is_a",
+          "tail": "UPSC learning platform",
+          "score": 0.95
+        },
+        {
+          "head": "UPSC learning platform",
+          "label": "provides_mentorship_by",
+          "tail": "former Civil Servants .",
+          "score": 0.9
+        },
+        {
+          "head": "former Civil Servants .",
+          "label": "helps_become",
+          "tail": "officer",
+          "score": 0.85
+        },
+        {
+          "head": "DCAP!",
+          "label": "provides",
+          "tail": "current Affairs",
+          "score": 0.95
+        },
+        {
+          "head": "current Affairs",
+          "label": "sourced_from",
+          "tail": "The Hindu,",
+          "score": 0.9
+        },
+        {
+          "head": "current Affairs",
+          "label": "sourced_from",
+          "tail": "Indian Express,",
+          "score": 0.9
+        },
+        {
+          "head": "current Affairs",
+          "label": "sourced_from",
+          "tail": "PIB,",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "d426c60e-d691-4f5d-8566-7109c043249c",
+      "title": "New recommendation available for Default Directory",
+      "snippet": "New recommendation available for Default Directory\nYou have a new recommendation for Default Directory Designate more than one global admin See why this recommendation was generated for your tenant and how to remediate it in the Microsoft Entra admin\nYou have a new recommendation for Default Directo...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "Default Directory",
+          "score": 0.6956677436828613,
+          "start": 33,
+          "end": 50
+        },
+        {
+          "label": "project",
+          "text": "Default Directory",
+          "score": 0.6209636330604553,
+          "start": 85,
+          "end": 102
+        },
+        {
+          "label": "person",
+          "text": "global admin",
+          "score": 0.6429729461669922,
+          "start": 127,
+          "end": 139
+        },
+        {
+          "label": "project",
+          "text": "Microsoft Entra",
+          "score": 0.7482463717460632,
+          "start": 229,
+          "end": 244
+        },
+        {
+          "label": "person",
+          "text": "global admin",
+          "score": 0.6549698710441589,
+          "start": 327,
+          "end": 339
+        },
+        {
+          "label": "project",
+          "text": "Microsoft Entra",
+          "score": 0.7065722346305847,
+          "start": 429,
+          "end": 444
+        },
+        {
+          "label": "project",
+          "text": "Microsoft Entra",
+          "score": 0.7852923274040222,
+          "start": 507,
+          "end": 522
+        },
+        {
+          "label": "project",
+          "text": "Microsoft Entra",
+          "score": 0.7922684550285339,
+          "start": 670,
+          "end": 685
+        },
+        {
+          "label": "person",
+          "text": "IT admin.",
+          "score": 0.7030047178268433,
+          "start": 737,
+          "end": 746
+        },
+        {
+          "label": "organization",
+          "text": "Microsoft Corporation,",
+          "score": 0.8467996120452881,
+          "start": 747,
+          "end": 769
+        }
+      ],
+      "relations": [
+        {
+          "head": "Default Directory",
+          "label": "has_recommendation_about",
+          "tail": "global admin",
+          "score": 0.9
+        },
+        {
+          "head": "Default Directory",
+          "label": "recommendation_remediated_in",
+          "tail": "Microsoft Entra",
+          "score": 0.85
+        },
+        {
+          "head": "Default Directory",
+          "label": "uses",
+          "tail": "Microsoft Entra",
+          "score": 0.95
+        },
+        {
+          "head": "IT admin",
+          "label": "controls_content_for",
+          "tail": "Default Directory",
+          "score": 0.75
+        },
+        {
+          "head": "IT admin",
+          "label": "controls_content_for",
+          "tail": "Microsoft Entra",
+          "score": 0.75
+        },
+        {
+          "head": "Microsoft Corporation",
+          "label": "discusses",
+          "tail": "Default Directory",
+          "score": 0.8
+        },
+        {
+          "head": "Microsoft Corporation",
+          "label": "discusses",
+          "tail": "Microsoft Entra",
+          "score": 0.8
+        },
+        {
+          "head": "Microsoft Entra",
+          "label": "manages_recommendations_for",
+          "tail": "global admin",
+          "score": 0.8
+        }
+      ]
+    },
+    {
+      "id": "ef2c1cd9-211f-4815-84e5-ee3c82730667",
+      "title": "Connect to Canva with two time-saving integrations",
+      "snippet": "Connect to Canva with two time-saving integrations\nSee what Publish to Mailchimp and Mailchimp Canva Sync can do \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c\n\u200c \u200c \u200c \u200c \u200c \u200c\r\n\"Intuit Mailchimp\"             \r\n<...",
+      "entities": [],
+      "relations": []
+    },
+    {
+      "id": "a1e89176-0ca0-4f85-af06-69d10a07e4ca",
+      "title": "Abhishek Veeramalla, Content Creator, is popular in your network",
+      "snippet": "Abhishek Veeramalla, Content Creator, is popular in your network\nSee your recommendations, Tommy \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nYou\u2019re up to 1.5x more likely to ...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Abhishek Veeramalla",
+          "score": 0.8148592710494995,
+          "start": 0,
+          "end": 19
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn Corporation",
+          "score": 0.7876255512237549,
+          "start": 2795,
+          "end": 2815
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn",
+          "score": 0.8550369143486023,
+          "start": 2867,
+          "end": 2875
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn",
+          "score": 0.8216122984886169,
+          "start": 2884,
+          "end": 2892
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn.",
+          "score": 0.8383468985557556,
+          "start": 2927,
+          "end": 2936
+        }
+      ],
+      "relations": [
+        {
+          "head": "LinkedIn",
+          "label": "discusses",
+          "tail": "Abhishek Veeramalla",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "bf761b58-bd59-4831-90b0-067f1ef49481",
+      "title": "\ud83d\udd17 Tommy, add Dharshan ~N",
+      "snippet": "\ud83d\udd17 Tommy, add Dharshan ~N\nBCA M.Sc(cs) \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nDo you know Dharshan ~N?\r\n\r\nYes, connect: https://www.linkedin.com/comm/my...",
+      "entities": [],
+      "relations": []
+    },
+    {
+      "id": "ca915d7b-bae6-4929-bde0-2318a41fcefa",
+      "title": "Sending an email really is that easy",
+      "snippet": "Sending an email really is that easy\nThese are the tools that make sending your first email a breeze \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c\n\r\n\r\n\u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c...",
+      "entities": [],
+      "relations": []
+    },
+    {
+      "id": "be2b3f18-9a54-403f-97e1-c4d10afc6e1c",
+      "title": "UPSC CSE \ud83d\udcc6  \u2022 Gir Lion Deaths",
+      "snippet": "UPSC CSE \ud83d\udcc6  \u2022 Gir Lion Deaths\nDAILY CURRENT AFFAIRS PROGRAM Welcome to DCAP! This is a free initiative by NIRNAY IAS, an online UPSC learning platform with mentorship by former Civil Servants. Who better to help you become an\n\r\n  \r\n  \r\n  \r\n  \r\n  \r\n  \r\n  \r\n \r\n \r\n  \r\n   \r\n     \r\n      \r\n       \r\n     ...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "DCAP!",
+          "score": 0.7500956058502197,
+          "start": 71,
+          "end": 76
+        },
+        {
+          "label": "organization",
+          "text": "NIRNAY IAS,",
+          "score": 0.9823541641235352,
+          "start": 106,
+          "end": 117
+        },
+        {
+          "label": "organization",
+          "text": "UPSC learning platform",
+          "score": 0.7557982206344604,
+          "start": 128,
+          "end": 150
+        },
+        {
+          "label": "person",
+          "text": "Civil Servants.",
+          "score": 0.7992278933525085,
+          "start": 177,
+          "end": 192
+        },
+        {
+          "label": "project",
+          "text": "DAILY CURRENT AFFAIRS PROGRAM",
+          "score": 0.7302463054656982,
+          "start": 484,
+          "end": 513
+        },
+        {
+          "label": "project",
+          "text": "DCAP!",
+          "score": 0.8379768133163452,
+          "start": 1055,
+          "end": 1060
+        },
+        {
+          "label": "organization",
+          "text": "NIRNAY IAS ,",
+          "score": 0.9851076006889343,
+          "start": 1092,
+          "end": 1104
+        },
+        {
+          "label": "organization",
+          "text": "UPSC learning platform",
+          "score": 0.7634053826332092,
+          "start": 1115,
+          "end": 1137
+        },
+        {
+          "label": "person",
+          "text": "Civil Servants .",
+          "score": 0.7981873750686646,
+          "start": 1165,
+          "end": 1181
+        },
+        {
+          "label": "person",
+          "text": "officer",
+          "score": 0.6043899059295654,
+          "start": 1216,
+          "end": 1223
+        },
+        {
+          "label": "project",
+          "text": "DCAP \u00a0program",
+          "score": 0.8193303942680359,
+          "start": 1261,
+          "end": 1274
+        },
+        {
+          "label": "topic",
+          "text": "current Affairs",
+          "score": 0.7683091163635254,
+          "start": 1283,
+          "end": 1298
+        },
+        {
+          "label": "organization",
+          "text": "The Hindu,",
+          "score": 0.966708242893219,
+          "start": 1332,
+          "end": 1342
+        },
+        {
+          "label": "organization",
+          "text": "Indian Express,",
+          "score": 0.9637812972068787,
+          "start": 1343,
+          "end": 1358
+        },
+        {
+          "label": "organization",
+          "text": "PIB,",
+          "score": 0.9267747402191162,
+          "start": 1359,
+          "end": 1363
+        },
+        {
+          "label": "topic",
+          "text": "Current Affairs",
+          "score": 0.8040322661399841,
+          "start": 2442,
+          "end": 2457
+        }
+      ],
+      "relations": [
+        {
+          "head": "DAILY CURRENT AFFAIRS PROGRAM",
+          "label": "is_abbreviated_as",
+          "tail": "DCAP!",
+          "score": 1.0
+        },
+        {
+          "head": "DCAP!",
+          "label": "is_an_initiative_by",
+          "tail": "NIRNAY IAS,",
+          "score": 1.0
+        },
+        {
+          "head": "NIRNAY IAS,",
+          "label": "is_a_type_of",
+          "tail": "UPSC learning platform",
+          "score": 1.0
+        },
+        {
+          "head": "UPSC learning platform",
+          "label": "provides_mentorship_by",
+          "tail": "Civil Servants.",
+          "score": 1.0
+        },
+        {
+          "head": "DCAP \u00a0program",
+          "label": "provides_notes_on",
+          "tail": "current Affairs",
+          "score": 1.0
+        },
+        {
+          "head": "current Affairs",
+          "label": "sourced_from",
+          "tail": "The Hindu,",
+          "score": 1.0
+        },
+        {
+          "head": "current Affairs",
+          "label": "sourced_from",
+          "tail": "Indian Express,",
+          "score": 1.0
+        },
+        {
+          "head": "current Affairs",
+          "label": "sourced_from",
+          "tail": "PIB,",
+          "score": 1.0
+        },
+        {
+          "head": "Civil Servants.",
+          "label": "are_a_type_of",
+          "tail": "officer",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "c672c79f-01a1-44df-b891-265898252ee8",
+      "title": "Security alert",
+      "snippet": "Security alert\nYou allowed The EYES access to some of your Google Account data thomasshelby251890@gmail.com If you didn&#39;t allow The EYES access to some of your Google Account data, someone else may be trying to\n[image: Google]\r\nYou allowed The EYES access to some of your Google Account data\r\n\r\n\r...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "thomasshelby251890",
+          "score": 0.6157751083374023,
+          "start": 79,
+          "end": 97
+        },
+        {
+          "label": "organization",
+          "text": "Google LLC",
+          "score": 0.7390161752700806,
+          "start": 1368,
+          "end": 1378
+        },
+        {
+          "label": "organization",
+          "text": "Google LLC",
+          "score": 0.7915357947349548,
+          "start": 2050,
+          "end": 2060
+        }
+      ],
+      "relations": [
+        {
+          "head": "Google LLC",
+          "label": "discusses",
+          "tail": "thomasshelby251890",
+          "score": 0.95
+        }
+      ]
+    },
+    {
+      "id": "2e62aace-1d3d-454d-9c90-28531c6acdee",
+      "title": "[EYES Draft Approval] Reply to \"Question about Q3 Budget\"",
+      "snippet": "[EYES Draft Approval] Reply to \"Question about Q3 Budget\"\n\u2709 Action Draft Ready Draft Reply for: &quot;Question about Q3 Budget&quot; Hi EYES User, EYES has prepared a draft response to an email from Valentin. Review the draft below: Hi Valentin, I am\n\u2709 Action Draft Ready\r\n\r\n\r\nDRAFT REPLY FOR: \"QUEST...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7505908012390137,
+          "start": 1,
+          "end": 5
+        },
+        {
+          "label": "topic",
+          "text": "Question about Q3 Budget",
+          "score": 0.6229978799819946,
+          "start": 102,
+          "end": 126
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7648542523384094,
+          "start": 136,
+          "end": 140
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7856349945068359,
+          "start": 147,
+          "end": 151
+        },
+        {
+          "label": "person",
+          "text": "Valentin.",
+          "score": 0.9733054041862488,
+          "start": 199,
+          "end": 208
+        },
+        {
+          "label": "person",
+          "text": "Valentin,",
+          "score": 0.9155357480049133,
+          "start": 236,
+          "end": 245
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.775260329246521,
+          "start": 327,
+          "end": 331
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.772361695766449,
+          "start": 341,
+          "end": 345
+        },
+        {
+          "label": "person",
+          "text": "Valentin.",
+          "score": 0.9740109443664551,
+          "start": 393,
+          "end": 402
+        },
+        {
+          "label": "person",
+          "text": "Valentin,",
+          "score": 0.9136695861816406,
+          "start": 433,
+          "end": 442
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7822970747947693,
+          "start": 463,
+          "end": 472
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.665253221988678,
+          "start": 524,
+          "end": 528
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7014840245246887,
+          "start": 548,
+          "end": 552
+        },
+        {
+          "label": "person",
+          "text": "Valentin",
+          "score": 0.9929922819137573,
+          "start": 568,
+          "end": 576
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7877472043037415,
+          "start": 602,
+          "end": 611
+        },
+        {
+          "label": "topic",
+          "text": "finance",
+          "score": 0.6908988952636719,
+          "start": 665,
+          "end": 672
+        },
+        {
+          "label": "commitment",
+          "text": "Committed",
+          "score": 0.8878523111343384,
+          "start": 688,
+          "end": 697
+        },
+        {
+          "label": "organization",
+          "text": "EYES Neural Memory OS",
+          "score": 0.901802659034729,
+          "start": 918,
+          "end": 939
+        },
+        {
+          "label": "topic",
+          "text": "Q3 Budget",
+          "score": 0.6157567501068115,
+          "start": 1031,
+          "end": 1040
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7458363771438599,
+          "start": 1045,
+          "end": 1049
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7750136256217957,
+          "start": 1056,
+          "end": 1060
+        },
+        {
+          "label": "person",
+          "text": "Valentin .",
+          "score": 0.9749414920806885,
+          "start": 1108,
+          "end": 1118
+        },
+        {
+          "label": "person",
+          "text": "Valentin,",
+          "score": 0.892930805683136,
+          "start": 1146,
+          "end": 1155
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7643344402313232,
+          "start": 1176,
+          "end": 1185
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6399936676025391,
+          "start": 1237,
+          "end": 1241
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.741948127746582,
+          "start": 1256,
+          "end": 1260
+        },
+        {
+          "label": "person",
+          "text": "Valentin",
+          "score": 0.9933527708053589,
+          "start": 1273,
+          "end": 1281
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7810020446777344,
+          "start": 1307,
+          "end": 1316
+        },
+        {
+          "label": "topic",
+          "text": "finance",
+          "score": 0.6899950504302979,
+          "start": 1370,
+          "end": 1377
+        },
+        {
+          "label": "commitment",
+          "text": "Committed",
+          "score": 0.8770973086357117,
+          "start": 1393,
+          "end": 1402
+        },
+        {
+          "label": "organization",
+          "text": "EYES Neural Memory OS",
+          "score": 0.9318642020225525,
+          "start": 1535,
+          "end": 1556
+        },
+        {
+          "label": "project",
+          "text": "the-eyes.app",
+          "score": 0.6535624265670776,
+          "start": 1559,
+          "end": 1571
+        }
+      ],
+      "relations": [
+        {
+          "head": "EYES",
+          "label": "concerns",
+          "tail": "Question about Q3 Budget",
+          "score": 0.9
+        },
+        {
+          "head": "EYES",
+          "label": "prepares_response_for",
+          "tail": "Valentin",
+          "score": 0.9
+        },
+        {
+          "head": "EYES",
+          "label": "sends",
+          "tail": "Q3 budget",
+          "score": 0.9
+        },
+        {
+          "head": "EYES",
+          "label": "finalizes",
+          "tail": "Q3 budget",
+          "score": 0.9
+        },
+        {
+          "head": "Valentin",
+          "label": "asked_about",
+          "tail": "Q3 budget",
+          "score": 0.95
+        },
+        {
+          "head": "Q3 budget",
+          "label": "mentioned_in",
+          "tail": "finance",
+          "score": 0.95
+        },
+        {
+          "head": "EYES",
+          "label": "committed_to",
+          "tail": "Valentin",
+          "score": 0.85
+        },
+        {
+          "head": "EYES",
+          "label": "committed_to",
+          "tail": "Q3 budget",
+          "score": 0.85
+        },
+        {
+          "head": "EYES Neural Memory OS",
+          "label": "has_website",
+          "tail": "the-eyes.app",
+          "score": 0.95
+        },
+        {
+          "head": "EYES",
+          "label": "is_part_of",
+          "tail": "EYES Neural Memory OS",
+          "score": 0.85
+        }
+      ]
+    },
+    {
+      "id": "f7c3b1c7-d6fa-4c4b-9f99-b76fd3defbdc",
+      "title": "[EYES Draft Approval] Reply to \"Question about Q3 Budget\"",
+      "snippet": "[EYES Draft Approval] Reply to \"Question about Q3 Budget\"\n\u2709 Action Draft Ready Draft Reply for: &quot;Question about Q3 Budget&quot; Hi EYES User, EYES has prepared a draft response to an email from Valentin. Review the draft below: Hi Valentin, I am\n\u2709 Action Draft Ready\r\n\r\n\r\nDRAFT REPLY FOR: \"QUEST...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7312068939208984,
+          "start": 1,
+          "end": 5
+        },
+        {
+          "label": "topic",
+          "text": "Question about Q3 Budget",
+          "score": 0.6112473607063293,
+          "start": 102,
+          "end": 126
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7469295859336853,
+          "start": 136,
+          "end": 140
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7716566324234009,
+          "start": 147,
+          "end": 151
+        },
+        {
+          "label": "person",
+          "text": "Valentin.",
+          "score": 0.9739475250244141,
+          "start": 199,
+          "end": 208
+        },
+        {
+          "label": "person",
+          "text": "Valentin,",
+          "score": 0.920205295085907,
+          "start": 236,
+          "end": 245
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7537137866020203,
+          "start": 327,
+          "end": 331
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7586908340454102,
+          "start": 341,
+          "end": 345
+        },
+        {
+          "label": "person",
+          "text": "Valentin.",
+          "score": 0.9745434522628784,
+          "start": 393,
+          "end": 402
+        },
+        {
+          "label": "person",
+          "text": "Valentin,",
+          "score": 0.9181634187698364,
+          "start": 433,
+          "end": 442
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7831283807754517,
+          "start": 463,
+          "end": 472
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6378693580627441,
+          "start": 524,
+          "end": 528
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6782414317131042,
+          "start": 548,
+          "end": 552
+        },
+        {
+          "label": "person",
+          "text": "Valentin",
+          "score": 0.9930160045623779,
+          "start": 568,
+          "end": 576
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7891091108322144,
+          "start": 602,
+          "end": 611
+        },
+        {
+          "label": "topic",
+          "text": "finance",
+          "score": 0.6644072532653809,
+          "start": 665,
+          "end": 672
+        },
+        {
+          "label": "commitment",
+          "text": "Committed",
+          "score": 0.8760361075401306,
+          "start": 688,
+          "end": 697
+        },
+        {
+          "label": "organization",
+          "text": "EYES Neural Memory OS",
+          "score": 0.9060395359992981,
+          "start": 918,
+          "end": 939
+        },
+        {
+          "label": "topic",
+          "text": "Q3 Budget",
+          "score": 0.6343746781349182,
+          "start": 1031,
+          "end": 1040
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7208127379417419,
+          "start": 1045,
+          "end": 1049
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7596594095230103,
+          "start": 1056,
+          "end": 1060
+        },
+        {
+          "label": "person",
+          "text": "Valentin .",
+          "score": 0.9756338596343994,
+          "start": 1108,
+          "end": 1118
+        },
+        {
+          "label": "person",
+          "text": "Valentin,",
+          "score": 0.9001494646072388,
+          "start": 1146,
+          "end": 1155
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7642197608947754,
+          "start": 1176,
+          "end": 1185
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6073799729347229,
+          "start": 1237,
+          "end": 1241
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.7129409313201904,
+          "start": 1256,
+          "end": 1260
+        },
+        {
+          "label": "person",
+          "text": "Valentin",
+          "score": 0.9933033585548401,
+          "start": 1273,
+          "end": 1281
+        },
+        {
+          "label": "topic",
+          "text": "Q3 budget",
+          "score": 0.7845621705055237,
+          "start": 1307,
+          "end": 1316
+        },
+        {
+          "label": "topic",
+          "text": "finance",
+          "score": 0.6613845825195312,
+          "start": 1370,
+          "end": 1377
+        },
+        {
+          "label": "commitment",
+          "text": "Committed",
+          "score": 0.8741723895072937,
+          "start": 1393,
+          "end": 1402
+        },
+        {
+          "label": "organization",
+          "text": "EYES Neural Memory OS",
+          "score": 0.9340903759002686,
+          "start": 1535,
+          "end": 1556
+        },
+        {
+          "label": "project",
+          "text": "the-eyes.app",
+          "score": 0.6402574181556702,
+          "start": 1559,
+          "end": 1571
+        }
+      ],
+      "relations": [
+        {
+          "head": "EYES",
+          "label": "discusses",
+          "tail": "Question about Q3 Budget",
+          "score": 0.9
+        },
+        {
+          "head": "EYES",
+          "label": "committed_to",
+          "tail": "Q3 budget",
+          "score": 0.9
+        },
+        {
+          "head": "EYES",
+          "label": "discusses",
+          "tail": "Q3 budget",
+          "score": 0.9
+        },
+        {
+          "head": "Valentin",
+          "label": "discusses",
+          "tail": "Q3 budget",
+          "score": 0.9
+        },
+        {
+          "head": "Valentin",
+          "label": "discusses",
+          "tail": "EYES",
+          "score": 0.8
+        },
+        {
+          "head": "Q3 budget",
+          "label": "located_in",
+          "tail": "finance",
+          "score": 0.7
+        }
+      ]
+    },
+    {
+      "id": "1378791d-82a7-4681-83d7-c4b2c7ae5fda",
+      "title": "Abhishek Veeramalla, Content Creator, is popular in your network",
+      "snippet": "Abhishek Veeramalla, Content Creator, is popular in your network\nSee your recommendations, Tommy \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nYou\u2019re up to 1.5x more likely to ...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Abhishek Veeramalla",
+          "score": 0.81270432472229,
+          "start": 0,
+          "end": 19
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn Corporation",
+          "score": 0.802739143371582,
+          "start": 2787,
+          "end": 2807
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn",
+          "score": 0.8687745928764343,
+          "start": 2859,
+          "end": 2867
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn",
+          "score": 0.8448357582092285,
+          "start": 2876,
+          "end": 2884
+        },
+        {
+          "label": "organization",
+          "text": "LinkedIn.",
+          "score": 0.8665802478790283,
+          "start": 2919,
+          "end": 2928
+        }
+      ],
+      "relations": [
+        {
+          "head": "Abhishek Veeramalla",
+          "label": "is_popular_with",
+          "tail": "Tommy",
+          "score": 0.9
+        },
+        {
+          "head": "LinkedIn",
+          "label": "sends_email_to",
+          "tail": "Tommy",
+          "score": 1.0
+        },
+        {
+          "head": "Abhishek Veeramalla",
+          "label": "is_member_of",
+          "tail": "LinkedIn",
+          "score": 0.8
+        }
+      ]
+    },
+    {
+      "id": "1dc285b2-9bfd-4cd5-bef0-2aed937877b9",
+      "title": "Supa Update June 2026",
+      "snippet": "Supa Update June 2026\nEverything that happened in the last month at Supabase \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nEverything that happened in the last month at Supabase \u00a0\r\n\r\nEverything that h...",
+      "entities": [
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.9745575189590454,
+          "start": 68,
+          "end": 76
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.951556384563446,
+          "start": 269,
+          "end": 277
+        },
+        {
+          "label": "organization",
+          "text": "Supabase\r\n\r\nSupabase",
+          "score": 0.9432221055030823,
+          "start": 329,
+          "end": 349
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.9680951237678528,
+          "start": 499,
+          "end": 507
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.6469427347183228,
+          "start": 567,
+          "end": 575
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.9654760360717773,
+          "start": 607,
+          "end": 615
+        },
+        {
+          "label": "organization",
+          "text": "GIC.",
+          "score": 0.8490400910377502,
+          "start": 687,
+          "end": 691
+        },
+        {
+          "label": "project",
+          "text": "Multigres v0.1",
+          "score": 0.7577311396598816,
+          "start": 762,
+          "end": 776
+        },
+        {
+          "label": "project",
+          "text": "Multigres 0.1 alpha",
+          "score": 0.7307680249214172,
+          "start": 816,
+          "end": 835
+        },
+        {
+          "label": "project",
+          "text": "Multigres",
+          "score": 0.8226861953735352,
+          "start": 878,
+          "end": 887
+        },
+        {
+          "label": "project",
+          "text": "Postgres:",
+          "score": 0.6566094756126404,
+          "start": 923,
+          "end": 932
+        },
+        {
+          "label": "project",
+          "text": "Postgres",
+          "score": 0.7420881986618042,
+          "start": 962,
+          "end": 970
+        },
+        {
+          "label": "project",
+          "text": "Multigres v0.1 alpha",
+          "score": 0.7633625864982605,
+          "start": 1071,
+          "end": 1091
+        },
+        {
+          "label": "project",
+          "text": "Multigres",
+          "score": 0.7457461357116699,
+          "start": 1124,
+          "end": 1133
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.6878371834754944,
+          "start": 1138,
+          "end": 1146
+        },
+        {
+          "label": "project",
+          "text": "Supabase Auth",
+          "score": 0.7800401449203491,
+          "start": 1308,
+          "end": 1321
+        },
+        {
+          "label": "project",
+          "text": "Supabase Auth",
+          "score": 0.8533385396003723,
+          "start": 1558,
+          "end": 1571
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.7279433012008667,
+          "start": 1786,
+          "end": 1794
+        },
+        {
+          "label": "organization",
+          "text": "OpenAI",
+          "score": 0.6728171706199646,
+          "start": 1797,
+          "end": 1803
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.8531495332717896,
+          "start": 1848,
+          "end": 1856
+        },
+        {
+          "label": "project",
+          "text": "ChatGPT app",
+          "score": 0.7001236081123352,
+          "start": 1876,
+          "end": 1887
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.8076709508895874,
+          "start": 1945,
+          "end": 1953
+        },
+        {
+          "label": "project",
+          "text": "ChatGPT",
+          "score": 0.7890959978103638,
+          "start": 1966,
+          "end": 1973
+        },
+        {
+          "label": "project",
+          "text": "ChatGPT.",
+          "score": 0.8464236855506897,
+          "start": 2178,
+          "end": 2186
+        },
+        {
+          "label": "organization",
+          "text": "Supabase",
+          "score": 0.7377750873565674,
+          "start": 2200,
+          "end": 2208
+        },
+        {
+          "label": "project",
+          "text": "ChatGPT",
+          "score": 0.8278107643127441,
+          "start": 2225,
+          "end": 2232
+        },
+        {
+          "label": "project",
+          "text": "Supabase AI Coding Agents",
+          "score": 0.7502914667129517,
+          "start": 2362,
+          "end": 2387
+        },
+        {
+          "label": "project",
+          "text": "Supabase plugin for AI",
+          "score": 0.6597625613212585,
+          "start": 2429,
+          "end": 2451
+        }
+      ],
+      "relations": [
+        {
+          "head": "Supabase",
+          "label": "received_investment_from",
+          "tail": "GIC",
+          "score": 0.8
+        },
+        {
+          "head": "Multigres v0.1 alpha",
+          "label": "is_a_version_of",
+          "tail": "Multigres",
+          "score": 0.9
+        },
+        {
+          "head": "Multigres",
+          "label": "is_an_operating_system_for",
+          "tail": "Postgres",
+          "score": 0.9
+        },
+        {
+          "head": "Multigres",
+          "label": "coming_soon_for",
+          "tail": "Supabase",
+          "score": 0.8
+        },
+        {
+          "head": "Supabase",
+          "label": "is_a",
+          "tail": "ChatGPT app",
+          "score": 0.9
+        },
+        {
+          "head": "Supabase",
+          "label": "integrates_with",
+          "tail": "ChatGPT",
+          "score": 0.8
+        },
+        {
+          "head": "Supabase",
+          "label": "partners_with",
+          "tail": "OpenAI",
+          "score": 0.8
+        }
+      ]
+    },
+    {
+      "id": "9918643c-b8b8-43bd-8c37-83662a9ac895",
+      "title": "Weekly Report for EYES: May 30th, 2026 - June 6th, 2026",
+      "snippet": "Weekly Report for EYES: May 30th, 2026 - June 6th, 2026\nSentry Weekly Update for EYES May 30th, 2026 \u2013 June 6th, 2026 Total Project Errors 36 View All Errors Sat Sun Mon Tue Wed Thu Fri Total Project Transactions 10.6k View All Transactions Sat Sun Mon Tue\nWeekly Update for EYES May 30th, 2026 &#821...",
+      "entities": [
+        {
+          "label": "organization",
+          "text": "EYES",
+          "score": 0.6412857174873352,
+          "start": 18,
+          "end": 22
+        },
+        {
+          "label": "organization",
+          "text": "Sentry",
+          "score": 0.7361759543418884,
+          "start": 56,
+          "end": 62
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6778232455253601,
+          "start": 81,
+          "end": 85
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6537654399871826,
+          "start": 275,
+          "end": 279
+        },
+        {
+          "label": "project",
+          "text": "EYES",
+          "score": 0.6279107928276062,
+          "start": 2078,
+          "end": 2082
+        }
+      ],
+      "relations": [
+        {
+          "head": "Sentry",
+          "label": "discusses",
+          "tail": "EYES",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "9c54dedf-9a45-40a5-822c-27979202c3cb",
+      "title": "The ONE email no founder wants to see",
+      "snippet": "The ONE email no founder wants to see\nLast month, I got a message no founder wants to see.. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nHello,\r\n\r\nFrank here!\r\n\r\nLast month, I got a message that no...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Frank",
+          "score": 0.9755032658576965,
+          "start": 250,
+          "end": 255
+        },
+        {
+          "label": "organization",
+          "text": "Kinso",
+          "score": 0.8271180391311646,
+          "start": 522,
+          "end": 527
+        },
+        {
+          "label": "organization",
+          "text": "Kinso",
+          "score": 0.8111953735351562,
+          "start": 571,
+          "end": 576
+        },
+        {
+          "label": "organization",
+          "text": "Kinso",
+          "score": 0.8725959062576294,
+          "start": 1120,
+          "end": 1125
+        },
+        {
+          "label": "person",
+          "text": "Frank",
+          "score": 0.9699484705924988,
+          "start": 1273,
+          "end": 1278
+        },
+        {
+          "label": "organization",
+          "text": "Kinso.",
+          "score": 0.8046361804008484,
+          "start": 2033,
+          "end": 2039
+        }
+      ],
+      "relations": [
+        {
+          "head": "Frank",
+          "label": "works_at",
+          "tail": "Kinso",
+          "score": 0.95
+        },
+        {
+          "head": "Frank",
+          "label": "committed_to",
+          "tail": "Kinso",
+          "score": 0.9
+        },
+        {
+          "head": "Frank",
+          "label": "discusses",
+          "tail": "Kinso",
+          "score": 0.9
+        },
+        {
+          "head": "Frank",
+          "label": "mentioned_with_emotion",
+          "tail": "Kinso",
+          "score": 0.75
+        }
+      ]
+    },
+    {
+      "id": "c4688ca8-5931-4a52-9fea-881e11ea749a",
+      "title": "You\u2019re now open to work - we can help you get noticed",
+      "snippet": "You\u2019re now open to work - we can help you get noticed\nUpdate your profile to stand out \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nLinkedIn | You chose to let recruiters know y...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Tommy undefined",
+          "score": 0.8539885878562927,
+          "start": 1395,
+          "end": 1410
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "60d37d85-5581-4853-825d-e9d8d12e3488",
+      "title": "JAVASCRIPT-NEXTJS-B - Error: ./src/components/landing/LandingPage.tsx:6:1",
+      "snippet": "JAVASCRIPT-NEXTJS-B - Error: ./src/components/landing/LandingPage.tsx:6:1\nNew issue from javascript-nextjs. Sentry Set up in Slack View on Sentry New issue We notified recently active members in the javascript-nextjs project of this issue Issue Error /_error ./\u200bsrc/\u200b\nDetails\r\n-------\r\n\r\nhttps://eyes...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.7301306128501892,
+          "start": 89,
+          "end": 106
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.8246967792510986,
+          "start": 199,
+          "end": 216
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.7004024386405945,
+          "start": 2193,
+          "end": 2210
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.840268075466156,
+          "start": 2296,
+          "end": 2313
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.8507132530212402,
+          "start": 2588,
+          "end": 2605
+        }
+      ],
+      "relations": [
+        {
+          "head": "javascript-nextjs",
+          "label": "generates_issue",
+          "tail": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "score": 0.9
+        },
+        {
+          "head": "Sentry",
+          "label": "is_set_up_in",
+          "tail": "Slack",
+          "score": 0.9
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "is_viewable_on",
+          "tail": "Sentry",
+          "score": 0.8
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "affects_project",
+          "tail": "javascript-nextjs",
+          "score": 0.8
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "occurred_on_browser",
+          "tail": "Chrome 149.0.0",
+          "score": 0.9
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "occurred_in_environment",
+          "tail": "development",
+          "score": 0.9
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "occurred_on_os",
+          "tail": "Windows >=10",
+          "score": 0.9
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "involved_feature",
+          "tail": "turbopack",
+          "score": 0.8
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "occurred_at_url",
+          "tail": "http://localhost:3000/",
+          "score": 0.9
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "is_module_not_found_for",
+          "tail": "./page.module.css",
+          "score": 0.9
+        },
+        {
+          "head": "./src/components/landing/LandingPage.tsx",
+          "label": "attempts_to_import",
+          "tail": "./page.module.css",
+          "score": 0.9
+        },
+        {
+          "head": "Error: ./src/components/landing/LandingPage.tsx:6:1",
+          "label": "has_related_documentation",
+          "tail": "https://nextjs.org/docs/messages/module-not-found",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "c1321cfd-36a6-4c9f-a92b-aaa30ceac775",
+      "title": "5 new Software Engineer openings at Mahindra & Mahindra",
+      "snippet": "5 new Software Engineer openings at Mahindra & Mahindra\n\ud83d\udd1d opportunities for you \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\n----------------------------------------\r\n...",
+      "entities": [
+        {
+          "label": "organization",
+          "text": "Mahindra & Mahindra",
+          "score": 0.9791320562362671,
+          "start": 36,
+          "end": 55
+        },
+        {
+          "label": "organization",
+          "text": "Mahindra & Mahindra",
+          "score": 0.9807276725769043,
+          "start": 1324,
+          "end": 1343
+        }
+      ],
+      "relations": [
+        {
+          "head": "Mahindra & Mahindra",
+          "label": "has_job_openings_for",
+          "tail": "Software Engineer",
+          "score": 1.0
+        },
+        {
+          "head": "Mahindra & Mahindra",
+          "label": "has_job_openings_count",
+          "tail": "5",
+          "score": 1.0
+        },
+        {
+          "head": "Mahindra & Mahindra",
+          "label": "has_followers_count",
+          "tail": "6K",
+          "score": 1.0
+        },
+        {
+          "head": "Mahindra & Mahindra",
+          "label": "has_employee_count",
+          "tail": "10,001+",
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "id": "f3976daf-930e-4727-8168-f7512a6365a6",
+      "title": "A new device logged into your account",
+      "snippet": "A new device logged into your account\nReview a recent login from a new device There was a recent login to your Notion account. Please review the details: Account thomasshelby251890@gmail.com Login method Login with Google IP &amp;\n\r\n      <!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"htt...",
+      "entities": [],
+      "relations": []
+    },
+    {
+      "id": "735ad7b8-c846-43de-a30e-b84b789ca5af",
+      "title": "New privacy settings for Search services",
+      "snippet": "New privacy settings for Search services\nthomasshelby251890@gmail.com Hello Tommy, We&#39;re updating our settings to give you even more control over saved history and personalized recommendations across Google Search services, including\nGoogle Logo\r\n\u200a\r\n\r\nthomasshelby251890@gmail.com\r\n\u200a\r\n\r\nHello Tom...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Tommy,",
+          "score": 0.8730830550193787,
+          "start": 76,
+          "end": 82
+        },
+        {
+          "label": "organization",
+          "text": "Google",
+          "score": 0.8349353671073914,
+          "start": 204,
+          "end": 210
+        },
+        {
+          "label": "organization",
+          "text": "Google",
+          "score": 0.7334000468254089,
+          "start": 238,
+          "end": 244
+        },
+        {
+          "label": "person",
+          "text": "Tommy,",
+          "score": 0.8576768636703491,
+          "start": 297,
+          "end": 303
+        },
+        {
+          "label": "organization",
+          "text": "Google",
+          "score": 0.8205937147140503,
+          "start": 427,
+          "end": 433
+        },
+        {
+          "label": "organization",
+          "text": "Google",
+          "score": 0.699381947517395,
+          "start": 560,
+          "end": 566
+        },
+        {
+          "label": "organization",
+          "text": "Google",
+          "score": 0.9529258608818054,
+          "start": 2345,
+          "end": 2351
+        },
+        {
+          "label": "organization",
+          "text": "Google",
+          "score": 0.8811148405075073,
+          "start": 2557,
+          "end": 2563
+        }
+      ],
+      "relations": [
+        {
+          "head": "Google",
+          "label": "discusses",
+          "tail": "Tommy",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "35a46b9c-254a-4b70-9e44-55f131d8021d",
+      "title": "JAVASCRIPT-NEXTJS-9 - ReferenceError: useRef is not defined",
+      "snippet": "JAVASCRIPT-NEXTJS-9 - ReferenceError: useRef is not defined\nNew issue from javascript-nextjs. Sentry Set up in Slack View on Sentry New issue We notified recently active members in the javascript-nextjs project of this issue Issue ReferenceError / useRef is not\nDetails\r\n-------\r\n\r\nhttps://eyes-3m.se...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "javascript-nextjs project",
+          "score": 0.8813576698303223,
+          "start": 185,
+          "end": 210
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.6270772814750671,
+          "start": 1705,
+          "end": 1722
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs project",
+          "score": 0.8985019326210022,
+          "start": 1808,
+          "end": 1833
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.8665066361427307,
+          "start": 1969,
+          "end": 1986
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "a01e1d9e-f7fe-4135-96a8-1fad3dab923b",
+      "title": "A new device logged into your account",
+      "snippet": "A new device logged into your account\nReview a recent login from a new device There was a recent login to your Notion account. Please review the details: Account thomasshelby251890@gmail.com Login method Login with Google IP &amp;\n\r\n      <!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"htt...",
+      "entities": [],
+      "relations": []
+    },
+    {
+      "id": "b1502fc1-9db2-4594-86c3-b73583c6291b",
+      "title": "JAVASCRIPT-NEXTJS-Q - ReferenceError: HistoryIcon is not defined",
+      "snippet": "JAVASCRIPT-NEXTJS-Q - ReferenceError: HistoryIcon is not defined\nNew issue from javascript-nextjs. Sentry Set up in Slack View on Sentry New issue We notified recently active members in the javascript-nextjs project of this issue Issue ReferenceError / HistoryIcon\nDetails\r\n-------\r\n\r\nhttps://eyes-3m...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.6716704964637756,
+          "start": 80,
+          "end": 97
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs project",
+          "score": 0.8801025152206421,
+          "start": 190,
+          "end": 215
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.6859833002090454,
+          "start": 1732,
+          "end": 1749
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs project",
+          "score": 0.9077648520469666,
+          "start": 1835,
+          "end": 1860
+        },
+        {
+          "label": "project",
+          "text": "javascript-nextjs",
+          "score": 0.897456169128418,
+          "start": 2002,
+          "end": 2019
+        }
+      ],
+      "relations": [
+        {
+          "head": "javascript-nextjs",
+          "label": "is_a",
+          "tail": "javascript-nextjs project",
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "id": "e7bdb707-4d49-4993-beb9-940e87f66233",
+      "title": "3 days left: Save your progress before your trial expires.",
+      "snippet": "3 days left: Save your progress before your trial expires.\nYour free trial will be downgraded and you may lose work unless you convert to a paid plan before it ends. \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c\n\r\n \r\n\r\n\r\n\r\n\r\n\r\n \r\n \r\n\r\n\r\n\r\n\r\n\r\n \r\n \r\n \r\n...",
+      "entities": [],
+      "relations": []
+    },
+    {
+      "id": "dad488f6-3966-48e7-bb35-d4a32229b70a",
+      "title": "Be a DevOps Hero",
+      "snippet": "Be a DevOps Hero\nStart with a GitLab Ultimate free trial! GitLab Expand your DevOps journey with a free 30-day GitLab trial Start your trial Experience single application success with GitLab Ultimate + Duo Enterprise.\nStart with a GitLab Ultimate free trial!\r\n\r\n\r\n\r\n\r\n\r\n\r\n \r\n<https://about.gitlab.com...",
+      "entities": [
+        {
+          "label": "project",
+          "text": "GitLab Ultimate",
+          "score": 0.8805692195892334,
+          "start": 30,
+          "end": 45
+        },
+        {
+          "label": "organization",
+          "text": "GitLab",
+          "score": 0.7902358770370483,
+          "start": 58,
+          "end": 64
+        },
+        {
+          "label": "project",
+          "text": "GitLab",
+          "score": 0.7487115263938904,
+          "start": 111,
+          "end": 117
+        },
+        {
+          "label": "project",
+          "text": "GitLab Ultimate",
+          "score": 0.8441150188446045,
+          "start": 184,
+          "end": 199
+        },
+        {
+          "label": "project",
+          "text": "Duo Enterprise.",
+          "score": 0.8119962215423584,
+          "start": 202,
+          "end": 217
+        },
+        {
+          "label": "project",
+          "text": "GitLab Ultimate",
+          "score": 0.8863368034362793,
+          "start": 231,
+          "end": 246
+        },
+        {
+          "label": "project",
+          "text": "GitLab",
+          "score": 0.7219190001487732,
+          "start": 493,
+          "end": 499
+        },
+        {
+          "label": "project",
+          "text": "GitLab Ultimate",
+          "score": 0.8423353433609009,
+          "start": 751,
+          "end": 766
+        },
+        {
+          "label": "project",
+          "text": "Duo Enterprise.",
+          "score": 0.8101353645324707,
+          "start": 769,
+          "end": 784
+        },
+        {
+          "label": "project",
+          "text": "GitLab",
+          "score": 0.7490403652191162,
+          "start": 1139,
+          "end": 1145
+        },
+        {
+          "label": "organization",
+          "text": "GitLab Inc.",
+          "score": 0.8588723540306091,
+          "start": 2407,
+          "end": 2418
+        },
+        {
+          "label": "organization",
+          "text": "GitLab",
+          "score": 0.6805489659309387,
+          "start": 2548,
+          "end": 2554
+        }
+      ],
+      "relations": [
+        {
+          "head": "GitLab",
+          "label": "offers",
+          "tail": "GitLab Ultimate",
+          "score": 1.0
+        },
+        {
+          "head": "GitLab",
+          "label": "offers",
+          "tail": "GitLab",
+          "score": 1.0
+        },
+        {
+          "head": "GitLab Ultimate",
+          "label": "integrates_with",
+          "tail": "Duo Enterprise.",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "id": "93d78acd-023f-4dbe-8c12-6e44f6257a6f",
+      "title": "One more week of monday.com, on us",
+      "snippet": "One more week of monday.com, on us\n\u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\n\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007\u034f \u2007...",
+      "entities": [
+        {
+          "label": "organization",
+          "text": "monday.com",
+          "score": 0.766830325126648,
+          "start": 17,
+          "end": 27
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2e9b9148-b875-445f-9837-5d8f4f57e482",
+      "title": "Tommy, NatWest Group hired people like you",
+      "snippet": "Tommy, NatWest Group hired people like you\nTommy, NatWest Group is a top company hiring for Software Engineer roles \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\n----------------------------------------\r\n\r\n\r\n      Soft...",
+      "entities": [
+        {
+          "label": "person",
+          "text": "Tommy",
+          "score": 0.891617476940155,
+          "start": 0,
+          "end": 5
+        },
+        {
+          "label": "organization",
+          "text": "NatWest Group",
+          "score": 0.9896059036254883,
+          "start": 7,
+          "end": 20
+        },
+        {
+          "label": "person",
+          "text": "Tommy",
+          "score": 0.8861259818077087,
+          "start": 43,
+          "end": 48
+        },
+        {
+          "label": "organization",
+          "text": "NatWest Group",
+          "score": 0.9901144504547119,
+          "start": 50,
+          "end": 63
+        },
+        {
+          "label": "organization",
+          "text": "NatWest Group",
+          "score": 0.9892207980155945,
+          "start": 1197,
+          "end": 1210
+        },
+        {
+          "label": "organization",
+          "text": "NetApp",
+          "score": 0.8855230808258057,
+          "start": 1860,
+          "end": 1866
+        },
+        {
+          "label": "organization",
+          "text": "IBM\r\nIT Services and IT Consulting",
+          "score": 0.914933979511261,
+          "start": 2594,
+          "end": 2628
+        }
+      ],
+      "relations": [
+        {
+          "head": "NatWest Group",
+          "label": "hired_people_like",
+          "tail": "Tommy",
+          "score": 0.9
+        },
+        {
+          "head": "NatWest Group",
+          "label": "listed_as_hiring_company_with",
+          "tail": "NetApp",
+          "score": 0.8
+        }
+      ]
+    },
+    {
+      "id": "0515bcdb-236c-4ceb-9f1b-96194219486b",
+      "title": "Your Xero trial expires today",
+      "snippet": "Your Xero trial expires today\nBuy a plan to avoid disruption. \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c Visit Xero Your free trial ends today Buy a plan by 30 Jun 2026 and get 80% off your first 3 months.* Buy now Hi Thomas, Your trial\n\r\n &zwnj; &zwnj; &zwnj; &zwnj; &zwnj; &zwnj; &zwnj; &zwnj; &zwnj; &zwn...",
+      "entities": [
+        {
+          "label": "organization",
+          "text": "Xero",
+          "score": 0.6499295234680176,
+          "start": 5,
+          "end": 9
+        },
+        {
+          "label": "organization",
+          "text": "Xero",
+          "score": 0.8021838068962097,
+          "start": 104,
+          "end": 108
+        },
+        {
+          "label": "person",
+          "text": "Thomas,",
+          "score": 0.7901384830474854,
+          "start": 211,
+          "end": 218
+        },
+        {
+          "label": "organization",
+          "text": "Xero",
+          "score": 0.7505825757980347,
+          "start": 570,
+          "end": 574
+        },
+        {
+          "label": "person",
+          "text": "Thomas,",
+          "score": 0.7678970098495483,
+          "start": 907,
+          "end": 914
+        },
+        {
+          "label": "organization",
+          "text": "Xero",
+          "score": 0.7502760887145996,
+          "start": 1406,
+          "end": 1410
+        },
+        {
+          "label": "organization",
+          "text": "Xero (Singapore) Pte. Ltd.",
+          "score": 0.8855623602867126,
+          "start": 1972,
+          "end": 1998
+        }
+      ],
+      "relations": [
+        {
+          "head": "Xero (Singapore) Pte. Ltd.",
+          "label": "discusses",
+          "tail": "Xero",
+          "score": 0.9
+        },
+        {
+          "head": "Xero (Singapore) Pte. Ltd.",
+          "label": "discusses",
+          "tail": "Thomas",
+          "score": 0.8
+        },
+        {
+          "head": "Thomas",
+          "label": "discusses",
+          "tail": "Xero",
+          "score": 0.7
+        }
+      ]
+    },
+    {
+      "id": "1f31173e-a525-4f34-8b40-79b5ca43cf0c",
+      "title": "Software Engineer at Flexiple",
+      "snippet": "Software Engineer at Flexiple\nFlexiple Software Engineer: React Native \u2013 Software Engineer SwiggyLocation:\u2026 \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f\nYour job alert for Software Engineer in Erode            \r\nSoftware ...",
+      "entities": [
+        {
+          "label": "organization",
+          "text": "Flexiple\nFlexiple",
+          "score": 0.8322550058364868,
+          "start": 21,
+          "end": 38
+        },
+        {
+          "label": "organization",
+          "text": "Flexiple\r\nIndia",
+          "score": 0.784878671169281,
+          "start": 310,
+          "end": 325
+        },
+        {
+          "label": "organization",
+          "text": "Bybit\r\nAPAC",
+          "score": 0.9115859270095825,
+          "start": 1248,
+          "end": 1259
+        },
+        {
+          "label": "organization",
+          "text": "SIMBA Team\r\nJobgether\r\nIndia",
+          "score": 0.8734502196311951,
+          "start": 2209,
+          "end": 2237
+        }
+      ],
+      "relations": [
+        {
+          "head": "Flexiple",
+          "label": "located_in",
+          "tail": "India",
+          "score": 0.95
+        },
+        {
+          "head": "Bybit",
+          "label": "located_in",
+          "tail": "APAC",
+          "score": 0.95
+        }
+      ]
+    }
+  ]
+}

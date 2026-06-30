@@ -8,7 +8,8 @@ from supabase import create_client, Client
 # import splink.duckdb.comparison_library as cl
 
 # 1. Load Environment
-load_dotenv('../../.env.local')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(current_dir, '..', '..', '.env.local'))
 
 supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { classifyContentType, processAcuteDetection } from '@/services/acute/detection';
+import { getOrCreateNodeId } from '@/utils/supabase/graph';
 
 type PostgrestErrorLike = {
   code?: string;
@@ -217,20 +218,48 @@ async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUp
 
         // Save relationships to the Bi-Temporal Graph table (Phase 2)
         if (relations.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const edgesToInsert = relations.map((rel: any) => ({
-             user_id: event.user_id,
-             head_node_id: rel.head.toLowerCase().replace(/\s+/g, '_'),
-             tail_node_id: rel.tail.toLowerCase().replace(/\s+/g, '_'),
-             relation_label: rel.label,
-             confidence: rel.score,
-             observed_from: new Date().toISOString(),
-             source_record_id: event.platform_id
-          }));
+          const findEntityLabel = (text: string): string => {
+            const cleanText = text.toLowerCase().trim();
+            const match = (entities as { text: string; label: string }[]).find(
+              (e) => e.text.toLowerCase().trim() === cleanText
+            );
+            return match ? match.label : 'other';
+          };
 
-          const { error: edgeError } = await supabase.from('chronic_edges').insert(edgesToInsert);
-          if (edgeError) {
-             console.warn('[Chronic Engine] Failed to save edges to Supabase:', edgeError.message);
+          for (const rel of relations) {
+            if (!rel.head || !rel.label || !rel.tail) continue;
+            try {
+              const headLabel = findEntityLabel(rel.head);
+              const tailLabel = findEntityLabel(rel.tail);
+
+              const headNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.head, headLabel);
+              const tailNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.tail, tailLabel);
+
+              const recordId = event.platform_id || 'manual';
+              const startChar = 0;
+              const endChar = 0;
+
+              // Insert the edge
+              const { error: edgeError } = await supabase.from('chronic_edges').insert({
+                user_id: event.user_id,
+                head_node_id: headNodeId,
+                tail_node_id: tailNodeId,
+                relation_label: rel.label,
+                confidence: Math.min(1, Math.max(0, rel.score || 0.7)),
+                source_record_id: recordId,
+                chunk_start_char: startChar,
+                chunk_end_char: endChar,
+                observed_from: new Date().toISOString(),
+                valid_from: new Date().toISOString(),
+              });
+
+              if (edgeError) {
+                console.warn('[Chronic Engine] Failed to save edge to Supabase:', edgeError.message);
+              }
+            } catch (err) {
+              const errMsg = err instanceof Error ? err.message : String(err);
+              console.warn('[Chronic Engine] Failed to resolve nodes for edge:', errMsg);
+            }
           }
         }
 

@@ -11,7 +11,8 @@ from datetime import datetime
 
 # Initialize Supabase
 from dotenv import load_dotenv
-load_dotenv('../../.env.local')  # Or system env
+current_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(current_dir, '..', '..', '.env.local'))
 sb_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")
 sb_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 supabase: Optional[Client] = create_client(sb_url, sb_key) if sb_url and sb_key else None
@@ -135,8 +136,11 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
 
                     user_prompt = f"Text:\n{request.text[:2000]}\n\nEntities Found:\n{entity_list_str}"
 
+                    # Route through the EYES LLM Gateway as defined in .env.local
                     response = completion(
-                        model="gemini/gemini-1.5-flash",
+                        model="openai/auto-extract",
+                        api_base=os.environ.get("LITELLM_BASE_URL"),
+                        api_key=os.environ.get("LITELLM_KEY"),
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
@@ -150,37 +154,6 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
 
                 except Exception as llm_err:
                     print(f"[Relationship Engine] LiteLLM Error: {llm_err}. Skipping relation extraction.")
-
-        # 3. Phase 4.C: Contradiction Handling
-        if supabase and request.user_id and len(relations) > 0:
-            try:
-                for rel in relations:
-                    head_id = rel['head'].lower().replace(' ', '_')
-                    tail_id = rel['tail'].lower().replace(' ', '_')
-
-                    res = supabase.table("chronic_edges") \
-                        .select("id, tail_node_id") \
-                        .eq("user_id", request.user_id) \
-                        .eq("head_node_id", head_id) \
-                        .eq("relation_label", rel['label']) \
-                        .is_("valid_to", "null") \
-                        .execute()
-
-                    existing_edges = res.data
-
-                    if existing_edges:
-                        for old_edge in existing_edges:
-                            if old_edge['tail_node_id'] != tail_id:
-                                print(f"[Phase 4] Contradiction detected! {head_id} {rel['label']} changed from {old_edge['tail_node_id']} to {tail_id}")
-                                supabase.table("chronic_edges") \
-                                    .update({
-                                        "valid_to": datetime.utcnow().isoformat(),
-                                        "is_contradicted_by": tail_id
-                                    }) \
-                                    .eq("id", old_edge['id']) \
-                                    .execute()
-            except Exception as db_err:
-                print(f"[Phase 4 DB Error]: {db_err}")
 
         return {"entities": entities, "relations": relations}
 

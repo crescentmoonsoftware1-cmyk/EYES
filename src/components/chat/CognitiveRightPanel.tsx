@@ -12,19 +12,7 @@ type StateVectorDay = {
   message_volume: number;
 };
 
-type Loop = {
-  id: string;
-  loop_description: string;
-  occurrence_count: number;
-  avg_duration_days: number;
-  is_active: boolean;
-};
 
-type DriftGap = {
-  stated: string;
-  lived: string;
-  gap_summary: string;
-};
 
 type EntityCorrelation = {
   entity_name: string;
@@ -71,12 +59,9 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
   const [activeTab, setActiveTab] = useState<Tab>('mindmap');
   const [vectors, setVectors] = useState<StateVectorDay[]>([]);
   const [clusterIds, setClusterIds] = useState<string[]>([]);
-  const [loops, setLoops] = useState<Loop[]>([]);
-  const [driftGaps, setDriftGaps] = useState<DriftGap[]>([]);
   const [correlations, setCorrelations] = useState<EntityCorrelation[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [inference, setInference] = useState<Inference | null>(null);
-  const [identityInsight, setIdentityInsight] = useState<{title: string, body: string} | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -84,17 +69,11 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
 
     const load = async () => {
       setLoading(true);
-      const [vecRes, statusRes, corrRes, clustersRes, inferenceRes, driftRes, insightsRes] = await Promise.allSettled([
+      const [vecRes, corrRes, clustersRes, inferenceRes] = await Promise.allSettled([
         fetch('/api/cognitive/state-vectors?days=90').then(r => r.json()),
-        fetch('/api/cognitive/status').then(r => r.json()),
         fetch('/api/cognitive/entity-correlations').then(r => r.json()),
         fetch('/api/topic-clusters').then(r => r.json()),
-        fetch('/api/cognitive/next-state').then(r => r.json()),
-        // Phase 4.D: Fetching the real temporal drift signal!
-        // We simulate a logged-in user_id 'user123' for the fetch query parameter
-        fetch('/api/cognitive/temporal-drift?userId=user123').then(r => r.json()),
-        // Phase 5: Fetch Narrative and Identity
-        fetch('/api/cognitive/insights').then(r => r.json())
+        fetch('/api/cognitive/next-state').then(r => r.json())
       ]);
 
       if (vecRes.status === 'fulfilled') {
@@ -102,15 +81,6 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
         setVectors(vecs);
         const ids = [...new Set(vecs.map(v => v.cluster_id).filter(Boolean))] as string[];
         setClusterIds(ids);
-      }
-      if (statusRes.status === 'fulfilled') {
-        setLoops(statusRes.value.loops ?? []);
-      }
-      if (driftRes.status === 'fulfilled') {
-        setDriftGaps(driftRes.value.gaps ?? []);
-      } else if (statusRes.status === 'fulfilled') {
-        // Fallback to old drift gaps if the new API fails
-        setDriftGaps(statusRes.value.driftGaps ?? []);
       }
       if (corrRes.status === 'fulfilled') {
         setCorrelations(corrRes.value.correlations ?? []);
@@ -120,9 +90,6 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
       }
       if (inferenceRes.status === 'fulfilled') {
         setInference(inferenceRes.value ?? null);
-      }
-      if (insightsRes.status === 'fulfilled' && insightsRes.value.insight) {
-        setIdentityInsight(insightsRes.value.insight);
       }
       setLoading(false);
     };
@@ -217,8 +184,6 @@ export function CognitiveRightPanel({ isOpen, onClose }: { isOpen: boolean; onCl
             inference={inference}
           />
         )}
-        {!loading && activeTab === 'loops' && <LoopsTab loops={loops} />}
-        {!loading && activeTab === 'drift' && <DriftTab gaps={driftGaps} />}
         {!loading && activeTab === 'people' && <PeopleTab correlations={correlations} />}
       </div>
     </div>
@@ -467,51 +432,6 @@ function MindMapTab({
   );
 }
 
-// ── Loops Tab ─────────────────────────────────────────────────────────────────
-function LoopsTab({ loops }: { loops: Loop[] }) {
-  if (!loops.length) return <EmptyState text="No recurring loops detected yet. Needs 3+ occurrences of the same state." />;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {loops.map(l => (
-        <div key={l.id} style={{
-          background: 'rgba(255,255,255,0.03)', border: `1px solid ${l.is_active ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.07)'}`,
-          borderRadius: '10px', padding: '12px',
-        }}>
-          {l.is_active && (
-            <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700, letterSpacing: '0.1em' }}>● ACTIVE</span>
-          )}
-          <p style={{ margin: '4px 0 6px', color: '#e5e7eb', fontSize: '13px' }}>{l.loop_description}</p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <span style={{ color: '#6b7280', fontSize: '12px' }}>{l.occurrence_count}× · avg {Math.round(l.avg_duration_days)}d each</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Drift Tab ─────────────────────────────────────────────────────────────────
-function DriftTab({ gaps }: { gaps: DriftGap[] }) {
-  if (!gaps.length) return <EmptyState text="No drift detected in the last 14 days. Need both stated and lived content." />;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {gaps.map((g, i) => (
-        <div key={i} style={{
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(245,158,11,0.2)',
-          borderRadius: '10px', padding: '12px',
-        }}>
-          <p style={{ margin: '0 0 8px', color: '#fbbf24', fontSize: '12px', fontWeight: 600 }}>
-            ⚡ {g.gap_summary}
-          </p>
-          <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.5 }}>
-            <div><strong style={{ color: '#6b7280' }}>STATED:</strong> {g.stated}</div>
-            <div><strong style={{ color: '#6b7280' }}>LIVED:</strong> {g.lived}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── People Tab ────────────────────────────────────────────────────────────────
 function PeopleTab({ correlations }: { correlations: EntityCorrelation[] }) {
