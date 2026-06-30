@@ -2,10 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/chat": { "maxDuration": 60 },
-    "api/audit/[id]": { "maxDuration": 300 },
-    "api/audit/[id]/pdf": { "maxDuration": 120 },
-    "api/queue/audit": { "maxDuration": 800 },
-    "api/cron/sync": { "maxDuration": 800 },
+    "api/audit/[id]": { "maxDuration": 60 },
+    "api/audit/[id]/pdf": { "maxDuration": 60 },
+    "api/queue/audit": { "maxDuration": 60 },
+    "api/cron/sync": { "maxDuration": 60 },
     "api/sync/embeddings": { "maxDuration": 60 },
     "api/cognitive/extract": { "maxDuration": 30 }
   }
