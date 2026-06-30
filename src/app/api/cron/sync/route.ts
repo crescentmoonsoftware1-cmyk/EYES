@@ -57,7 +57,7 @@ export {
 };
 
 // Vercel function timeout — must be <= plan limit (Pro = 800s max for background)
-export const maxDuration = 800;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 type TokenRow = {

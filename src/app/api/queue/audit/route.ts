@@ -4,7 +4,7 @@ import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
 import { createAdminClient } from '@/utils/supabase/server';
 
 // QStash workers can run for extended periods — allow full Vercel Pro timeout
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 export const dynamic = 'force-dynamic';
 
