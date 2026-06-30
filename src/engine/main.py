@@ -73,8 +73,8 @@ async def load_model():
     global gliner_model
     print("Loading GLiNER model into RAM...")
     try:
-        gliner_model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
-        print("GLiNER model loaded successfully. Engine is ready.")
+        gliner_model = GLiNER.from_pretrained("knowledgator/gliner-multitask-large-v0.5")
+        print("GLiNER Multitask model loaded successfully. Engine is ready.")
     except Exception as e:
         print(f"Failed to load model: {e}")
 
