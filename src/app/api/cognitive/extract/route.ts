@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { getOrCreateNodeId } from '@/utils/supabase/graph';
 
-export const maxDuration = 30;
+
 export const dynamic = 'force-dynamic';
 
 /**

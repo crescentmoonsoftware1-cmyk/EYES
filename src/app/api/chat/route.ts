@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { invokeModel, invokeModelStream } from '@/services/ai/ai';
 
 // Vercel function timeout — must be <= plan limit (Pro = 300s, Hobby = 10s)
-export const maxDuration = 60;
+
 
 // ── Constants ────────────────────────────────────────────────────────────────
 /** Minimum cosine similarity to include a memory record in evidence (0–1 scale). */
