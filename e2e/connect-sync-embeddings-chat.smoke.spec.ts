@@ -19,11 +19,11 @@ test.describe('Connect to Chat smoke flow', () => {
     // Verify success indicator is shown on the oauth redirect page
     await expect(page.getByText('github connected. Syncing...')).toBeVisible();
 
-    // Wait for auto redirect to the readiness view
-    await page.waitForURL(url => url.searchParams.get('view') === 'readiness', { timeout: 5000 });
+    // Wait for auto redirect to the connectors view
+    await page.waitForURL(url => url.searchParams.get('view') === 'connectors', { timeout: 5000 });
 
     // Verify the page heading and platform card are visible
-    await expect(page.getByRole('heading', { name: 'Network Integrity' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Source Readiness' })).toBeVisible();
     await expect(page.locator('strong').filter({ hasText: 'GitHub' })).toBeVisible();
 
     // Verify and click the force sync button on the platform card

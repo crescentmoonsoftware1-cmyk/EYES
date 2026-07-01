@@ -24,6 +24,8 @@ export async function installSupabaseClientMock(page: Page) {
       plan: 'Private Beta',
       joined_date: 'Apr 2026',
       memories_indexed: 1234,
+      onboarding_completed: true,
+      behavior_logging_consent: true,
     };
 
     const createQuery = (table: string) => {

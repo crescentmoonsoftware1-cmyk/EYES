@@ -290,12 +290,16 @@ async function retrieveEvidence(
           .order('strength', { ascending: false })
           .limit(5)
       : Promise.resolve({ data: null }),
-    supabase
-      .from('chronic_edges')
-      .select('head_node_id, relation_label, tail_node_id, is_contradicted_by')
-      .eq('user_id', userId)
-      .is('valid_to', null)
-      .limit(30)
+    /* 
+      // Temporarily disabled: Do NOT surface chronic_edges into the chat layer until testing is finished.
+      supabase
+        .from('chronic_edges')
+        .select('head_node_id, relation_label, tail_node_id, is_contradicted_by')
+        .eq('user_id', userId)
+        .is('valid_to', null)
+        .limit(30)
+    */
+    Promise.resolve({ data: null })
   ]);
 
   if (embedResult && typeof embedResult === 'object' && 'embedding' in embedResult) {
@@ -309,10 +313,12 @@ async function retrieveEvidence(
   }
 
   // Parse Graph Edges
+  /*
   if (graphResult && graphResult.data && graphResult.data.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     graphText = graphResult.data.map((e: any) => `[${e.head_node_id.replace(/_/g, ' ')}] ${e.relation_label} [${e.tail_node_id.replace(/_/g, ' ')}]`).join('\n');
   }
+  */
 
   const queries = plan.search_queries && plan.search_queries.length > 0
     ? plan.search_queries.slice(0, 4)

@@ -40,7 +40,8 @@ gliner_model = None
 DEFAULT_ENTITY_LABELS = [
     "person", "organization", "place", "project",
     "commitment", "decision", "goal", "emotional_state",
-    "event", "topic", "document", "financial_transaction"
+    "event", "topic", "document", "financial_transaction",
+    "task", "blocker"
 ]
 
 class ExtractRequest(BaseModel):
@@ -130,8 +131,9 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
                         "You are a knowledge graph relationship extractor. "
                         "Extract relationships between the provided entities based on the text. "
                         "Return ONLY a valid JSON array of objects with keys: 'head', 'label', 'tail', 'score' (0.0-1.0). "
-                        "Use labels like 'works_at', 'located_in', 'committed_to', 'mentioned_with_emotion', 'discusses'. "
-                        "If no relationships exist, return []."
+                        "CRITICAL: You MUST prioritize extracting these specific relationship labels if present: "
+                        "'commitment' (promises, tasks), 'delayed_on' (blockers, waiting on), and 'decided_against' (rejections, pivots). "
+                        "Use generic labels only if these do not apply. If no relationships exist, return []."
                     )
 
                     user_prompt = f"Text:\n{request.text[:2000]}\n\nEntities Found:\n{entity_list_str}"

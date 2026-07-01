@@ -210,7 +210,7 @@ function MindMapTab({
   const { openConfirm } = useConfirm();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [graphData, setGraphData] = useState<{nodes: any[], edges: any[], merged_nodes_count: number} | null>(null);
+  const [graphData, setGraphData] = useState<{nodes: unknown[], edges: {source: string; target: string; label: string;}[], merged_nodes_count: number} | null>(null);
 
   useEffect(() => {
     fetch('/api/cognitive/mindmap')
@@ -234,6 +234,7 @@ function MindMapTab({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       {/* True Mindmap UI: Rendering Nodes & Edges from chronic_edges */}
+      {/* Temporarily disabled: Do NOT surface chronic_edges into the chat layer until testing is finished.
       <div style={{
         background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: '12px', padding: '14px',
@@ -267,6 +268,7 @@ function MindMapTab({
           ))}
         </div>
       </div>
+      */}
 
 
       {/* 90-day Daily grid */}
